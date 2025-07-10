@@ -30,6 +30,13 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
+  # Explicitly define dependency versions
+  pod 'GoogleUtilities/Logger', '~> 7.12.0'
+  pod 'GoogleSignIn', '~> 7.0'
+  pod 'Firebase/Core', '~> 10.25.0'
+  pod 'Firebase/Auth', '~> 10.25.0'
+  pod 'Firebase/Firestore', '~> 10.25.0'
+
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
     inherit! :search_paths
@@ -41,6 +48,8 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+      # Add the following line to prevent arm64 architecture build on simulator
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
     end
   end
 end 
