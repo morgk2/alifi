@@ -2,14 +2,78 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/gestures.dart';
 import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'icons.dart';
 import 'dialogs/terms_of_service_dialog.dart';
 import 'dialogs/privacy_policy_dialog.dart';
 import 'dialogs/report_problem_dialog.dart';
 import 'pages/page_container.dart';
+import 'services/auth_service.dart';
+import 'firebase_options.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
-void main() {
-  runApp(const MainApp());
+Future<void> main() async {
+  try {
+    print('Starting app initialization...');
+    WidgetsFlutterBinding.ensureInitialized();
+    print('Flutter binding initialized');
+    
+    // Initialize Firebase
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      print('Firebase initialized successfully');
+    } catch (e) {
+      print('Error initializing Firebase: $e');
+      // Continue anyway as the app should work in guest mode
+    }
+
+    // Configure Firestore
+    if (kIsWeb) {
+      try {
+        FirebaseFirestore.instance.settings = const Settings(
+          persistenceEnabled: true,
+          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+        );
+        print('Firestore web settings configured');
+      } catch (e) {
+        print('Error configuring Firestore settings: $e');
+      }
+    }
+
+    runApp(const MainApp());
+    print('App started successfully');
+  } catch (e, stackTrace) {
+    print('Fatal error during app initialization: $e');
+    print('Stack trace: $stackTrace');
+    // Show an error UI instead of crashing
+    runApp(MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 60),
+              const SizedBox(height: 16),
+              const Text(
+                'Failed to start the app',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Error: $e',
+                style: const TextStyle(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ));
+  }
 }
 
 class MainApp extends StatelessWidget {
@@ -17,56 +81,88 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.white,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        splashFactory: NoSplash.splashFactory,
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            splashFactory: NoSplash.splashFactory,
+    return ChangeNotifierProvider(
+      create: (_) => AuthService()..init(),
+      child: MaterialApp(
+        theme: ThemeData(
+          fontFamily: 'Inter',
+          primarySwatch: Colors.blue,
+          scaffoldBackgroundColor: Colors.white,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          splashFactory: NoSplash.splashFactory,
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              splashFactory: NoSplash.splashFactory,
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(
+              splashFactory: NoSplash.splashFactory,
+            ),
+          ),
+          iconButtonTheme: IconButtonThemeData(
+            style: IconButton.styleFrom(
+              splashFactory: NoSplash.splashFactory,
+            ),
           ),
         ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            splashFactory: NoSplash.splashFactory,
-          ),
-        ),
-        iconButtonTheme: IconButtonThemeData(
-          style: IconButton.styleFrom(
-            splashFactory: NoSplash.splashFactory,
-          ),
-        ),
+        home: const AuthWrapper(),
+        builder: (context, child) {
+          // Add error boundary widget
+          ErrorWidget.builder = (FlutterErrorDetails details) {
+            return Material(
+              child: Container(
+                color: Colors.white,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 60,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Something went wrong',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          };
+          return child!;
+        },
       ),
-      home: const SplashScreen(),
     );
   }
 }
 
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  Widget build(BuildContext context) {
+    final authService = context.watch<AuthService>();
+
+    // Show splash screen while initializing
+    if (!authService.isInitialized) {
+      return const SplashScreen();
+    }
+
+    // If authenticated, show main app
+    if (authService.isAuthenticated) {
+      return const PageContainer();
+    }
+
+    // If not authenticated, show login page
+    return const LoginPage();
+  }
 }
 
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Timer(const Duration(seconds: 2), () {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 800),
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const LoginPage(),
-        ),
-      );
-    });
-  }
+class SplashScreen extends StatelessWidget {
+  const SplashScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -78,19 +174,6 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Center(
         child: Hero(
           tag: 'logo',
-          flightShuttleBuilder: (
-            BuildContext flightContext,
-            Animation<double> animation,
-            HeroFlightDirection flightDirection,
-            BuildContext fromHeroContext,
-            BuildContext toHeroContext,
-          ) {
-            return Image.asset(
-              'assets/images/alifi_logo.png',
-              width: logoWidth,
-              fit: BoxFit.contain,
-            );
-          },
           child: Image.asset(
             'assets/images/alifi_logo.png',
             width: logoWidth,
@@ -170,6 +253,14 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
+  Future<void> _handleGoogleSignIn(BuildContext context) async {
+    final authService = context.read<AuthService>();
+    final user = await authService.signInWithGoogle();
+    if (user != null && mounted) {
+      _navigateToHome(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -221,7 +312,7 @@ class _LoginPageState extends State<LoginPage>
                       color: Colors.white,
                       textColor: Colors.black87,
                       borderColor: Colors.grey[300],
-                      onPressed: () {},
+                      onPressed: () => _handleGoogleSignIn(context),
                     ),
                     const SizedBox(height: 12),
                     _SocialButton(
@@ -338,9 +429,11 @@ class _SocialButton extends StatelessWidget {
           ),
           splashFactory: NoSplash.splashFactory,
           shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
               SvgPicture.string(
@@ -354,12 +447,16 @@ class _SocialButton extends StatelessWidget {
               ),
               const SizedBox(width: 12),
             ],
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: textColor,
+            Flexible(
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

@@ -26,7 +26,9 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
   void initState() {
     super.initState();
     _pages = [
-      const HomePage(),
+      HomePage(
+        onNavigateToMap: () => setState(() => _currentIndex = 1),
+      ),
       MapPage(
         onSearchFocusChange: (isVisible) {
           if (_isVisible != isVisible) {
@@ -35,7 +37,19 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
         },
       ),
       const MyPetsPage(),
-      const ProfilePage(),
+      const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Text(
+            'Coming Soon',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
     ];
 
     _hideController = AnimationController(

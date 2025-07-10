@@ -9,9 +9,16 @@ import '../icons.dart';
 import '../widgets/placeholder_image.dart';
 import '../widgets/scrollable_fade_container.dart';
 import '../widgets/fundraising_card.dart';
+import 'notification_page.dart';
+import 'profile_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final VoidCallback onNavigateToMap;
+
+  const HomePage({
+    super.key,
+    required this.onNavigateToMap,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -168,7 +175,7 @@ class _HomePageState extends State<HomePage> {
                               'Fundraising',
                               style: TextStyle(
                                 fontSize: 24,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ],
@@ -299,13 +306,28 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   _buildHeaderButton(
                     icon: AppIcons.bellIcon,
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationPage(),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(width: 8),
-                  const CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.grey,
-                    child: Icon(Icons.person, color: Colors.white),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const ProfilePage(),
+                        ),
+                      );
+                    },
+                    child: const CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.grey,
+                      child: Icon(Icons.person, color: Colors.white),
+                    ),
                   ),
                 ],
               ),
@@ -356,6 +378,7 @@ class _HomePageState extends State<HomePage> {
           'Good afternoon, user!',
           style: TextStyle(
             fontSize: 16,
+            fontWeight: FontWeight.w600,
             color: Colors.grey,
           ),
         ),
@@ -363,7 +386,7 @@ class _HomePageState extends State<HomePage> {
           "What's new?",
           style: TextStyle(
             fontSize: 32,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ],
@@ -438,7 +461,7 @@ class _HomePageState extends State<HomePage> {
                                       pet.name,
                                       style: const TextStyle(
                                         fontSize: 20,
-                                        fontWeight: FontWeight.bold,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
                                     const SizedBox(height: 8),
@@ -471,7 +494,7 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                     const SizedBox(height: 8),
                                     ElevatedButton(
-                                      onPressed: () {},
+                                      onPressed: widget.onNavigateToMap,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: const Color(0xFFF59E0B),
                                         foregroundColor: Colors.white,
@@ -555,7 +578,7 @@ class _HomePageState extends State<HomePage> {
                   'You may be Interested',
                   style: TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const Spacer(),

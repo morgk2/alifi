@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/placeholder_image.dart';
 import '../icons.dart';
+import '../services/auth_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -18,8 +21,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    _usernameController = TextEditingController(text: '@username');
-    _displayNameController = TextEditingController(text: 'Display Name');
+    final user = context.read<AuthService>().currentUser;
+    _usernameController = TextEditingController(text: user?.username ?? '@username');
+    _displayNameController = TextEditingController(text: user?.displayName ?? 'Display Name');
   }
 
   @override
@@ -43,7 +47,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               // TODO: Implement account deletion
               Navigator.pop(context); // Close dialog
               Navigator.pop(context); // Go back to profile
@@ -56,6 +60,41 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ],
       ),
     );
+  }
+
+  Future<void> _saveChanges() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final authService = context.read<AuthService>();
+    final user = authService.currentUser;
+    if (user == null) return;
+
+    // Update user data in Firestore
+    final updatedUser = user.copyWith(
+      username: _usernameController.text.trim(),
+      displayName: _displayNameController.text.trim(),
+    );
+
+    try {
+      // Update Firestore document
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.id)
+          .update(updatedUser.toFirestore());
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update profile')),
+        );
+      }
+    }
   }
 
   @override
@@ -79,12 +118,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                // TODO: Save profile changes
-                Navigator.pop(context);
-              }
-            },
+            onPressed: _saveChanges,
             child: const Text(
               'Save',
               style: TextStyle(
@@ -96,219 +130,245 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Profile Picture Section
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Stack(
-                    children: [
-                      const PlaceholderImage(
-                        width: 120,
-                        height: 120,
-                        isCircular: true,
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF9E42),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 2,
+      body: Consumer<AuthService>(
+        builder: (context, authService, _) {
+          final user = authService.currentUser;
+
+          return SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Profile Picture Section
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Stack(
+                        children: [
+                          if (user?.photoURL != null)
+                            CircleAvatar(
+                              radius: 60,
+                              backgroundImage: NetworkImage(user!.photoURL!),
+                            )
+                          else
+                            const PlaceholderImage(
+                              width: 120,
+                              height: 120,
+                              isCircular: true,
+                            ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF9E42),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  // TODO: Implement image picker
+                                },
+                              ),
                             ),
                           ),
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            onPressed: () {
-                              // TODO: Implement image picker
-                            },
-                          ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              // Form Fields
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Username',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _usernameController,
-                      decoration: InputDecoration(
-                        hintText: 'Enter username',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a username';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Display Name',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _displayNameController,
-                      decoration: InputDecoration(
-                        hintText: 'Enter display name',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a display name';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 32),
-                    // Linked Accounts Section
-                    const Text(
-                      'Linked Accounts',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildLinkedAccountTile(
-                      'Google',
-                      AppIcons.googleIcon,
-                      true,
-                      () {
-                        // TODO: Implement Google account linking
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _buildLinkedAccountTile(
-                      'Facebook',
-                      AppIcons.facebookIcon,
-                      false,
-                      () {
-                        // TODO: Implement Facebook account linking
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _buildLinkedAccountTile(
-                      'Apple',
-                      AppIcons.appleIcon,
-                      false,
-                      () {
-                        // TODO: Implement Apple account linking
-                      },
-                    ),
-                    const SizedBox(height: 40),
-                    // Delete Account Button
-                    Center(
-                      child: TextButton(
-                        onPressed: _showDeleteAccountDialog,
-                        child: const Text(
-                          'Delete Account',
+                  // Form Fields
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Username',
                           style: TextStyle(
-                            color: Colors.red,
                             fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _usernameController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter username',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter a username';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Display Name',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _displayNameController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter display name',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter a display name';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 32),
+                        // Linked Accounts Section
+                        const Text(
+                          'Linked Accounts',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildLinkedAccountTile(
+                          'Google',
+                          AppIcons.googleIcon,
+                          user?.linkedAccounts['google'] ?? false,
+                          () {
+                            // Already implemented in AuthService
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildLinkedAccountTile(
+                          'Facebook',
+                          AppIcons.facebookIcon,
+                          user?.linkedAccounts['facebook'] ?? false,
+                          () {
+                            // TODO: Implement Facebook account linking
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildLinkedAccountTile(
+                          'Apple',
+                          AppIcons.appleIcon,
+                          user?.linkedAccounts['apple'] ?? false,
+                          () {
+                            // TODO: Implement Apple account linking
+                          },
+                        ),
+                        const SizedBox(height: 40),
+                        // Delete Account Button
+                        Center(
+                          child: TextButton(
+                            onPressed: _showDeleteAccountDialog,
+                            child: const Text(
+                              'Delete Account',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildLinkedAccountTile(
     String title,
-    String iconSvg,
+    String icon,
     bool isLinked,
     VoidCallback onTap,
   ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            SvgPicture.string(
-              iconSvg,
-              width: 24,
-              height: 24,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          SvgPicture.string(
+            icon,
+            width: 24,
+            height: 24,
+          ),
+          const SizedBox(width: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
             ),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+          ),
+          const Spacer(),
+          if (isLinked)
+            const Icon(
+              Icons.check_circle,
+              color: Colors.green,
+              size: 24,
+            )
+          else
+            TextButton(
+              onPressed: onTap,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: Colors.grey),
+                ),
+              ),
+              child: const Text(
+                'Link',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontSize: 14,
+                ),
               ),
             ),
-            const Spacer(),
-            Text(
-              isLinked ? 'Connected' : 'Connect',
-              style: TextStyle(
-                color: isLinked ? Colors.grey : const Color(0xFFFF9E42),
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

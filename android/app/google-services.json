@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "261633708467",
+    "project_id": "alifi-924c1",
+    "storage_bucket": "alifi-924c1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:261633708467:android:6b877681b92d4864497bc6",
+        "android_client_info": {
+          "package_name": "com.example.alifi"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "261633708467-998bnb0ko0gf2vb887trshq3v8omikd6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.alifi",
+            "certificate_hash": "ec2baf634979c7dea5c6b0d0a390fd668cce7249"
+          }
+        },
+        {
+          "client_id": "261633708467-uba68ge1mau5e89pf9ip7u55hb93l0p0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBTMqKnnAHtpnuXApz8vq3tJkGvOLf8_zY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "261633708467-uba68ge1mau5e89pf9ip7u55hb93l0p0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "261633708467-bdf1vb4fea9i3638nqdk2kh6dn5ov3s9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.alifi"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
