@@ -1,5 +1,11 @@
 platform :ios, '13.0'
 
+# Add this pre-install hook to update specs
+pre_install do |installer|
+  Pod::UI.puts "Running pod repo update"
+  `pod repo update`
+end
+
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
