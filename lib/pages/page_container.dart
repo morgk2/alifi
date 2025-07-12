@@ -5,6 +5,7 @@ import '../icons.dart';
 import 'home_page.dart';
 import 'map_page.dart';
 import 'my_pets_page.dart';
+import 'marketplace_page.dart';
 import 'profile_page.dart';
 
 class PageContainer extends StatefulWidget {
@@ -37,19 +38,7 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
         },
       ),
       const MyPetsPage(),
-      const Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(
-          child: Text(
-            'Coming Soon',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
+      const MarketplacePage(),
     ];
 
     _hideController = AnimationController(

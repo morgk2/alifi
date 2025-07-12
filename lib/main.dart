@@ -5,12 +5,14 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import 'icons.dart';
 import 'dialogs/terms_of_service_dialog.dart';
 import 'dialogs/privacy_policy_dialog.dart';
 import 'dialogs/report_problem_dialog.dart';
 import 'pages/page_container.dart';
 import 'services/auth_service.dart';
+import 'services/device_performance.dart';
 import 'firebase_options.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -18,6 +20,21 @@ Future<void> main() async {
   try {
     print('Starting app initialization...');
     WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize device performance detection
+    await DevicePerformance().initialize();
+    print('Device performance detection initialized');
+    
+    // Optimize for smoother rendering
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
+    );
+    
     print('Flutter binding initialized');
     
     // Initialize Firebase
@@ -91,6 +108,12 @@ class MainApp extends StatelessWidget {
           splashColor: Colors.transparent,
           highlightColor: Colors.transparent,
           splashFactory: NoSplash.splashFactory,
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: {
+              TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            },
+          ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
               splashFactory: NoSplash.splashFactory,
@@ -109,30 +132,19 @@ class MainApp extends StatelessWidget {
         ),
         home: const AuthWrapper(),
         builder: (context, child) {
-          // Add error boundary widget
-          ErrorWidget.builder = (FlutterErrorDetails details) {
-            return Material(
-              child: Container(
-                color: Colors.white,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: Colors.red,
-                      size: 60,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Something went wrong',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ],
-                ),
+          // Add performance optimizations
+          return RepaintBoundary(
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                physics: const ClampingScrollPhysics(),
+                dragDevices: {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.mouse,
+                },
               ),
-            );
-          };
-          return child!;
+              child: child!,
+            ),
+          );
         },
       ),
     );

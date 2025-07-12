@@ -11,6 +11,7 @@ import '../widgets/scrollable_fade_container.dart';
 import '../widgets/fundraising_card.dart';
 import 'notification_page.dart';
 import 'profile_page.dart';
+import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback onNavigateToMap;
@@ -107,6 +108,14 @@ class _HomePageState extends State<HomePage> {
     if (isAtTop != _isAtTop) {
       setState(() => _isAtTop = isAtTop);
     }
+  }
+
+  void _navigateToSettings(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SettingsPage(),
+      ),
+    );
   }
 
   @override
@@ -297,10 +306,19 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SvgPicture.string(
-                AppIcons.trophyIcon,
-                width: 28,
-                height: 28,
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.menu),
+                    onPressed: () => _navigateToSettings(context),
+                  ),
+                  const SizedBox(width: 4),
+                  SvgPicture.string(
+                    AppIcons.trophyIcon,
+                    width: 28,
+                    height: 28,
+                  ),
+                ],
               ),
               Row(
                 children: [

@@ -4,6 +4,10 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to show you nearby pet services and help locate lost pets.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We need your location to show you nearby pet services and help locate lost pets even when the app is in background.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Alifi</string>
 	<key>CFBundleExecutable</key>
