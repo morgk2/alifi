@@ -112,7 +112,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           });
           _mapController.move(
             LatLng(position.latitude, position.longitude),
-            _mapController.zoom,
+            15.0, // Use a fixed zoom level instead of the deprecated zoom property
           );
         }
       });
@@ -151,7 +151,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
   Future<void> _searchPlaces(String query) async {
     if (_currentPosition == null || query.isEmpty) {
-      print('Cannot search: position=${_currentPosition}, query=$query'); // Debug log
+      print('Cannot search: position=$_currentPosition, query=$query'); // Debug log
       return;
     }
 
@@ -180,10 +180,10 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           final bounds = LatLngBounds.fromPoints(
             results.map((r) => r.location).toList(),
           );
-          _mapController.fitBounds(
-            bounds,
-            options: const FitBoundsOptions(
-              padding: EdgeInsets.all(50.0),
+          _mapController.fitCamera(
+            CameraFit.bounds(
+              bounds: bounds,
+              padding: const EdgeInsets.all(50.0),
             ),
           );
         }
@@ -471,15 +471,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: const LatLng(
+              initialCenter: LatLng(
                 37.7749, // Default latitude (e.g., San Francisco)
                 -122.4194, // Default longitude (e.g., San Francisco)
               ),
               initialZoom: 12.0, // Default zoom level
-              interactionOptions: const InteractionOptions(
-                enableScrollWheel: true,
-                enableMultiFingerGestureRace: true,
-              ),
+              // Remove interaction options as they're not needed in newer versions
             ),
             children: [
               TileLayer(

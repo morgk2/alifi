@@ -1,8 +1,13 @@
-plugins {
-    id 'com.android.application' version '8.1.4' apply false
-    id 'com.android.library' version '8.1.4' apply false
-    id 'org.jetbrains.kotlin.android' version '1.9.0' apply false
-    id 'com.google.gms.google-services' version '4.4.0' apply false
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:8.6.0"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
+        classpath "com.google.gms:google-services:4.4.1"
+    }
 }
 
 allprojects {
@@ -15,9 +20,23 @@ allprojects {
 rootProject.buildDir = '../build'
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
-subprojects {
-    project.evaluationDependsOn(':app')
+    
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            android {
+                buildTypes {
+                    release {
+                        minifyEnabled true
+                        shrinkResources project.name == ':app'  // Only enable for app module
+                    }
+                    debug {
+                        minifyEnabled false
+                        shrinkResources false
+                    }
+                }
+            }
+        }
+    }
 }
 
 tasks.register("clean", Delete) {

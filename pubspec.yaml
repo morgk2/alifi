@@ -13,28 +13,28 @@ dependencies:
   flutter_svg: ^2.0.10+1
   flutter_colorpicker: ^1.0.3
   image_picker: ^1.0.7
-  blur: ^3.1.0
-  firebase_core: ^2.32.0
+  blur: ^4.0.2
+  firebase_core: ^3.15.1
   firebase_core_web: ^2.7.0
-  firebase_auth: ^4.17.9
+  firebase_auth: ^5.6.2
   firebase_auth_web: ^5.8.0
-  google_sign_in: ^5.4.4  # Downgrading to maintain compatibility
-  google_sign_in_web: ^0.10.2+1
-  cloud_firestore: ^4.15.9
+  google_sign_in: ^6.2.1  # Updated to latest stable version
+  google_sign_in_web: ^0.12.3  # Updated to match google_sign_in
+  cloud_firestore: ^5.6.11
   provider: ^6.1.2
   shared_preferences: ^2.2.2
-  device_info_plus: ^9.1.2
-  flutter_map: ^6.1.0
+  device_info_plus: ^11.5.0
+  flutter_map: ^8.1.1
   latlong2: ^0.9.0
-  geolocator: ^10.1.0
-  permission_handler: ^11.3.0
+  geolocator: ^14.0.2
+  permission_handler: ^12.0.1
   uuid: ^4.3.3  # Added for generating unique IDs
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
-  flutter_launcher_icons: ^0.11.0  # Downgraded version
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4  # Downgraded version
 
 # Flutter launcher icons configuration
 flutter_launcher_icons:
