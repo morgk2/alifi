@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/fundraising.dart';
+import '../pages/contribute_page.dart';
 
 class FundraisingCard extends StatelessWidget {
   final Fundraising fundraising;
@@ -11,7 +12,7 @@ class FundraisingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final percentage = fundraising.progressPercentage.round();
+    final percentage = ((fundraising.currentAmount / fundraising.goalAmount) * 100).round();
 
     return Container(
       decoration: BoxDecoration(
@@ -50,8 +51,7 @@ class FundraisingCard extends StatelessWidget {
                   ),
                 ),
                 FractionallySizedBox(
-                  widthFactor:
-                      fundraising.currentAmount / fundraising.goalAmount,
+                  widthFactor: (fundraising.currentAmount / fundraising.goalAmount).clamp(0.0, 1.0),
                   child: Container(
                     height: 12,
                     decoration: BoxDecoration(
@@ -106,8 +106,7 @@ class FundraisingCard extends StatelessWidget {
                     children: [
                       SizedBox.expand(
                         child: CircularProgressIndicator(
-                          value: fundraising.currentAmount /
-                              fundraising.goalAmount,
+                          value: (fundraising.currentAmount / fundraising.goalAmount).clamp(0.0, 1.0),
                           backgroundColor: Colors.grey[200],
                           color: const Color(0xFF4CAF50),
                           strokeWidth: 8,
@@ -125,16 +124,11 @@ class FundraisingCard extends StatelessWidget {
                                 color: Color(0xFF4CAF50),
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF4CAF50),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.attach_money,
-                                color: Colors.white,
-                                size: 16,
+                            const Text(
+                              '5',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Color(0xFF4CAF50),
                               ),
                             ),
                           ],
@@ -150,7 +144,13 @@ class FundraisingCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ContributePage(fundraising: fundraising),
+                    ),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4CAF50),
                   foregroundColor: Colors.white,
@@ -160,12 +160,19 @@ class FundraisingCard extends StatelessWidget {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Contribute',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Contribute',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

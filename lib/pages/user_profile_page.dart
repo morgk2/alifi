@@ -4,6 +4,7 @@ import '../models/pet.dart';
 import '../services/database_service.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../widgets/spinning_loader.dart';
 
 class UserProfilePage extends StatefulWidget {
   final User user;
@@ -263,7 +264,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   ),
                   const SizedBox(height: 8),
                   if (_isLoading)
-                    const Center(child: CircularProgressIndicator())
+                    const Center(child: SpinningLoader(color: Colors.orange))
                   else if (_userPets.isEmpty)
                     Center(
                       child: Text(

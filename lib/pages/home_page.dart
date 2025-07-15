@@ -195,7 +195,18 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(height: 16),
                         FundraisingCard(
-                          fundraising: Fundraising.mockData,
+                          fundraising: Fundraising(
+                            id: 'fund_001',
+                            title: 'Animal Shelter Expansion',
+                            description: 'Help us expand our shelter to accommodate more animals in need.',
+                            currentAmount: 324223.21,
+                            goalAmount: 635000.00,
+                            creatorId: 'user_001',
+                            createdAt: DateTime.now(),
+                            endDate: DateTime.now().add(const Duration(days: 30)),
+                            status: 'active',
+                            supporterIds: ['user_001', 'user_002', 'user_003'],
+                          ),
                         ),
                         // Add bottom spacing to prevent nav bar overlap
                         const SizedBox(height: 120),

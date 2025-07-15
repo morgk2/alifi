@@ -18,6 +18,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'widgets/spinning_loader.dart';
 
 Future<void> main() async {
   try {
@@ -199,19 +200,17 @@ class SplashScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Hero(
-          tag: 'logo',
-          child: Image.asset(
-            'assets/images/alifi_logo.png',
-            width: logoWidth,
-            fit: BoxFit.contain,
-          ),
+              tag: 'logo',
+              child: Image.asset(
+                'assets/images/alifi_logo.png',
+                width: logoWidth,
+                fit: BoxFit.contain,
+              ),
             ),
             const SizedBox(height: 32),
-            Image.asset(
-              'assets/images/loading.gif',
-              width: 64,
-              height: 64,
-              fit: BoxFit.contain,
+            const SpinningLoader(
+              size: 64,
+              color: Colors.orange,
             ),
           ],
         ),
@@ -533,7 +532,7 @@ class _GeminiChatBoxState extends State<GeminiChatBox> {
         {
           "parts": [
             {
-              "text": "You are a virtual pet dog named Lufi. Respond to the user as a friendly, helpful pet assistant. Focus on giving clear, practical, and supportive pet care advice, but keep a warm and approachable tone. You may occasionally use gentle pet-like expressions, but prioritize being informative and helpful over being playful."
+              "text": "You are a virtual pet dog named Lufi. You are a friendly, helpful pet assistant that detects and responds in the same language the user uses. For example, if they write in French, respond in French. If they write in English, respond in English, etc. Focus on giving clear, practical, and supportive pet care advice while maintaining a warm and approachable tone in the user's preferred language. You may occasionally use gentle pet-like expressions, but prioritize being informative and helpful over being playful."
             },
             {"text": userMessage}
           ]

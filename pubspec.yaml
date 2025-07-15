@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  percent_indicator: ^4.2.3
   http: ^1.2.0
   flutter_svg: ^2.0.10+1
   flutter_colorpicker: ^1.0.3
@@ -65,12 +66,13 @@ flutter:
     - assets/images/cat_icon.png
     - assets/images/dog_icon.png
     - assets/images/ai_lufi.png
+    - assets/images/loading.png
     - assets/fonts/Inter-Italic-VariableFont_opsz,wght.ttf
     - assets/fonts/Inter-VariableFont_opsz,wght.ttf
     - assets/fonts/InterDisplay-Regular.ttf
     - assets/fonts/Montserrat-Black.ttf
     - assets/fonts/Montserrat-ExtraBold.ttf
-  
+    - assets/images/payment/
   fonts:
     - family: Inter
       fonts:

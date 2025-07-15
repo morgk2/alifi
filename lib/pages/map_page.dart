@@ -8,6 +8,7 @@ import '../config/mapbox_config.dart';
 import '../services/places_service.dart';
 import '../dialogs/report_missing_pet_dialog.dart';
 import '../dialogs/add_business_dialog.dart';
+import '../widgets/spinning_loader.dart';
 
 class MapPage extends StatefulWidget {
   final Function(bool)? onSearchFocusChange;

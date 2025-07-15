@@ -4,6 +4,7 @@ import '../services/database_service.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../pages/user_profile_page.dart';
+import '../widgets/spinning_loader.dart';
 
 class UserSearchPage extends StatefulWidget {
   const UserSearchPage({super.key});
@@ -84,7 +85,11 @@ class _UserSearchPageState extends State<UserSearchPage> {
 
     setState(() => _isLoading = true);
     try {
-      final users = await _databaseService.searchUsers(query);
+      final users = await _databaseService.searchUsers(
+        displayName: query,
+        username: query,
+        email: query,
+      );
       setState(() {
         _searchResults = users;
         _isLoading = false;
@@ -164,7 +169,7 @@ class _UserSearchPageState extends State<UserSearchPage> {
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: SpinningLoader(color: Colors.orange))
           : Column(
               children: [
                 // Show All Users button

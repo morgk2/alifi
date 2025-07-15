@@ -9,6 +9,7 @@ import 'base_dialog.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../widgets/spinning_loader.dart';
 
 class AddPetDialog extends StatefulWidget {
   const AddPetDialog({super.key});
@@ -149,8 +150,11 @@ class _AddPetDialogState extends State<AddPetDialog> {
         weight: _weight,
       );
 
+      // Convert XFile list to path strings
+      final imagePaths = _selectedImages.map((xFile) => xFile.path).toList();
+
       // Save pet with images
-      await dbService.createPetWithImages(pet, _selectedImages, userId);
+      await dbService.createPetWithImages(pet, imagePaths);
 
       if (mounted) {
         Navigator.of(context).pop(true);
@@ -484,6 +488,29 @@ class _AddPetDialogState extends State<AddPetDialog> {
     );
   }
 
+  // Add this method at the top of the class to maintain consistent text field styling
+  InputDecoration _getPillDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.grey),
+      filled: true,
+      fillColor: Colors.grey[100],
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: const BorderSide(color: Colors.orange, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+    );
+  }
+
   Widget _buildNameStep() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -499,18 +526,12 @@ class _AddPetDialogState extends State<AddPetDialog> {
         TextField(
           controller: _nameController,
           onChanged: (value) => setState(() => _name = value),
-          decoration: const InputDecoration(
-            labelText: 'Pet Name*',
-            border: OutlineInputBorder(),
-          ),
+          decoration: _getPillDecoration('Pet Name*'),
         ),
         const SizedBox(height: 16),
         TextField(
           onChanged: (value) => setState(() => _breed = value),
-          decoration: const InputDecoration(
-            labelText: 'Breed (optional)',
-            border: OutlineInputBorder(),
-          ),
+          decoration: _getPillDecoration('Breed (optional)'),
         ),
         const SizedBox(height: 32),
         ElevatedButton(
@@ -554,10 +575,7 @@ class _AddPetDialogState extends State<AddPetDialog> {
               _age = int.tryParse(value);
             });
           },
-          decoration: const InputDecoration(
-            labelText: 'Age in years',
-            border: OutlineInputBorder(),
-          ),
+          decoration: _getPillDecoration('Age in years'),
         ),
         const SizedBox(height: 32),
         ElevatedButton(
@@ -605,15 +623,18 @@ class _AddPetDialogState extends State<AddPetDialog> {
                     _weight = double.tryParse(value);
                   });
                 },
-                decoration: InputDecoration(
-                  labelText: 'Weight in $_weightUnit',
-                  border: const OutlineInputBorder(),
-                ),
+                decoration: _getPillDecoration('Weight in $_weightUnit'),
               ),
             ),
             const SizedBox(width: 16),
             TextButton(
               onPressed: _convertWeight,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
               child: Text(
                 _weightUnit == 'kg' ? 'Switch to lb' : 'Switch to kg',
                 style: const TextStyle(color: Colors.orange),
@@ -645,104 +666,209 @@ class _AddPetDialogState extends State<AddPetDialog> {
   }
 
   Widget _buildColorSelection() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text(
-          'Choose a color for your pet\'s profile',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 32),
-        BlockPicker(
-          pickerColor: _selectedColor,
-          onColorChanged: (color) {
-            setState(() => _selectedColor = color);
-          },
-          availableColors: const [
-            Colors.red,
-            Colors.pink,
-            Colors.purple,
-            Colors.deepPurple,
-            Colors.indigo,
-            Colors.blue,
-            Colors.lightBlue,
-            Colors.cyan,
-            Colors.teal,
-            Colors.green,
-            Colors.lightGreen,
-            Colors.lime,
-            Colors.yellow,
-            Colors.amber,
-            Colors.orange,
-            Colors.deepOrange,
-            Colors.brown,
-            Colors.grey,
-            Colors.blueGrey,
-            Colors.black,
-          ],
-          itemBuilder: (color, isCurrentColor, onTap) => Container(
-            margin: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color,
-              border: isCurrentColor
-                  ? Border.all(color: Colors.white, width: 4)
-                  : null,
-              boxShadow: isCurrentColor
-                  ? [
-                      BoxShadow(
-                        color: color.withOpacity(0.8),
-                        blurRadius: 8,
-                      )
-                    ]
-                  : null,
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Choose a color for your pet\'s profile',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
             ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(50),
-                child: Container(
-                  width: 32,
-                  height: 32,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 250, // Reduced height for color grid
+            child: BlockPicker(
+              pickerColor: _selectedColor,
+              onColorChanged: (color) {
+                setState(() => _selectedColor = color);
+              },
+              availableColors: const [
+                Colors.red,
+                Colors.pink,
+                Colors.purple,
+                Colors.deepPurple,
+                Colors.indigo,
+                Colors.blue,
+                Colors.lightBlue,
+                Colors.cyan,
+                Colors.teal,
+                Colors.green,
+                Colors.lightGreen,
+                Colors.lime,
+                Colors.yellow,
+                Colors.amber,
+                Colors.orange,
+                Colors.deepOrange,
+              ],
+              itemBuilder: (color, isCurrentColor, onTap) => Container(
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color,
+                  border: isCurrentColor
+                      ? Border.all(color: Colors.white, width: 4)
+                      : null,
+                  boxShadow: isCurrentColor
+                      ? [
+                          BoxShadow(
+                            color: color.withOpacity(0.8),
+                            blurRadius: 8,
+                          )
+                        ]
+                      : null,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onTap,
+                    borderRadius: BorderRadius.circular(50),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: _isLoading ? null : _nextStep,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(32),
-            ),
-          ),
-          child: _isLoading
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : const Text(
-                  'Finish',
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              TextButton(
+                onPressed: _previousStep,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                ),
+                child: const Text(
+                  'Back',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    color: Colors.grey,
                   ),
                 ),
-        ),
-      ],
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // Show confirmation dialog
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return Dialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.pets,
+                                size: 48,
+                                color: Colors.orange,
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Add Your Pet?',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Are you sure you want to add this pet to your profile?',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    child: const Text(
+                                      'Cancel',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () {
+                                            Navigator.of(context).pop();
+                                            _savePet();
+                                          },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(32),
+                                      ),
+                                    ),
+                                    child: _isLoading
+                                        ? const SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: SpinningLoader(
+                                              size: 24,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : const Text(
+                                            'Confirm',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(32),
+                  ),
+                  elevation: 2,
+                ),
+                child: const Text(
+                  'Confirm',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -777,7 +903,7 @@ class _AddPetDialogState extends State<AddPetDialog> {
               _buildProgressBar(),
               const SizedBox(height: 32),
               SizedBox(
-                height: 400,
+                height: 500, // Increased height to accommodate buttons
                 child: PageView(
                   controller: _wizardController,
                   physics: const NeverScrollableScrollPhysics(),

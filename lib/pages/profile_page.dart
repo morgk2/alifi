@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import 'edit_profile_page.dart';
 import '../services/database_service.dart'; // Added import for DatabaseService
 import 'user_search_page.dart'; // Added import for UserSearchPage
+import '../widgets/spinning_loader.dart';
 
 // Models for database-driven content
 class Achievement {
@@ -194,9 +195,8 @@ class ProfilePage extends StatelessWidget {
                       FutureBuilder<List<Achievement>>(
                         future: _fetchAchievements(),
                         builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
-                            return const Center(
-                                child: CircularProgressIndicator());
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: SpinningLoader(color: Colors.orange));
                           }
 
                           return Column(
@@ -272,9 +272,8 @@ class ProfilePage extends StatelessWidget {
                       FutureBuilder<List<Activity>>(
                         future: _fetchActivities(),
                         builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
-                            return const Center(
-                                child: CircularProgressIndicator());
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: SpinningLoader(color: Colors.orange));
                           }
 
                           return Column(

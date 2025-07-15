@@ -83,6 +83,71 @@ class DatabaseService {
     return snapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
   }
 
+  // User Follow/Unfollow Operations
+  Future<void> followUser(String currentUserId, String targetUserId) async {
+    // Add targetUser to currentUser's following list
+    await _usersCollection.doc(currentUserId).update({
+      'following': FieldValue.arrayUnion([targetUserId])
+    });
+
+    // Add currentUser to targetUser's followers list
+    await _usersCollection.doc(targetUserId).update({
+      'followers': FieldValue.arrayUnion([currentUserId])
+    });
+  }
+
+  Future<void> unfollowUser(String currentUserId, String targetUserId) async {
+    // Remove targetUser from currentUser's following list
+    await _usersCollection.doc(currentUserId).update({
+      'following': FieldValue.arrayRemove([targetUserId])
+    });
+
+    // Remove currentUser from targetUser's followers list
+    await _usersCollection.doc(targetUserId).update({
+      'followers': FieldValue.arrayRemove([currentUserId])
+    });
+  }
+
+  // Check if user is following another user
+  Future<bool> isFollowing(String currentUserId, String targetUserId) async {
+    final currentUser = await getUser(currentUserId);
+    return currentUser?.following.contains(targetUserId) ?? false;
+  }
+
+  // Get user's followers count
+  Future<int> getFollowersCount(String userId) async {
+    final user = await getUser(userId);
+    return user?.followers.length ?? 0;
+  }
+
+  // Get user's following count
+  Future<int> getFollowingCount(String userId) async {
+    final user = await getUser(userId);
+    return user?.following.length ?? 0;
+  }
+
+  // Get user's followers
+  Future<List<User>> getFollowers(String userId) async {
+    final user = await getUser(userId);
+    if (user == null || user.followers.isEmpty) return [];
+
+    final snapshot = await _usersCollection
+        .where(FieldPath.documentId, whereIn: user.followers)
+        .get();
+    return snapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
+  }
+
+  // Get user's following
+  Future<List<User>> getFollowing(String userId) async {
+    final user = await getUser(userId);
+    if (user == null || user.following.isEmpty) return [];
+
+    final snapshot = await _usersCollection
+        .where(FieldPath.documentId, whereIn: user.following)
+        .get();
+    return snapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
+  }
+
   // Pet Operations
   Future<String> createPet(Pet pet, {bool isGuest = false}) async {
     if (isGuest) {
@@ -98,6 +163,33 @@ class DatabaseService {
     } else {
       // For authenticated users, save to Firestore
       final docRef = await _petsCollection.add(pet.toFirestore());
+      return docRef.id;
+    }
+  }
+
+  // Pet Operations with Images
+  Future<String> createPetWithImages(Pet pet, List<String> localImagePaths, {bool isGuest = false}) async {
+    if (isGuest) {
+      // For guest mode, store images locally and save pet to local storage
+      final localPet = pet.copyWith(
+        id: _uuid.v4(),
+        ownerId: 'guest',
+        imageUrls: localImagePaths, // Store local paths directly
+        createdAt: DateTime.now(),
+        lastUpdatedAt: DateTime.now(),
+      );
+      await _localStorage.addGuestPet(localPet);
+      return localPet.id;
+    } else {
+      // For authenticated users, still store images locally for now
+      final petWithLocalImages = pet.copyWith(
+        imageUrls: localImagePaths, // Store local paths directly
+        createdAt: DateTime.now(),
+        lastUpdatedAt: DateTime.now(),
+      );
+
+      // Save pet to Firestore with local image paths
+      final docRef = await _petsCollection.add(petWithLocalImages.toFirestore());
       return docRef.id;
     }
   }
