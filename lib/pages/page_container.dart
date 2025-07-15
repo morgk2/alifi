@@ -6,7 +6,7 @@ import 'home_page.dart';
 import 'map_page.dart';
 import 'my_pets_page.dart';
 import 'marketplace_page.dart';
-import 'profile_page.dart';
+import 'user_search_page.dart';
 
 class PageContainer extends StatefulWidget {
   const PageContainer({super.key});
@@ -78,6 +78,11 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
         _hideController.forward();
       }
     });
+  }
+
+  // Helper to determine if nav bar background is dark based on theme brightness
+  bool _isNavBarBackgroundDark(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark;
   }
 
   @override
@@ -163,25 +168,53 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
 
   Widget _buildBottomNavBar() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final maxNavWidth = 320.0; // Current max width
-    final navWidth = screenWidth < maxNavWidth + 32 ? screenWidth - 32 : maxNavWidth;
+    const maxNavWidth = 320.0;
+    const minNavWidth = 220.0;
+    const minBarHeight = 44.0;
+    const minIconSize = 16.0;
+    double sidePadding = 16.0;
+    double barHeight = 64;
+    double iconSize = 24;
+    double indicatorHeight = 52;
+    double indicatorRadius = 26;
+    double searchButtonSize = barHeight;
+    double spacing = sidePadding < 12 ? 6 : 12;
+
+    // Responsive adjustments for very slim screens
+    if (screenWidth < minNavWidth + 2 * sidePadding + searchButtonSize + spacing) {
+      sidePadding = 6.0;
+      barHeight = 44;
+      iconSize = 16;
+      indicatorHeight = 36;
+      indicatorRadius = 14;
+      searchButtonSize = barHeight;
+      spacing = 4;
+    }
+
+    double navWidth = screenWidth - 2 * sidePadding - searchButtonSize - spacing;
+    if (navWidth > maxNavWidth) navWidth = maxNavWidth;
+    if (navWidth < minNavWidth) navWidth = minNavWidth;
     final itemWidth = navWidth / 4;
     final indicatorWidth = itemWidth;
+
+    final bool isDarkBg = _isNavBarBackgroundDark(context);
+    final Color defaultIconColor = isDarkBg ? Colors.white : Colors.black;
+    final Color activeIconColor = const Color(0xFFFF9E42);
 
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 24.0),
+        padding: EdgeInsets.only(left: sidePadding, right: sidePadding, bottom: 24.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(32),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Container(
                   width: navWidth,
-                  height: 64,
+                  height: barHeight,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.45),
                     borderRadius: BorderRadius.circular(32),
@@ -199,12 +232,12 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
                           top: 4,
                           child: Container(
                             width: indicatorWidth,
-                            height: 52,
+                            height: indicatorHeight,
                             padding: const EdgeInsets.symmetric(horizontal: 6),
                             child: Container(
                               decoration: BoxDecoration(
                                 color: Colors.grey[300]!.withOpacity(0.85),
-                                borderRadius: BorderRadius.circular(26),
+                                borderRadius: BorderRadius.circular(indicatorRadius),
                                 border: Border.all(
                                   color: Colors.black.withOpacity(0.15),
                                   width: 1,
@@ -228,32 +261,32 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
                               behavior: HitTestBehavior.opaque,
                               child: SizedBox(
                                 width: itemWidth,
-                                height: 64,
+                                height: barHeight,
                                 child: Center(
                                   child: index == 1 
                                     ? Icon(
                                         Icons.map,
-                                        size: 24,
+                                        size: iconSize,
                                         color: _currentIndex == index
-                                          ? const Color(0xFFFF9E42)
-                                          : Colors.black,
+                                          ? activeIconColor
+                                          : defaultIconColor,
                                       )
                                     : index == 2
                                       ? Icon(
                                           Icons.pets,
-                                          size: 24,
+                                          size: iconSize,
                                           color: _currentIndex == index
-                                            ? const Color(0xFFFF9E42)
-                                            : Colors.black,
+                                            ? activeIconColor
+                                            : defaultIconColor,
                                         )
                                       : SvgPicture.string(
                                         icons[index]!,
-                                        width: 24,
-                                        height: 24,
+                                        width: iconSize,
+                                        height: iconSize,
                                         colorFilter: ColorFilter.mode(
                                           _currentIndex == index
-                                              ? const Color(0xFFFF9E42)
-                                              : Colors.black,
+                                              ? activeIconColor
+                                              : defaultIconColor,
                                           BlendMode.srcIn,
                                         ),
                                       ),
@@ -268,14 +301,23 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            ClipRRect(
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UserSearchPage(),
+                  ),
+                );
+              },
+              child: ClipRRect(
               borderRadius: BorderRadius.circular(32),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Container(
-                  width: 64,
-                  height: 64,
+                  width: searchButtonSize,
+                  height: searchButtonSize,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.45),
                     shape: BoxShape.circle,
@@ -284,11 +326,12 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
                   child: Center(
                     child: SvgPicture.string(
                       AppIcons.searchIcon,
-                      width: 24,
-                      height: 24,
-                      colorFilter: const ColorFilter.mode(
-                        Colors.black,
+                      width: iconSize,
+                      height: iconSize,
+                      colorFilter: ColorFilter.mode(
+                        defaultIconColor,
                         BlendMode.srcIn,
+                        ),
                       ),
                     ),
                   ),

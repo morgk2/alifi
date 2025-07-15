@@ -26,13 +26,13 @@ class MarketplacePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(20.0),
+            const Padding(
+              padding: EdgeInsets.all(20.0),
               child: Row(
                 children: [
-                  const Icon(Icons.store, size: 24),
-                  const SizedBox(width: 8),
-                  const Text(
+                  Icon(Icons.store, size: 24),
+                  SizedBox(width: 8),
+                  Text(
                     'Marketplace',
                     style: TextStyle(
                       fontSize: 24,
@@ -293,9 +293,9 @@ class MarketplacePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
+          const Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               child: PlaceholderImage(
                 width: 200,
                 height: 160,
@@ -339,9 +339,9 @@ class MarketplacePage extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
+              const Expanded(
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
                   child: PlaceholderImage(
                     width: 160,
                     height: 120,

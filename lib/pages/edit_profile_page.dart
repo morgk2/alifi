@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/placeholder_image.dart';
 import '../icons.dart';
 import '../services/auth_service.dart';
+import '../services/database_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -17,6 +18,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _usernameController;
   late TextEditingController _displayNameController;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -69,29 +71,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final user = authService.currentUser;
     if (user == null) return;
 
-    // Update user data in Firestore
     final updatedUser = user.copyWith(
       username: _usernameController.text.trim(),
       displayName: _displayNameController.text.trim(),
     );
 
+    setState(() => _isSaving = true);
     try {
-      // Update Firestore document
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.id)
-          .update(updatedUser.toFirestore());
+      await DatabaseService().updateUser(updatedUser);
+      authService.updateCurrentUser(updatedUser);
 
       if (mounted) {
+        setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
+          const SnackBar(content: Text('Information saved!')),
         );
-        Navigator.pop(context);
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
+      setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update profile')),
+          SnackBar(content: Text('Failed to update profile: $e')),
         );
       }
     }
@@ -118,15 +119,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
         actions: [
           TextButton(
-            onPressed: _saveChanges,
-            child: const Text(
-              'Save',
-              style: TextStyle(
-                color: Color(0xFFFF9E42),
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            onPressed: _isSaving ? null : _saveChanges,
+            child: _isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text(
+                    'Save',
+                    style: TextStyle(
+                      color: Color(0xFFFF9E42),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -134,179 +141,197 @@ class _EditProfilePageState extends State<EditProfilePage> {
         builder: (context, authService, _) {
           final user = authService.currentUser;
 
-          return SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Profile Picture Section
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Stack(
-                        children: [
-                          if (user?.photoURL != null)
-                            CircleAvatar(
-                              radius: 60,
-                              backgroundImage: NetworkImage(user!.photoURL!),
-                            )
-                          else
-                            const PlaceholderImage(
-                              width: 120,
-                              height: 120,
-                              isCircular: true,
-                            ),
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFF9E42),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
+          return Stack(
+            children: [
+              SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Stack(
+                            children: [
+                              if (user?.photoURL != null)
+                                CircleAvatar(
+                                  radius: 60,
+                                  backgroundImage: NetworkImage(user!.photoURL!),
+                                )
+                              else
+                                const PlaceholderImage(
+                                  width: 120,
+                                  height: 120,
+                                  isCircular: true,
+                                ),
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF9E42),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    icon: const Icon(
+                                      Icons.camera_alt,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      // TODO: Implement image picker
+                                    },
+                                  ),
                                 ),
                               ),
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(
-                                  Icons.camera_alt,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  // TODO: Implement image picker
-                                },
-                              ),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Username',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _usernameController,
+                              decoration: const InputDecoration(
+                                hintText: '@username',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Username cannot be empty';
+                                }
+                                if (!RegExp(r'^@[a-zA-Z0-9_]{3,20}$').hasMatch(value.trim())) {
+                                  return 'Invalid username (3-20 chars, letters, numbers, _)';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'Display Name',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _displayNameController,
+                              decoration: const InputDecoration(
+                                hintText: 'Display Name',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Display name cannot be empty';
+                                }
+                                if (value.trim().length < 3) {
+                                  return 'Display name must be at least 3 characters';
+                                }
+                                if (value.trim().length > 30) {
+                                  return 'Display name must be at most 30 characters';
+                                }
+                                if (!RegExp(r"^[a-zA-Z0-9 _\-.'!]+$").hasMatch(value.trim())) {
+                                  return 'Display name contains invalid characters';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 32),
+                            const Text(
+                              'Linked Accounts',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildLinkedAccountTile(
+                              'Google',
+                              AppIcons.googleIcon,
+                              user?.linkedAccounts['google'] ?? false,
+                              () {
+                                // Already implemented in AuthService
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _buildLinkedAccountTile(
+                              'Facebook',
+                              AppIcons.facebookIcon,
+                              user?.linkedAccounts['facebook'] ?? false,
+                              () {
+                                // TODO: Implement Facebook account linking
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _buildLinkedAccountTile(
+                              'Apple',
+                              AppIcons.appleIcon,
+                              user?.linkedAccounts['apple'] ?? false,
+                              () {
+                                // TODO: Implement Apple account linking
+                              },
+                            ),
+                            const SizedBox(height: 40),
+                            Center(
+                              child: TextButton(
+                                onPressed: _showDeleteAccountDialog,
+                                child: const Text(
+                                  'Delete Account',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  // Form Fields
-                  Padding(
-                    padding: const EdgeInsets.all(16),
+                ),
+              ), // <-- ✅ comma added here
+              if (_isSaving)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.white.withOpacity(0.7),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Username',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _usernameController,
-                          decoration: InputDecoration(
-                            hintText: 'Enter username',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter a username';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Display Name',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _displayNameController,
-                          decoration: InputDecoration(
-                            hintText: 'Enter display name',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter a display name';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 32),
-                        // Linked Accounts Section
-                        const Text(
-                          'Linked Accounts',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        const SizedBox(height: 80),
+                        Image.asset(
+                          'assets/images/loading.gif',
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 16),
-                        _buildLinkedAccountTile(
-                          'Google',
-                          AppIcons.googleIcon,
-                          user?.linkedAccounts['google'] ?? false,
-                          () {
-                            // Already implemented in AuthService
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        _buildLinkedAccountTile(
-                          'Facebook',
-                          AppIcons.facebookIcon,
-                          user?.linkedAccounts['facebook'] ?? false,
-                          () {
-                            // TODO: Implement Facebook account linking
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        _buildLinkedAccountTile(
-                          'Apple',
-                          AppIcons.appleIcon,
-                          user?.linkedAccounts['apple'] ?? false,
-                          () {
-                            // TODO: Implement Apple account linking
-                          },
-                        ),
-                        const SizedBox(height: 40),
-                        // Delete Account Button
-                        Center(
-                          child: TextButton(
-                            onPressed: _showDeleteAccountDialog,
-                            child: const Text(
-                              'Delete Account',
-                              style: TextStyle(
-                                color: Colors.red,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
+                        const Text('Saving...', style: TextStyle(fontSize: 16)),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
+                ),
+            ],
           );
         },
       ),
@@ -372,4 +397,4 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ),
     );
   }
-} 
+}

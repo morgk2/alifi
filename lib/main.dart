@@ -15,6 +15,9 @@ import 'services/auth_service.dart';
 import 'services/device_performance.dart';
 import 'firebase_options.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 Future<void> main() async {
   try {
@@ -110,7 +113,7 @@ class MainApp extends StatelessWidget {
       create: (_) => AuthService()..init(),
       child: MaterialApp(
         theme: ThemeData(
-          fontFamily: 'Inter',
+          fontFamily: 'InterDisplay',
           primarySwatch: Colors.blue,
           scaffoldBackgroundColor: Colors.white,
           splashColor: Colors.transparent,
@@ -140,7 +143,7 @@ class MainApp extends StatelessWidget {
         ),
         home: const AuthWrapper(),
         builder: (context, child) {
-          // Add performance optimizations
+          // Only wrap with RepaintBoundary and ScrollConfiguration, no floating button
           return RepaintBoundary(
             child: ScrollConfiguration(
               behavior: ScrollConfiguration.of(context).copyWith(
@@ -166,8 +169,8 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
 
-    // Show splash screen while initializing
-    if (!authService.isInitialized) {
+    // Show splash screen while initializing or loading user
+    if (!authService.isInitialized || authService.isLoadingUser) {
       return const SplashScreen();
     }
 
@@ -192,13 +195,25 @@ class SplashScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: Hero(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Hero(
           tag: 'logo',
           child: Image.asset(
             'assets/images/alifi_logo.png',
             width: logoWidth,
             fit: BoxFit.contain,
           ),
+            ),
+            const SizedBox(height: 32),
+            Image.asset(
+              'assets/images/loading.gif',
+              width: 64,
+              height: 64,
+              fit: BoxFit.contain,
+            ),
+          ],
         ),
       ),
     );
@@ -214,8 +229,9 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+  
   late Animation<double> _fadeAnimation;
+  late AnimationController _animationController;
 
   @override
   void initState() {
@@ -288,11 +304,16 @@ class _LoginPageState extends State<LoginPage>
 
     return Scaffold(
       body: SafeArea(
+        child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+              ),
           child: Column(
             children: [
-              const Spacer(),
+                  const SizedBox(height: 40),
               Hero(
                 tag: 'logo',
                 flightShuttleBuilder: (
@@ -364,7 +385,7 @@ class _LoginPageState extends State<LoginPage>
                   ],
                 ),
               ),
-              const Spacer(),
+                  const SizedBox(height: 40),
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: Padding(
@@ -404,6 +425,8 @@ class _LoginPageState extends State<LoginPage>
                 ),
               ),
             ],
+              ),
+            ),
           ),
         ),
       ),
@@ -481,6 +504,386 @@ class _SocialButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class GeminiChatBox extends StatefulWidget {
+  const GeminiChatBox({super.key});
+
+  @override
+  State<GeminiChatBox> createState() => _GeminiChatBoxState();
+}
+
+class _GeminiChatBoxState extends State<GeminiChatBox> {
+  static final List<Map<String, String>> _messages = [];
+  final TextEditingController _controller = TextEditingController();
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  bool _loading = false;
+  static const String _apiKey = 'AIzaSyB32jJtKaieqAx2OLUs0TkXnBJD2zhuilc';
+
+  Future<String> _fetchGeminiReply(String userMessage) async {
+    final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$_apiKey');
+    final headers = {
+      'Content-Type': 'application/json',
+    };
+    final body = jsonEncode({
+      "contents": [
+        {
+          "parts": [
+            {
+              "text": "You are a virtual pet dog named Lufi. Respond to the user as a friendly, helpful pet assistant. Focus on giving clear, practical, and supportive pet care advice, but keep a warm and approachable tone. You may occasionally use gentle pet-like expressions, but prioritize being informative and helpful over being playful."
+            },
+            {"text": userMessage}
+          ]
+        }
+      ]
+    });
+    final response = await http.post(url, headers: headers, body: body);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['candidates'] != null && data['candidates'].isNotEmpty) {
+        final parts = data['candidates'][0]['content']['parts'];
+        if (parts != null && parts.isNotEmpty && parts[0]['text'] != null) {
+          return parts[0]['text'];
+        }
+      }
+      return 'No response from Gemini.';
+    } else {
+      return 'Error: ${response.statusCode}\n${response.body}';
+    }
+  }
+
+  Future<void> _sendMessage() async {
+    final userMessage = _controller.text.trim();
+    if (userMessage.isEmpty) return;
+    setState(() {
+      _messages.add({'role': 'user', 'text': userMessage});
+      _controller.clear();
+      _loading = true;
+    });
+    _listKey.currentState?.insertItem(_messages.length - 1);
+    final reply = await _fetchGeminiReply(userMessage);
+    setState(() {
+      _messages.add({'role': 'ai', 'text': reply});
+      _loading = false;
+    });
+    _listKey.currentState?.insertItem(_messages.length - 1);
+  }
+
+  Widget _buildMessage(BuildContext context, int index, Animation<double> animation) {
+    final msg = _messages[index];
+    final isUser = msg['role'] == 'user';
+    final text = msg['text'] ?? '';
+    final isOneLine = _isOneLine(text, context);
+    return SizeTransition(
+      sizeFactor: animation,
+      axisAlignment: -1.0,
+      child: Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (!isUser) ...[
+              CircleAvatar(
+                radius: 18,
+                backgroundImage: AssetImage('assets/images/ai_lufi.png'),
+                backgroundColor: Colors.transparent,
+              ),
+              const SizedBox(width: 8),
+            ],
+            Flexible(
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.3),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isUser ? Colors.deepPurple[100] : Colors.grey[200],
+                    borderRadius: isOneLine
+                        ? BorderRadius.circular(32)
+                        : BorderRadius.circular(20),
+                  ),
+                  child: isUser
+                      ? Text(
+                          text,
+                          style: const TextStyle(fontSize: 16),
+                        )
+                      : _buildFormattedAiMessage(text),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget to format AI message with bold/large titles for **Title** lines
+  Widget _buildFormattedAiMessage(String text) {
+    final lines = text.split('\n');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: lines.map((line) {
+        final boldTitle = RegExp(r'^\*\*(.+)\*\*$');
+        final match = boldTitle.firstMatch(line.trim());
+        if (match != null) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 4.0),
+            child: Text(
+              match.group(1)!,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+              ),
+            ),
+          );
+        } else {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 2.0),
+            child: Text(
+              line,
+              style: const TextStyle(fontSize: 16),
+            ),
+          );
+        }
+      }).toList(),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundImage: AssetImage('assets/images/ai_lufi.png'),
+            backgroundColor: Colors.transparent,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(32),
+              ),
+              child: _AnimatedTypingDots(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper to determine if the text is one line in the current context
+  bool _isOneLine(String text, BuildContext context) {
+    final span = TextSpan(text: text, style: const TextStyle(fontSize: 16));
+    final tp = TextPainter(
+      text: span,
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    );
+    tp.layout(maxWidth: MediaQuery.of(context).size.width * 0.7);
+    return !tp.didExceedMaxLines;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    return Stack(
+      children: [
+        // Transparent layer to detect taps outside the sheet
+        GestureDetector(
+          onTap: () => Navigator.of(context).maybePop(),
+          child: Container(
+            color: Colors.transparent,
+          ),
+        ),
+        DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 16,
+              offset: Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 6,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const Text(
+                  'AI pet assistant',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            Expanded(
+                  child: AnimatedList(
+                    key: _listKey,
+                controller: scrollController,
+                    initialItemCount: _messages.length,
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                    itemBuilder: (context, index, animation) => _buildMessage(context, index, animation),
+              ),
+            ),
+            if (_loading)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    child: _buildTypingIndicator(),
+              ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 8,
+                  right: 8,
+                  bottom: mq.viewInsets.bottom + mq.padding.bottom + 16, // Add safe space for nav bar
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(32), // pill shape
+                        ),
+                        child: TextField(
+                          controller: _controller,
+                          decoration: const InputDecoration(
+                            hintText: 'Type your message...',
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                          ),
+                          onSubmitted: (_) => _sendMessage(),
+                          enabled: !_loading,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurpleAccent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_upward_rounded),
+                        color: Colors.white,
+                        onPressed: _loading ? null : _sendMessage,
+                        iconSize: 24,
+                        splashRadius: 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Animated typing dots widget
+class _AnimatedTypingDots extends StatefulWidget {
+  @override
+  State<_AnimatedTypingDots> createState() => _AnimatedTypingDotsState();
+}
+
+class _AnimatedTypingDotsState extends State<_AnimatedTypingDots> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late List<Animation<double>> _dotAnimations;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+    _dotAnimations = List.generate(3, (i) {
+      // Each dot animates up and down in a wave, with a smooth loop
+      return TweenSequence([
+        TweenSequenceItem(
+          tween: Tween<double>(begin: 0, end: -8).chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 50,
+        ),
+        TweenSequenceItem(
+          tween: Tween<double>(begin: -8, end: 0).chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 50,
+        ),
+      ]).animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: Interval(i * 0.18, 0.64 + i * 0.18, curve: Curves.linear),
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 20,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(3, (i) {
+          return AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(0, _dotAnimations[i].value),
+                child: child,
+              );
+            },
+            child: Container(
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: Colors.grey[600],
+                shape: BoxShape.circle,
+              ),
+            ),
+          );
+        }),
       ),
     );
   }

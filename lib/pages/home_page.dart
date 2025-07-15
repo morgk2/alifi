@@ -12,6 +12,8 @@ import '../widgets/fundraising_card.dart';
 import 'notification_page.dart';
 import 'profile_page.dart';
 import 'settings_page.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import '../main.dart'; // For GeminiChatBox
 
 class HomePage extends StatefulWidget {
   final VoidCallback onNavigateToMap;
@@ -183,8 +185,10 @@ class _HomePageState extends State<HomePage> {
                             const Text(
                               'Fundraising',
                               style: TextStyle(
-                                fontSize: 24,
+                                fontFamily: 'Montserrat',
+                                fontSize: 28,
                                 fontWeight: FontWeight.w800,
+                                letterSpacing: -1.1,
                               ),
                             ),
                           ],
@@ -206,7 +210,7 @@ class _HomePageState extends State<HomePage> {
           AnimatedSlide(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            offset: Offset(0, _showHeader ? 0 : -1),
+            offset: Offset(0, (_showHeader && !_isAtTop) ? 0 : -1),
             child: ClipRect(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -249,23 +253,46 @@ class _HomePageState extends State<HomePage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              SvgPicture.string(
-                                AppIcons.trophyIcon,
-                                width: 28,
-                                height: 28,
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.menu),
+                                    onPressed: () => _navigateToSettings(context),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  SvgPicture.string(
+                                    AppIcons.trophyIcon,
+                                    width: 28,
+                                    height: 28,
+                                  ),
+                                ],
                               ),
                               Row(
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   _buildHeaderButton(
                                     icon: AppIcons.bellIcon,
-                                    onTap: () {},
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => const NotificationPage(),
+                                        ),
+                                      );
+                                    },
                                   ),
                                   const SizedBox(width: 8),
-                                  const CircleAvatar(
-                                    radius: 16,
-                                    backgroundColor: Colors.grey,
-                                    child: Icon(Icons.person, color: Colors.white),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) => const ProfilePage(),
+                                        ),
+                                      );
+                                    },
+                                    child: const CircleAvatar(
+                                      radius: 16,
+                                      backgroundColor: Colors.grey,
+                                      child: Icon(Icons.person, color: Colors.white),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -322,13 +349,15 @@ class _HomePageState extends State<HomePage> {
               ),
               Row(
                 children: [
+                  // Replace notification bell with Gemini chat button
                   _buildHeaderButton(
                     icon: AppIcons.bellIcon,
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationPage(),
-                        ),
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const GeminiChatBox(),
                       );
                     },
                   ),
@@ -403,8 +432,10 @@ class _HomePageState extends State<HomePage> {
         Text(
           "What's new?",
           style: TextStyle(
-            fontSize: 32,
+            fontFamily: 'Montserrat',
+            fontSize: 34,
             fontWeight: FontWeight.w800,
+            letterSpacing: -1.2,
           ),
         ),
       ],

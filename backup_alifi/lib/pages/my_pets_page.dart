@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
-import '../widgets/placeholder_image.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:blur/blur.dart';
-import 'package:flutter/rendering.dart';
-import 'dart:ui';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class MyPetsPage extends StatefulWidget {
@@ -23,7 +19,7 @@ class _MyPetsPageState extends State<MyPetsPage> {
   int _currentPetPage = 0;
 
   // Start with no pets
-  List<Map<String, dynamic>> _myPets = [];
+  final List<Map<String, dynamic>> _myPets = [];
 
   Widget _buildPetImage(Map<String, dynamic> pet) {
     if (kIsWeb && pet['webImage'] != null) {
@@ -1015,8 +1011,8 @@ class _AddPetWizardState extends State<AddPetWizard> {
                                           builder: (context, child) {
                                             return Theme(
                                               data: Theme.of(context).copyWith(
-                                                colorScheme: ColorScheme.light(
-                        primary: const Color(0xFFF59E0B),
+                                                colorScheme: const ColorScheme.light(
+                        primary: Color(0xFFF59E0B),
                                                   onPrimary: Colors.white,
                                                   surface: Colors.white,
                                                   onSurface: Colors.black,
@@ -1827,8 +1823,8 @@ class _EditPetWizardState extends State<EditPetWizard> {
                 builder: (context, child) {
                   return Theme(
                     data: Theme.of(context).copyWith(
-                      colorScheme: ColorScheme.light(
-                        primary: const Color(0xFFF59E0B),
+                      colorScheme: const ColorScheme.light(
+                        primary: Color(0xFFF59E0B),
                         onPrimary: Colors.white,
                         surface: Colors.white,
                         onSurface: Colors.black,

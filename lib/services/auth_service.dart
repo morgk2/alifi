@@ -20,6 +20,8 @@ class AuthService extends ChangeNotifier {
   SharedPreferences? _prefs;
   bool _initialized = false;
   bool _isGuestMode = false;
+  bool _isLoadingUser = false;
+  bool get isLoadingUser => _isLoadingUser;
 
   models.User? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null || _isGuestMode;
@@ -58,13 +60,46 @@ class AuthService extends ChangeNotifier {
       _auth.authStateChanges().listen((firebaseUser) async {
         if (firebaseUser == null) {
           _currentUser = null;
+          _isLoadingUser = false;
           await _prefs?.remove('user_id');
           // Don't notify if in guest mode
           if (!_isGuestMode) {
             notifyListeners();
           }
         } else {
-          await _loadUserData(firebaseUser.uid);
+          _isLoadingUser = true;
+          notifyListeners();
+          // Try to load from Firestore, but always set _currentUser at minimum
+          try {
+            await _loadUserData(firebaseUser.uid);
+            if (_currentUser == null) {
+              // Fallback if Firestore fails
+              _currentUser = models.User(
+                id: firebaseUser.uid,
+                email: firebaseUser.email ?? '',
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+                createdAt: DateTime.now(),
+                lastLoginAt: DateTime.now(),
+                linkedAccounts: {'google': true},
+              );
+              await _prefs?.setString('user_id', firebaseUser.uid);
+            }
+          } catch (e) {
+            // Fallback if anything fails
+            _currentUser = models.User(
+              id: firebaseUser.uid,
+              email: firebaseUser.email ?? '',
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+              createdAt: DateTime.now(),
+              lastLoginAt: DateTime.now(),
+              linkedAccounts: {'google': true},
+            );
+            await _prefs?.setString('user_id', firebaseUser.uid);
+          }
+          _isLoadingUser = false;
+          notifyListeners();
         }
       }, onError: (error) {
         print('Error in auth state listener: $error');
@@ -167,21 +202,37 @@ class AuthService extends ChangeNotifier {
             email: user.email!,
             displayName: user.displayName,
             photoURL: user.photoURL,
-            createdAt: DateTime.now(),
-            lastLoginAt: DateTime.now(),
+            createdAt: DateTime.now(), // This will be overwritten by server timestamp
+            lastLoginAt: DateTime.now(), // This will be overwritten by server timestamp
             linkedAccounts: {'google': true},
+            followersCount: 0,
+            followingCount: 0,
+            followers: const [],
+            following: const [],
+            pets: const [],
           );
-          await userDoc.set(newUser.toFirestore());
+          
+          // Use server timestamp when creating the document
+          final userData = newUser.toFirestore();
+          userData['createdAt'] = FieldValue.serverTimestamp();
+          userData['lastLoginAt'] = FieldValue.serverTimestamp();
+          await userDoc.set(userData);
           _currentUser = newUser;
           await _prefs?.setString('user_id', user.uid);
         } else {
-          // Update existing user's last login
+          // Update existing user's last login while preserving relationships and pets
           final existingUser = models.User.fromFirestore(userSnapshot);
           final updatedUser = existingUser.copyWith(
             lastLoginAt: DateTime.now(),
             linkedAccounts: {...existingUser.linkedAccounts, 'google': true},
+            // Preserve existing relationships
+            followers: existingUser.followers,
+            following: existingUser.following,
+            followersCount: existingUser.followersCount,
+            followingCount: existingUser.followingCount,
+            pets: existingUser.pets, // Preserve existing pets
           );
-          await userDoc.update(updatedUser.toFirestore());
+          await DatabaseService().updateUser(updatedUser);
           _currentUser = updatedUser;
           await _prefs?.setString('user_id', user.uid);
         }
@@ -199,6 +250,7 @@ class AuthService extends ChangeNotifier {
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
           linkedAccounts: {'google': true},
+          pets: const [], // Initialize empty pets array
         );
         await _prefs?.setString('user_id', user.uid);
         notifyListeners();
@@ -243,6 +295,11 @@ class AuthService extends ChangeNotifier {
     await dbService.transferGuestPetsToUser(user.id);
     _isGuestMode = false;
     await _localStorage.setGuestMode(false);
+    _currentUser = user;
+    notifyListeners();
+  }
+
+  void updateCurrentUser(models.User user) {
     _currentUser = user;
     notifyListeners();
   }

@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../widgets/placeholder_image.dart';
 import '../services/auth_service.dart';
 import 'edit_profile_page.dart';
+import '../services/database_service.dart'; // Added import for DatabaseService
+import 'user_search_page.dart'; // Added import for UserSearchPage
 
 // Models for database-driven content
 class Achievement {
@@ -111,7 +113,19 @@ class ProfilePage extends StatelessWidget {
               ),
             ],
           ),
-          body: SingleChildScrollView(
+          body: RefreshIndicator(
+            onRefresh: () async {
+              // Reload user data from Firestore and update AuthService
+              if (user != null) {
+                final dbService = DatabaseService();
+                final freshUser = await dbService.getUser(user.id);
+                if (freshUser != null) {
+                  authService.updateCurrentUser(freshUser);
+                }
+              }
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               children: [
                 Container(
@@ -328,6 +342,7 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
               ],
+              ),
             ),
           ),
         );

@@ -150,9 +150,9 @@ class CategoryPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
+          const Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               child: PlaceholderImage(
                 width: double.infinity,
                 height: double.infinity,

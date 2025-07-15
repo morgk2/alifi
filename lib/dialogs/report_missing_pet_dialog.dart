@@ -18,6 +18,18 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
   late AnimationController _animationController;
   late Animation<double> _animation;
 
+  // Add pet type state
+  String _selectedType = 'dog';
+  final List<Map<String, dynamic>> _petTypes = [
+    {'type': 'dog', 'asset': 'assets/images/dog_icon.png'},
+    {'type': 'cat', 'asset': 'assets/images/cat_icon.png'},
+  ];
+
+  // For swipeable steps
+  final PageController _pageController = PageController();
+  int _currentStep = 0;
+  final int _totalSteps = 5; // Updated to include Last Seen and Reward steps
+
   bool get _isValid =>
       _selectedImage != null &&
       _nameController.text.trim().isNotEmpty &&
@@ -43,6 +55,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
     _descriptionController.dispose();
     _rewardController.dispose();
     _animationController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -77,6 +90,20 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
     setState(() {
       _selectedImage = 'assets/images/placeholder_pet.jpg';
     });
+  }
+
+  void _nextStep() {
+    if (_currentStep < _totalSteps - 1) {
+      setState(() => _currentStep++);
+      _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.ease);
+    }
+  }
+
+  void _prevStep() {
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+      _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.ease);
+    }
   }
 
   void _showValidationError() {
@@ -348,6 +375,11 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxDialogHeight = screenHeight * 0.9;
+    final maxDialogWidth = screenWidth * 0.95;
+
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
@@ -359,12 +391,17 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
               insetPadding: EdgeInsets.zero,
               backgroundColor: Colors.transparent,
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(24),
+                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                constraints: BoxConstraints(
+                  maxHeight: maxDialogHeight,
+                  maxWidth: maxDialogWidth,
+                ),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
                 ),
+                child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -377,8 +414,88 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 24),
-                    // Pet Image
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 420, // Fixed height for PageView
+                        child: PageView(
+                          controller: _pageController,
+                          physics: const BouncingScrollPhysics(),
+                          onPageChanged: (index) => setState(() => _currentStep = index),
+                          children: [
+                            // Step 1: Pet Type Selector
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                double availableWidth = constraints.maxWidth;
+                                double circleSize = 120; // Increased from 72
+                                double iconSize = 64; // Increased from 40
+                                if (availableWidth < 350) {
+                                  circleSize = 96; // Increased from 48
+                                  iconSize = 48; // Increased from 28
+                                }
+                                bool showCircle = availableWidth >= 250;
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    const Text(
+                                      'Select Pet Type',
+                                      style: TextStyle(
+                                        fontSize: 18, // Increased from 16
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 32), // Increased from 24
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: _petTypes.map((petType) {
+                                        final isSelected = _selectedType == petType['type'];
+                                        return GestureDetector(
+                                          onTap: () => setState(() => _selectedType = petType['type']),
+                                          child: Container(
+                                            margin: const EdgeInsets.symmetric(horizontal: 16), // Increased from 8
+                                            child: showCircle
+                                                ? AnimatedContainer(
+                                                    duration: const Duration(milliseconds: 200),
+                                                    width: circleSize,
+                                                    height: circleSize,
+                                                    decoration: BoxDecoration(
+                                                      color: isSelected ? Colors.red[100] : Colors.grey[200],
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
+                                                        color: isSelected ? Colors.red : Colors.grey[400]!,
+                                                        width: isSelected ? 4 : 1, // Increased from 3
+                                                      ),
+                                                    ),
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.all(16.0), // Increased from 8
+                                                      child: Image.asset(
+                                                        petType['asset'],
+                                                        width: iconSize,
+                                                        height: iconSize,
+                                                        color: isSelected ? Colors.red : Colors.grey[700],
+                                                        colorBlendMode: BlendMode.srcIn,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : Image.asset(
+                                                    petType['asset'],
+                                                    width: iconSize,
+                                                    height: iconSize,
+                                                    color: isSelected ? Colors.red : Colors.grey[700],
+                                                    colorBlendMode: BlendMode.srcIn,
+                                                  ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                            // Step 2: Image and Name
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
                     Center(
                       child: GestureDetector(
                         onTap: () => _pickImage(),
@@ -423,7 +540,6 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // Pet Name
                     const Text(
                       'Pet Name',
                       style: TextStyle(
@@ -445,13 +561,17 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                         controller: _nameController,
                         decoration: const InputDecoration(
                           hintText: 'Enter your pet\'s name (Required)',
-                          contentPadding: EdgeInsets.all(16),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Adjusted padding
                           border: InputBorder.none,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    // Description
+                              ],
+                            ),
+                            // Step 3: Description
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
                     const Text(
                       'Description',
                       style: TextStyle(
@@ -473,15 +593,18 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                         controller: _descriptionController,
                         maxLines: 4,
                         decoration: const InputDecoration(
-                          hintText:
-                              'Describe your pet - size, color, distinctive features... (Required)',
-                          contentPadding: EdgeInsets.all(16),
+                                      hintText: 'Describe your pet - size, color, distinctive features... (Required)',
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Adjusted padding
                           border: InputBorder.none,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    // Last seen
+                              ],
+                            ),
+                            // Step 4: Last seen
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
                     const Text(
                       'Last seen',
                       style: TextStyle(
@@ -535,8 +658,12 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    // Reward
+                              ],
+                            ),
+                            // Step 5: Reward (optional)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
                     const Text(
                       'Reward (optional)',
                       style: TextStyle(
@@ -556,16 +683,41 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                       ),
                       child: TextField(
                         controller: _rewardController,
-                        keyboardType: TextInputType.text,
+                                    keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
-                          hintText: 'DZD',
-                          contentPadding: EdgeInsets.all(16),
+                                      hintText: 'Enter reward amount in DZD (Optional)',
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Adjusted padding
                           border: InputBorder.none,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 32),
-                    // Buttons
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          if (_currentStep > 0)
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back_ios),
+                              onPressed: _prevStep,
+                            )
+                          else
+                            const SizedBox(width: 48),
+                          Text('Step ${_currentStep + 1} of $_totalSteps'),
+                          if (_currentStep < _totalSteps - 1)
+                            IconButton(
+                              icon: const Icon(Icons.arrow_forward_ios),
+                              onPressed: _nextStep,
+                            )
+                          else
+                            const SizedBox(width: 48),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
@@ -608,6 +760,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                       ],
                     ),
                   ],
+                  ),
                 ),
               ),
             ),

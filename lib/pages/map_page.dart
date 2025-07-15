@@ -151,7 +151,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
   Future<void> _searchPlaces(String query) async {
     if (_currentPosition == null || query.isEmpty) {
-      print('Cannot search: position=$_currentPosition, query=$query'); // Debug log
+      print('Cannot search: position= [38;5;246m$_currentPosition [0m, query=$query'); // Debug log
       return;
     }
 
@@ -161,7 +161,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
     try {
       print('Searching from position: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}'); // Debug log
-      final results = await _placesService.searchNearby(
+      // Remove the forced 'veterinary' keyword so all business types can be found
+      final results = await _placesService.searchNearbyBroad(
         query: query,
         location: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
         radiusKm: 20, // Increased search radius
@@ -364,101 +365,151 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     );
   }
 
-  Widget _buildSearchResults() {
+  Widget _buildAnimatedSearchPanel() {
+    final bool showPanel = _isSearchFocused || _searchController.text.isNotEmpty;
+    return showPanel
+        ? Positioned.fill(
+            top: 90, // Height of the search bar area
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 250),
+              opacity: showPanel ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !showPanel,
+                child: Container(
+                  color: Colors.white.withOpacity(0.97),
+                  child: SafeArea(
+                    top: false,
+                    child: _searchController.text.isEmpty
+                        ? _buildRecentSearchesChips()
+                        : _buildAnimatedSearchResults(),
+                  ),
+                ),
+              ),
+            ),
+          )
+        : const SizedBox.shrink();
+  }
+
+  Widget _buildAnimatedSearchResults() {
     if (_isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: CircularProgressIndicator(),
-        ),
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 32),
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          const Text('Searching...', style: TextStyle(color: Colors.grey)),
+        ],
       );
     }
-
     if (_searchResults.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16.0),
-        child: const Text(
-          'No results found. Try a different search term.',
-          style: TextStyle(color: Colors.grey),
-        ),
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 32),
+          Icon(Icons.search_off, size: 48, color: Colors.grey[300]),
+          const SizedBox(height: 12),
+          const Text('No results found', style: TextStyle(color: Colors.grey)),
+        ],
       );
     }
-
-    return ListView.builder(
+    return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _searchResults.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final place = _searchResults[index];
-        return ListTile(
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(Icons.local_hospital, color: Colors.blue),
+        IconData icon = Icons.location_on;
+        Color iconColor = Colors.blue;
+        if (place.placeType != null) {
+          if (place.placeType!.toLowerCase().contains('vet')) {
+            icon = Icons.local_hospital;
+            iconColor = Colors.redAccent;
+          } else if (place.placeType!.toLowerCase().contains('shop')) {
+            icon = Icons.store;
+            iconColor = Colors.orange;
+          }
+        }
+        return AnimatedContainer(
+          duration: Duration(milliseconds: 200 + index * 30),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
-          title: Text(place.name),
-          subtitle: Text(place.address),
-          trailing: place.distance != null
-              ? Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    place.distance!,
-                    style: TextStyle(
-                      color: Colors.grey[700],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+          child: ListTile(
+            leading: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: iconColor, size: 28),
+            ),
+            title: Text(
+              place.name,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+            subtitle: Text(
+              place.address,
+              style: const TextStyle(fontSize: 13, color: Colors.grey),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: place.distance != null
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                )
-              : null,
-          onTap: () => _selectPlace(place),
+                    child: Text(
+                      place.distance!,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  )
+                : null,
+            onTap: () => _selectPlace(place),
+            splashColor: Colors.blue.withOpacity(0.08),
+            hoverColor: Colors.blue.withOpacity(0.04),
+          ),
         );
       },
     );
   }
 
-  Widget _buildRecentSearches() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            'Recent Searches',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-          ),
-        ),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _recentSearches.length,
-          itemBuilder: (context, index) {
-            return ListTile(
-              leading: const Icon(Icons.history),
-              title: Text(_recentSearches[index]),
-              onTap: () {
-                _searchController.text = _recentSearches[index];
-                _searchPlaces(_recentSearches[index]);
-              },
-            );
-          },
-        ),
-      ],
+  Widget _buildRecentSearchesChips() {
+    if (_recentSearches.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: _recentSearches.map((search) {
+          return ActionChip(
+            label: Text(search),
+            avatar: const Icon(Icons.history, size: 18, color: Colors.grey),
+            backgroundColor: Colors.grey[100],
+            onPressed: () {
+              _searchController.text = search;
+              _searchPlaces(search);
+            },
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -526,34 +577,40 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: TextField(
-                            focusNode: _searchFocusNode,
-                            controller: _searchController,
-                            decoration: InputDecoration(
-                              hintText: 'Search for veterinarians, pet shops...',
-                              prefixIcon: const Icon(Icons.search),
-                              suffixIcon: _isSearchFocused
-                                  ? IconButton(
-                                      icon: const Icon(Icons.close),
-                                      onPressed: _clearSearch,
-                                    )
-                                  : null,
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
+                              child: TextField(
+                                focusNode: _searchFocusNode,
+                                controller: _searchController,
+                                decoration: InputDecoration(
+                                  hintText: 'Search for veterinarians, pet shops... ',
+                                  prefixIcon: const Icon(Icons.search),
+                                  suffixIcon: _isSearchFocused
+                                      ? IconButton(
+                                          icon: const Icon(Icons.close),
+                                          onPressed: _clearSearch,
+                                        )
+                                      : null,
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -586,29 +643,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                   ),
                 ),
               ),
-              // Search results
-              if (_isSearchFocused)
-                Expanded(
-                  child: AnimatedBuilder(
-                    animation: _animationController,
-                    builder: (context, child) {
-                      return Transform.translate(
-                        offset: Offset(0, _slideAnimation.value),
-                        child: Opacity(
-                          opacity: _fadeAnimation.value,
-                          child: Container(
-                            color: Colors.white,
-                            child: SingleChildScrollView(
-                              child: _searchController.text.isEmpty
-                                  ? _buildRecentSearches()
-                                  : _buildSearchResults(),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+              // The new animated search panel
+              _buildAnimatedSearchPanel(),
             ],
           ),
         ],

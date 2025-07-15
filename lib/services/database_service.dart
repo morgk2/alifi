@@ -19,7 +19,7 @@ class DatabaseService {
   }
 
   Future<void> updateUser(User user) async {
-    await _usersCollection.doc(user.id).update(user.toFirestore());
+    await _usersCollection.doc(user.id).set(user.toFirestore(), SetOptions(merge: true));
   }
 
   Future<User?> getUser(String userId) async {
@@ -32,6 +32,55 @@ class DatabaseService {
         .doc(userId)
         .snapshots()
         .map((doc) => doc.exists ? User.fromFirestore(doc) : null);
+  }
+
+  // User Search Operations
+  Future<List<User>> searchUsers({
+    String? displayName,
+    String? username,
+    String? email,
+    int limit = 10,
+  }) async {
+    Query query = _usersCollection;
+
+    // Add filters based on search criteria
+    if (displayName != null && displayName.isNotEmpty) {
+      final searchName = displayName.toLowerCase();
+      query = query.where('displayName_lower', isGreaterThanOrEqualTo: searchName)
+                  .where('displayName_lower', isLessThan: searchName + '\uf8ff');
+    }
+
+    if (username != null && username.isNotEmpty) {
+      final searchUsername = username.toLowerCase();
+      query = query.where('username_lower', isGreaterThanOrEqualTo: searchUsername)
+                  .where('username_lower', isLessThan: searchUsername + '\uf8ff');
+    }
+
+    if (email != null && email.isNotEmpty) {
+      final searchEmail = email.toLowerCase();
+      query = query.where('email', isGreaterThanOrEqualTo: searchEmail)
+                  .where('email', isLessThan: searchEmail + '\uf8ff');
+    }
+
+    // Apply limit and get results
+    final snapshot = await query.limit(limit).get();
+    return snapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
+  }
+
+  Future<List<User>> getAllUsers({int limit = 50}) async {
+    final snapshot = await _usersCollection
+        .orderBy('lastLoginAt', descending: true)
+        .limit(limit)
+        .get();
+    return snapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
+  }
+
+  Future<List<User>> getRecentUsers({int limit = 10}) async {
+    final snapshot = await _usersCollection
+        .orderBy('lastLoginAt', descending: true)
+        .limit(limit)
+        .get();
+    return snapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
   }
 
   // Pet Operations

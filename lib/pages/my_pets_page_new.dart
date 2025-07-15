@@ -23,7 +23,7 @@ class _MyPetsPageState extends State<MyPetsPage> {
   int _currentPetPage = 0;
 
   // Start with no pets
-  List<Map<String, dynamic>> _myPets = [];
+  final List<Map<String, dynamic>> _myPets = [];
 
   Widget _buildPetImage(Map<String, dynamic> pet) {
     if (kIsWeb && pet['webImage'] != null) {
@@ -410,13 +410,12 @@ class _MyPetsPageState extends State<MyPetsPage> {
                                           builder: (context, child) {
                                             return Theme(
                                               data: Theme.of(context).copyWith(
-                                                colorScheme: ColorScheme.light(
+                                                colorScheme: const ColorScheme.light(
                                                   primary: Colors.orange,
                                                   onPrimary: Colors.white,
                                                   surface: Colors.white,
                                                   onSurface: Colors.black,
-                                                ),
-                                                dialogBackgroundColor: Colors.white,
+                                                ), dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
                                               ),
                                               child: child!,
                                             );

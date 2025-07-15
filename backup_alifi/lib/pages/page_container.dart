@@ -6,7 +6,6 @@ import 'home_page.dart';
 import 'map_page.dart';
 import 'my_pets_page.dart';
 import 'marketplace_page.dart';
-import 'profile_page.dart';
 
 class PageContainer extends StatefulWidget {
   const PageContainer({super.key});
@@ -163,7 +162,7 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
 
   Widget _buildBottomNavBar() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final maxNavWidth = 320.0; // Current max width
+    const maxNavWidth = 320.0; // Current max width
     final navWidth = screenWidth < maxNavWidth + 32 ? screenWidth - 32 : maxNavWidth;
     final itemWidth = navWidth / 4;
     final indicatorWidth = itemWidth;

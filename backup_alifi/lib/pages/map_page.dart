@@ -151,7 +151,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
   Future<void> _searchPlaces(String query) async {
     if (_currentPosition == null || query.isEmpty) {
-      print('Cannot search: position=${_currentPosition}, query=$query'); // Debug log
+      print('Cannot search: position=$_currentPosition, query=$query'); // Debug log
       return;
     }
 
@@ -470,13 +470,13 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           // Map
           FlutterMap(
             mapController: _mapController,
-            options: MapOptions(
-              initialCenter: const LatLng(
+            options: const MapOptions(
+              initialCenter: LatLng(
                 37.7749, // Default latitude (e.g., San Francisco)
                 -122.4194, // Default longitude (e.g., San Francisco)
               ),
               initialZoom: 12.0, // Default zoom level
-              interactionOptions: const InteractionOptions(
+              interactionOptions: InteractionOptions(
                 enableScrollWheel: true,
                 enableMultiFingerGestureRace: true,
               ),

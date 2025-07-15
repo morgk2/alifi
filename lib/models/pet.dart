@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Pet {
   final String id;
   final String name;
-  final String species; // 'dog', 'cat', etc.
+  final String species;
   final String breed;
   final String color;
   final int age;
@@ -14,12 +14,13 @@ class Pet {
   final String ownerId;
   final DateTime createdAt;
   final DateTime lastUpdatedAt;
-  final Map<String, dynamic> medicalInfo; // vaccinations, conditions, etc.
-  final Map<String, dynamic> dietaryInfo; // food preferences, allergies, etc.
+  final Map<String, dynamic> medicalInfo;
+  final Map<String, dynamic> dietaryInfo;
   final List<String> tags;
-  final bool isActive; // to soft delete pets
+  final bool isActive;
+  final double? weight; // Added weight property
 
-  const Pet({
+  Pet({
     required this.id,
     required this.name,
     required this.species,
@@ -36,31 +37,9 @@ class Pet {
     required this.medicalInfo,
     required this.dietaryInfo,
     required this.tags,
-    required this.isActive,
+    this.isActive = true,
+    this.weight, // Added weight parameter
   });
-
-  factory Pet.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Pet(
-      id: doc.id,
-      name: data['name'] ?? '',
-      species: data['species'] ?? '',
-      breed: data['breed'] ?? '',
-      color: data['color'] ?? '',
-      age: data['age'] ?? 0,
-      gender: data['gender'] ?? '',
-      microchipId: data['microchipId'],
-      description: data['description'],
-      imageUrls: List<String>.from(data['imageUrls'] ?? []),
-      ownerId: data['ownerId'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      lastUpdatedAt: (data['lastUpdatedAt'] as Timestamp).toDate(),
-      medicalInfo: Map<String, dynamic>.from(data['medicalInfo'] ?? {}),
-      dietaryInfo: Map<String, dynamic>.from(data['dietaryInfo'] ?? {}),
-      tags: List<String>.from(data['tags'] ?? []),
-      isActive: data['isActive'] ?? true,
-    );
-  }
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -80,7 +59,57 @@ class Pet {
       'dietaryInfo': dietaryInfo,
       'tags': tags,
       'isActive': isActive,
+      'weight': weight, // Added weight to Firestore data
     };
+  }
+
+  factory Pet.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    
+    // Helper function to safely convert timestamps
+    DateTime getTimestamp(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is Timestamp) return value.toDate();
+      return DateTime.now();
+    }
+
+    // Helper function to safely convert maps
+    Map<String, dynamic> getMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        // Convert LinkedMap to regular Map
+        return Map<String, dynamic>.from(value.map((key, val) => MapEntry(key.toString(), val)));
+      }
+      return {};
+    }
+
+    // Helper function to safely convert lists
+    List<String> getStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) return List<String>.from(value.map((e) => e.toString()));
+      return [];
+    }
+
+    return Pet(
+      id: doc.id,
+      name: data['name']?.toString() ?? '',
+      species: data['species']?.toString() ?? '',
+      breed: data['breed']?.toString() ?? '',
+      color: data['color']?.toString() ?? '',
+      age: (data['age'] as num?)?.toInt() ?? 0,
+      gender: data['gender']?.toString() ?? '',
+      microchipId: data['microchipId']?.toString(),
+      description: data['description']?.toString(),
+      imageUrls: getStringList(data['imageUrls']),
+      ownerId: data['ownerId']?.toString() ?? '',
+      createdAt: getTimestamp(data['createdAt']),
+      lastUpdatedAt: getTimestamp(data['lastUpdatedAt']),
+      medicalInfo: getMap(data['medicalInfo']),
+      dietaryInfo: getMap(data['dietaryInfo']),
+      tags: getStringList(data['tags']),
+      isActive: data['isActive'] as bool? ?? true,
+      weight: (data['weight'] as num?)?.toDouble(), // Added weight from Firestore data
+    );
   }
 
   Pet copyWith({
@@ -101,6 +130,7 @@ class Pet {
     Map<String, dynamic>? dietaryInfo,
     List<String>? tags,
     bool? isActive,
+    double? weight, // Added weight to copyWith
   }) {
     return Pet(
       id: id ?? this.id,
@@ -120,6 +150,7 @@ class Pet {
       dietaryInfo: dietaryInfo ?? this.dietaryInfo,
       tags: tags ?? this.tags,
       isActive: isActive ?? this.isActive,
+      weight: weight ?? this.weight, // Added weight to new instance
     );
   }
 } 
