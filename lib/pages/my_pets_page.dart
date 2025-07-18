@@ -9,6 +9,21 @@ import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../models/pet.dart';
 import '../dialogs/add_pet_dialog.dart';
+import '../widgets/spinning_loader.dart';
+import 'dart:ui';
+import '../dialogs/report_missing_pet_dialog.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
+// Helper to parse color string to Color
+Color _parseColor(String colorString) {
+  // Flutter's Color.toString() outputs 'Color(0xff123456)'
+  final hexMatch = RegExp(r'0x[a-fA-F0-9]{8}').firstMatch(colorString);
+  if (hexMatch != null) {
+    return Color(int.parse(hexMatch.group(0)!));
+  }
+  // fallback
+  return const Color(0xFFF59E0B);
+}
 
 class MyPetsPage extends StatefulWidget {
   const MyPetsPage({super.key});
@@ -87,11 +102,20 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
       );
     }
     
-    return Image.network(
-      pet.imageUrls.first,
+    return CachedNetworkImage(
+      imageUrl: pet.imageUrls.first,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Center(
+      placeholder: (context, url) => Center(
+        child: Text(
+          pet.name,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
+        ),
+      ),
+      errorWidget: (context, url, error) => Center(
           child: Text(
             pet.name,
             style: const TextStyle(
@@ -100,8 +124,8 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
               fontSize: 22,
             ),
           ),
-        );
-      },
+      ),
+      fadeInDuration: const Duration(milliseconds: 300),
     );
   }
 
@@ -223,7 +247,15 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit),
-                  onPressed: () => _showEditPetDialog(pet),
+                  onPressed: () async {
+                    // Open AddPetDialog in edit mode, passing the pet info
+                    await showDialog(
+                      context: context,
+                      builder: (context) => AddPetDialog(
+                        pet: pet, // Pass the pet to edit
+                      ),
+                    );
+                  },
                   color: const Color(0xFFF59E0B),
                 ),
               ],
@@ -255,9 +287,9 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                     Expanded(
                       child: _buildInfoBox(
                         pet.age != null
-                            ? (pet.age! < 0
-                                ? '${-pet.age!} ${-pet.age! == 1 ? 'month' : 'months'}'
-                                : '${pet.age!} ${pet.age! == 1 ? 'year' : 'years'}')
+                            ? (pet.age < 0
+                                ? '${-pet.age} ${-pet.age == 1 ? 'month' : 'months'}'
+                                : '${pet.age} ${pet.age == 1 ? 'year' : 'years'}')
                             : 'Unknown',
                         const Color(0xFFFFF3E0),
                         Icons.cake,
@@ -325,7 +357,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
 
   Widget _buildPetList() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: SpinningLoader(color: Colors.orange));
     }
 
     if (_pets.isEmpty) {
@@ -402,13 +434,13 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                                         decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(0xFFF59E0B),
+                              color: _parseColor(pet.color),
                               width: 6,
                             ),
                           ),
                           child: ClipOval(
                             child: Container(
-              color: Colors.white,
+              color: Colors.white, // Always white inside
                               child: _buildPetImage(pet),
                             ),
                           ),
@@ -471,6 +503,236 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
     // TODO: Implement edit pet dialog
   }
 
+  void _showEditPetsDialog() async {
+    await showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.2),
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: StatefulBuilder(
+                builder: (context, setDialogState) {
+                  return Container(
+                    color: Colors.white.withOpacity(0.95),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Edit Pets', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                ),
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Close'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: 350,
+                          height: 400,
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: _pets.length,
+                            itemBuilder: (context, index) {
+                              final pet = _pets[index];
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: Colors.white,
+                                  radius: 24,
+                                  child: Icon(Icons.pets, color: _parseColor(pet.color)),
+                                ),
+                                title: Text(pet.name),
+                                subtitle: Text(pet.breed),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit, color: Colors.orange),
+                                      onPressed: () async {
+                                        Navigator.of(context).pop();
+                                        await showDialog(
+                                          context: context,
+                                          builder: (context) => AddPetDialog(pet: pet),
+                                        );
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete, color: Colors.red),
+                                      onPressed: () async {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          barrierColor: Colors.black.withOpacity(0.2),
+                                          builder: (context) => Dialog(
+                                            backgroundColor: Colors.transparent,
+                                            insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(28),
+                                              child: BackdropFilter(
+                                                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                                                child: Container(
+                                                  color: Colors.white.withOpacity(0.95),
+                                                  padding: const EdgeInsets.all(24),
+                                                  child: Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 48),
+                                                      const SizedBox(height: 16),
+                                                      Text('Delete Pet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
+                                                      const SizedBox(height: 8),
+                                                      Text('Are you sure you want to delete ${pet.name}?', textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
+                                                      const SizedBox(height: 24),
+                                                      Row(
+                                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                        children: [
+                                                          TextButton(
+                                                            style: TextButton.styleFrom(
+                                                              backgroundColor: Colors.orange,
+                                                              foregroundColor: Colors.white,
+                                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                                            ),
+                                                            onPressed: () => Navigator.of(context).pop(false),
+                                                            child: const Text('Cancel'),
+                                                          ),
+                                                          TextButton(
+                                                            style: TextButton.styleFrom(
+                                                              backgroundColor: Colors.red,
+                                                              foregroundColor: Colors.white,
+                                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                                            ),
+                                                            onPressed: () => Navigator.of(context).pop(true),
+                                                            child: const Text('Delete'),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                        if (confirm == true) {
+                                          await DatabaseService().deletePet(pet.id);
+                                          setDialogState(() {
+                                            _pets.removeAt(index);
+                                          });
+                                          setState(() {}); // Also update main page
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showReportMissingPetDialog() async {
+    if (_pets.isEmpty) {
+      await showDialog(
+        context: context,
+        builder: (context) => const ReportMissingPetDialog(),
+      );
+    } else {
+      await showDialog(
+        context: context,
+        barrierColor: Colors.black.withOpacity(0.2),
+        builder: (context) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(
+                  color: Colors.white.withOpacity(0.95),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Select a pet to report missing', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: 350,
+                        height: 300,
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _pets.length,
+                          itemBuilder: (context, index) {
+                            final pet = _pets[index];
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.white,
+                                radius: 24,
+                                child: Icon(Icons.pets, color: _parseColor(pet.color)),
+                              ),
+                              title: Text(pet.name),
+                              subtitle: Text(pet.breed),
+                              trailing: TextButton(
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                ),
+                                onPressed: () async {
+                                  Navigator.of(context).pop();
+                                  await showDialog(
+                                    context: context,
+                                    builder: (context) => ReportMissingPetDialog(pet: pet),
+                                  );
+                                },
+                                child: const Text('Report'),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
+  }
+
   @override
   void dispose() {
     _pageController.removeListener(_onPageScroll);
@@ -528,10 +790,33 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                       ),
                     ],
                   ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.search, size: 24),
-                  ),
+                 Row(
+                   children: [
+                     IconButton(
+                       onPressed: () {},
+                       icon: const Icon(Icons.search, size: 24),
+                     ),
+                     PopupMenuButton<String>(
+                       icon: const Icon(Icons.more_vert),
+                       color: Colors.white,
+                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                       itemBuilder: (context) => [
+                         const PopupMenuItem(
+                           value: 'edit_pets',
+                           child: Text('Edit Pets'),
+                         ),
+                         const PopupMenuItem(
+                           value: 'report_missing',
+                           child: Text('Report a missing pet'),
+                         ),
+                       ],
+                       onSelected: (value) {
+                         if (value == 'edit_pets') _showEditPetsDialog();
+                         if (value == 'report_missing') _showReportMissingPetDialog();
+                       },
+                     ),
+                   ],
+                 ),
                 ],
               ),
             ),

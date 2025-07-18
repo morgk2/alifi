@@ -13,7 +13,9 @@ class User {
   final List<String> following;
   final int followersCount;
   final int followingCount;
-  final List<String> pets;  // Added pets array to store pet IDs
+  final List<String> pets;
+  final int level;
+  final int petsRescued;
 
   User({
     required this.id,
@@ -28,7 +30,9 @@ class User {
     this.following = const [],
     this.followersCount = 0,
     this.followingCount = 0,
-    this.pets = const [],  // Initialize empty pets array
+    this.pets = const [],
+    this.level = 1,
+    this.petsRescued = 0,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -47,7 +51,9 @@ class User {
       'following': following,
       'followersCount': followersCount,
       'followingCount': followingCount,
-      'pets': pets,  // Include pets in Firestore document
+      'pets': pets,
+      'level': level,
+      'petsRescued': petsRescued,
     };
   }
 
@@ -75,6 +81,8 @@ class User {
       followersCount: data['followersCount'] ?? 0,
       followingCount: data['followingCount'] ?? 0,
       pets: List<String>.from(data['pets'] ?? []),
+      level: data['level'] ?? 1,
+      petsRescued: data['petsRescued'] ?? 0,
     );
   }
 
@@ -91,7 +99,9 @@ class User {
     List<String>? following,
     int? followersCount,
     int? followingCount,
-    List<String>? pets,  // Add pets to copyWith
+    List<String>? pets,
+    int? level,
+    int? petsRescued,
   }) {
     return User(
       id: id ?? this.id,
@@ -106,7 +116,9 @@ class User {
       following: following ?? this.following,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
-      pets: pets ?? this.pets,  // Include pets in copyWith
+      pets: pets ?? this.pets,
+      level: level ?? this.level,
+      petsRescued: petsRescued ?? this.petsRescued,
     );
   }
 } 

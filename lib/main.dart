@@ -15,10 +15,10 @@ import 'services/auth_service.dart';
 import 'services/device_performance.dart';
 import 'firebase_options.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:google_generative_ai/google_generative_ai.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'widgets/spinning_loader.dart';
+import 'services/database_service.dart';
 
 Future<void> main() async {
   try {
@@ -110,8 +110,15 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
       create: (_) => AuthService()..init(),
+        ),
+        Provider(
+          create: (_) => DatabaseService(),
+        ),
+      ],
       child: MaterialApp(
         theme: ThemeData(
           fontFamily: 'InterDisplay',
@@ -209,7 +216,7 @@ class SplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             const SpinningLoader(
-              size: 64,
+              size: 32,
               color: Colors.orange,
             ),
           ],

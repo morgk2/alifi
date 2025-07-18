@@ -4,8 +4,9 @@ import '../widgets/placeholder_image.dart';
 import '../services/auth_service.dart';
 import 'edit_profile_page.dart';
 import '../services/database_service.dart'; // Added import for DatabaseService
-import 'user_search_page.dart'; // Added import for UserSearchPage
+// Added import for UserSearchPage
 import '../widgets/spinning_loader.dart';
+import '../models/pet.dart'; // Added import for Pet model
 
 // Models for database-driven content
 class Achievement {
@@ -89,6 +90,7 @@ class ProfilePage extends StatelessWidget {
       builder: (context, authService, _) {
         final user = authService.currentUser;
         final isAuthenticated = authService.isAuthenticated;
+        final isCurrentUser = true; // This page is only for the current user in this app
 
         return Scaffold(
           backgroundColor: Colors.grey[100],
@@ -116,7 +118,6 @@ class ProfilePage extends StatelessWidget {
           ),
           body: RefreshIndicator(
             onRefresh: () async {
-              // Reload user data from Firestore and update AuthService
               if (user != null) {
                 final dbService = DatabaseService();
                 final freshUser = await dbService.getUser(user.id);
@@ -129,66 +130,156 @@ class ProfilePage extends StatelessWidget {
               physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               children: [
+                  // Profile header
                 Container(
                   width: double.infinity,
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  decoration: BoxDecoration(
+                    margin: const EdgeInsets.symmetric(horizontal: 0),
+                    padding: const EdgeInsets.symmetric(vertical: 32),
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        offset: const Offset(0, 2),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
                   child: Column(
                     children: [
-                      if (user?.photoURL != null)
+                        if (user?.photoURL != null && user!.photoURL!.isNotEmpty)
                         CircleAvatar(
-                          radius: 60,
+                            radius: 54,
                           backgroundImage: NetworkImage(user!.photoURL!),
                         )
                       else
-                        const PlaceholderImage(
-                          width: 120,
-                          height: 120,
-                          isCircular: true,
+                          const CircleAvatar(
+                            radius: 54,
+                            backgroundColor: Colors.grey,
+                            child: Icon(Icons.person, size: 54, color: Colors.white),
                         ),
                       const SizedBox(height: 16),
                       Text(
-                        user?.username ?? user?.displayName ?? '@username',
+                          user?.displayName ?? '',
                         style: const TextStyle(
-                          fontSize: 20,
+                            fontSize: 24,
                           fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (user?.email != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          user!.email,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
                           ),
                         ),
+                        const SizedBox(height: 16),
+                        // Stats row
+                        Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      (user?.petsRescued ?? 0).toString(),
+                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      (user?.followersCount ?? 0).toString(),
+                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      (user?.level ?? 1).toString(),
+                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Text(
+                                      'Pets\nRescued',
+                                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Text(
+                                      'Followers',
+                                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Text(
+                                      'Level',
+                                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (isCurrentUser)
+                          OutlinedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const EditProfilePage(),
+                                ),
+                              );
+                            },
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              side: const BorderSide(color: Color(0xFFFFB300)),
+                              foregroundColor: const Color(0xFFFFB300),
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                            ),
+                            child: const Text('Edit profile', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  // Achievements
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(top: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Achievements',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Row(
+                            children: const [
+                              Icon(Icons.emoji_events, size: 24, color: Colors.black),
+                              SizedBox(width: 8),
+                              Text('Achievements', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            ],
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -198,147 +289,107 @@ class ProfilePage extends StatelessWidget {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: SpinningLoader(color: Colors.orange));
                           }
-
-                          return Column(
-                            children: snapshot.data!
-                                .map((achievement) => Container(
-                                      margin: const EdgeInsets.only(bottom: 12),
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
-                                            offset: const Offset(0, 2),
-                                            blurRadius: 4,
-                                          ),
-                                        ],
-                                      ),
+                            final achievements = snapshot.data ?? [];
+                            return SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
                                       child: Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color: Colors.amber[100],
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Icon(
-                                              achievement.icon,
-                                              color: Colors.amber[800],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  achievement.title,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 16,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  achievement.description,
-                                                  style: TextStyle(
-                                                    color: Colors.grey[600],
-                                                    fontSize: 14,
-                                                  ),
+                                children: achievements.map((achievement) => _AchievementBadge(achievement: achievement)).toList(),
+                              ),
+                            );
+                          },
                                                 ),
                                               ],
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ))
-                                .toList(),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 32),
-                      const Text(
-                        'Recent Activity',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      FutureBuilder<List<Activity>>(
-                        future: _fetchActivities(),
+                  // Pets Owned (replace Last activities)
+                  FutureBuilder<List<Pet>>(
+                    future: DatabaseService().getUserPets(user!.id).first,
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: SpinningLoader(color: Colors.orange));
                           }
-
-                          return Column(
-                            children: snapshot.data!
-                                .map((activity) => Container(
-                                      margin: const EdgeInsets.only(bottom: 12),
-                                      padding: const EdgeInsets.all(16),
+                      final pets = snapshot.data ?? [];
+                      return Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(top: 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              child: Row(
+                                children: const [
+                                  Icon(Icons.pets, size: 22, color: Colors.black),
+                                  SizedBox(width: 8),
+                                  Text('Owned pets', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            pets.isEmpty
+                                ? const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 24),
+                                    child: Text('No pets found.', style: TextStyle(color: Colors.grey)),
+                                  )
+                                : SizedBox(
+                                    height: 120,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      itemCount: pets.length,
+                                      itemBuilder: (context, index) {
+                                        final pet = pets[index];
+                                        return Container(
+                                          width: 100,
+                                          margin: const EdgeInsets.only(right: 16),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(16),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
+                                                color: Colors.black.withOpacity(0.06),
+                                                blurRadius: 8,
                                             offset: const Offset(0, 2),
-                                            blurRadius: 4,
+                                              ),
+                                            ],
                                           ),
-                                        ],
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color: Colors.blue[100],
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Icon(
-                                              activity.icon,
-                                              color: Colors.blue[800],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
                                             child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                            mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
+                                              pet.imageUrls.isNotEmpty
+                                                  ? CircleAvatar(
+                                                      radius: 32,
+                                                      backgroundImage: NetworkImage(pet.imageUrls.first),
+                                                    )
+                                                  : const CircleAvatar(
+                                                      radius: 32,
+                                                      backgroundColor: Colors.grey,
+                                                      child: Icon(Icons.pets, color: Colors.white),
+                                                    ),
+                                              const SizedBox(height: 8),
                                                 Text(
-                                                  activity.text,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 16,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
+                                                pet.name,
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                                textAlign: TextAlign.center,
+                                              ),
                                                 Text(
-                                                  activity.time,
-                                                  style: TextStyle(
-                                                    color: Colors.grey[600],
-                                                    fontSize: 14,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                                pet.breed,
+                                                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ],
                                           ),
-                                        ],
-                                      ),
-                                    ))
-                                .toList(),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                            const SizedBox(height: 32),
+                          ],
+                        ),
+                      );
+                    },
                 ),
               ],
               ),
@@ -346,6 +397,129 @@ class ProfilePage extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _ProfileStat extends StatelessWidget {
+  final String label;
+  final int value;
+  const _ProfileStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          value.toString(),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12), // Increased space between number and label
+        Text(
+          label,
+          style: const TextStyle(fontSize: 13, color: Colors.grey),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileStatDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1.5,
+      height: 36,
+      color: Colors.grey[300],
+    );
+  }
+}
+
+class _AchievementBadge extends StatelessWidget {
+  final Achievement achievement;
+  const _AchievementBadge({required this.achievement});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 110,
+      height: 150,
+      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.amber[50],
+            child: Icon(achievement.icon, size: 32, color: Colors.amber[800]),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            achievement.title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            achievement.description,
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActivityCard extends StatelessWidget {
+  final Activity activity;
+  const _ActivityCard({required this.activity});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(activity.icon, size: 28, color: Colors.black),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          activity.text,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          activity.time,
+          style: const TextStyle(fontSize: 11, color: Colors.grey),
+        ),
+      ],
     );
   }
 }

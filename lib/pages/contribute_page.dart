@@ -84,7 +84,7 @@ class _ContributePageState extends State<ContributePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${widget.fundraising.currentAmount.toStringAsFixed(2)}',
+                      widget.fundraising.currentAmount.toStringAsFixed(2),
                       style: const TextStyle(
                         color: Color(0xFF4CAF50),
                         fontWeight: FontWeight.bold,

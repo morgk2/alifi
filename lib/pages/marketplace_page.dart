@@ -143,26 +143,19 @@ class MarketplacePage extends StatelessWidget {
                     // New Listings Grid
                     SizedBox(
                       height: 240,
-                      child: ListView(
+                      child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        children: [
-                          _buildNewListingItem(
-                            'Car Seat Cover',
-                            6000,
-                            'Car seat cover for pets',
-                          ),
-                          _buildNewListingItem(
-                            'Pet Water Bottle',
-                            2100,
-                            'Portable water bottle',
-                          ),
-                          _buildNewListingItem(
-                            'Scratching Post',
-                            910,
-                            'Cat scratching post',
-                          ),
-                        ],
+                        itemCount: 3, // Assuming 3 items for now
+                        itemBuilder: (context, index) {
+                          return RepaintBoundary(
+                            child: _buildNewListingItem(
+                              'Car Seat Cover',
+                              6000,
+                              'Car seat cover for pets',
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -210,14 +203,15 @@ class MarketplacePage extends StatelessWidget {
                     // Top Sellers Grid
                     SizedBox(
                       height: 180,
-                      child: ListView(
+                      child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        children: [
-                          _buildTopSellerItem('Pet Food Toys', 150, 'Pet food toys', 1),
-                          _buildTopSellerItem('Red Dog Toy', 120, 'Red dog toy', 2),
-                          _buildTopSellerItem('Orange Pig Toy', 120, 'Orange pig toy', 3),
-                        ],
+                        itemCount: 3, // Assuming 3 items for now
+                        itemBuilder: (context, index) {
+                          return RepaintBoundary(
+                            child: _buildTopSellerItem('Pet Food Toys', 150, 'Pet food toys', 1),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: 20),

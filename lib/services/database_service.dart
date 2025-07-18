@@ -1,6 +1,9 @@
+import 'dart:math' show pi, cos;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:latlong2/latlong.dart' as latlong;
 import '../models/user.dart';
 import '../models/pet.dart';
+import '../models/lost_pet.dart';
 import 'local_storage_service.dart';
 import 'package:uuid/uuid.dart';
 
@@ -12,6 +15,7 @@ class DatabaseService {
   // Collections
   CollectionReference get _usersCollection => _db.collection('users');
   CollectionReference get _petsCollection => _db.collection('pets');
+  CollectionReference get _lostPetsCollection => _db.collection('lost_pets');
 
   // User Operations
   Future<void> createUser(User user) async {
@@ -41,30 +45,84 @@ class DatabaseService {
     String? email,
     int limit = 10,
   }) async {
-    Query query = _usersCollection;
-
-    // Add filters based on search criteria
-    if (displayName != null && displayName.isNotEmpty) {
-      final searchName = displayName.toLowerCase();
-      query = query.where('displayName_lower', isGreaterThanOrEqualTo: searchName)
-                  .where('displayName_lower', isLessThan: searchName + '\uf8ff');
+    if ((displayName?.isEmpty ?? true) && 
+        (username?.isEmpty ?? true) && 
+        (email?.isEmpty ?? true)) {
+      // If no search criteria, return recent users
+      final snapshot = await _usersCollection
+          .orderBy('lastLoginAt', descending: true)
+          .limit(limit)
+          .get();
+      return snapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
     }
 
-    if (username != null && username.isNotEmpty) {
-      final searchUsername = username.toLowerCase();
-      query = query.where('username_lower', isGreaterThanOrEqualTo: searchUsername)
-                  .where('username_lower', isLessThan: searchUsername + '\uf8ff');
+    // Get all users that match any of the search criteria
+    final searchTerm = (displayName ?? username ?? email ?? '').toLowerCase();
+    if (searchTerm.isEmpty) return [];
+
+    // Query for users where any of the searchable fields match
+    final displayNameQuery = _usersCollection
+        .where('displayName_lower', isGreaterThanOrEqualTo: searchTerm)
+        .where('displayName_lower', isLessThan: searchTerm + '\uf8ff')
+        .limit(limit);
+
+    final usernameQuery = _usersCollection
+        .where('username_lower', isGreaterThanOrEqualTo: searchTerm)
+        .where('username_lower', isLessThan: searchTerm + '\uf8ff')
+        .limit(limit);
+
+    final emailQuery = _usersCollection
+        .where('email', isGreaterThanOrEqualTo: searchTerm)
+        .where('email', isLessThan: searchTerm + '\uf8ff')
+        .limit(limit);
+
+    // Execute all queries in parallel
+    final results = await Future.wait([
+      displayNameQuery.get(),
+      usernameQuery.get(),
+      emailQuery.get(),
+    ]);
+
+    // Combine results and remove duplicates
+    final Set<String> seenIds = {};
+    final List<User> users = [];
+
+    for (final querySnapshot in results) {
+      for (final doc in querySnapshot.docs) {
+        if (seenIds.add(doc.id)) { // Only add if ID hasn't been seen
+          users.add(User.fromFirestore(doc));
+        }
+      }
     }
 
-    if (email != null && email.isNotEmpty) {
-      final searchEmail = email.toLowerCase();
-      query = query.where('email', isGreaterThanOrEqualTo: searchEmail)
-                  .where('email', isLessThan: searchEmail + '\uf8ff');
-    }
+    // Sort by relevance (exact matches first, then partial matches)
+    users.sort((a, b) {
+      final aName = a.displayName?.toLowerCase() ?? '';
+      final bName = b.displayName?.toLowerCase() ?? '';
+      final aUsername = a.username?.toLowerCase() ?? '';
+      final bUsername = b.username?.toLowerCase() ?? '';
+      
+      // Exact matches first
+      if (aName == searchTerm && bName != searchTerm) return -1;
+      if (bName == searchTerm && aName != searchTerm) return 1;
+      if (aUsername == searchTerm && bUsername != searchTerm) return -1;
+      if (bUsername == searchTerm && aUsername != searchTerm) return 1;
+      
+      // Then sort by how close the match is
+      final aNameMatch = aName.startsWith(searchTerm) ? 0 : 1;
+      final bNameMatch = bName.startsWith(searchTerm) ? 0 : 1;
+      if (aNameMatch != bNameMatch) return aNameMatch - bNameMatch;
+      
+      final aUsernameMatch = aUsername.startsWith(searchTerm) ? 0 : 1;
+      final bUsernameMatch = bUsername.startsWith(searchTerm) ? 0 : 1;
+      if (aUsernameMatch != bUsernameMatch) return aUsernameMatch - bUsernameMatch;
+      
+      // Finally sort by name
+      return aName.compareTo(bName);
+    });
 
-    // Apply limit and get results
-    final snapshot = await query.limit(limit).get();
-    return snapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
+    // Return limited results
+    return users.take(limit).toList();
   }
 
   Future<List<User>> getAllUsers({int limit = 50}) async {
@@ -206,8 +264,8 @@ class DatabaseService {
     if (isGuest) {
       await _localStorage.deleteGuestPet(petId);
     } else {
-      // Soft delete by setting isActive to false
-      await _petsCollection.doc(petId).update({'isActive': false});
+      // Hard delete: remove the document from Firestore
+      await _petsCollection.doc(petId).delete();
     }
   }
 
@@ -230,6 +288,7 @@ class DatabaseService {
       return _petsCollection
           .where('ownerId', isEqualTo: userId)
           .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: true)  // Order by creation time, newest first
           .snapshots()
           .map((snapshot) =>
               snapshot.docs.map((doc) => Pet.fromFirestore(doc)).toList());
@@ -307,5 +366,142 @@ class DatabaseService {
       await createPet(updatedPet);
     }
     await _localStorage.clearGuestData();
+  }
+
+  // Lost Pet Operations
+  Future<String> reportLostPet({
+    required Pet pet,
+    required latlong.LatLng location,
+    required String address,
+    required DateTime lastSeenDate,
+    required String reportedByUserId,
+    String? additionalInfo,
+    List<String> contactNumbers = const [],
+    String? reward,
+  }) async {
+    final lostPet = {
+      'petId': pet.id,
+      'location': GeoPoint(location.latitude, location.longitude),  // Convert to GeoPoint
+      'address': address,
+      'lastSeenDate': Timestamp.fromDate(lastSeenDate),
+      'reportedDate': Timestamp.fromDate(DateTime.now()),
+      'isFound': false,
+      'reportedByUserId': reportedByUserId,
+      'additionalInfo': additionalInfo,
+      'contactNumbers': contactNumbers,
+      'reward': reward,
+    };
+
+    final docRef = await _lostPetsCollection.add(lostPet);
+    return docRef.id;
+  }
+
+  Future<void> markPetAsFound(String lostPetId) async {
+    await _lostPetsCollection.doc(lostPetId).update({'isFound': true});
+  }
+
+  Stream<List<LostPet>> getNearbyLostPets({
+    required latlong.LatLng userLocation,
+    double radiusInKm = 10,
+  }) {
+    // Convert km to degrees (rough approximation)
+    final latDegrees = radiusInKm / 111.0;
+    final lonDegrees = radiusInKm / (111.0 * cos(userLocation.latitude * pi / 180));
+
+    final minLat = userLocation.latitude - latDegrees;
+    final maxLat = userLocation.latitude + latDegrees;
+    final minLon = userLocation.longitude - lonDegrees;
+    final maxLon = userLocation.longitude + lonDegrees;
+
+    return _lostPetsCollection
+        .where('isFound', isEqualTo: false)
+        .where('location',
+            isGreaterThan: GeoPoint(minLat, minLon),
+            isLessThan: GeoPoint(maxLat, maxLon))
+        .orderBy('location')
+        .orderBy('lastSeenDate', descending: true)
+        .snapshots()
+        .asyncMap((snapshot) async {
+          final lostPets = <LostPet>[];
+          for (var doc in snapshot.docs) {
+            final lostPet = await LostPet.fromFirestore(doc, _db);
+            if (lostPet != null) {
+              lostPets.add(lostPet);
+            }
+          }
+          return lostPets;
+        });
+  }
+
+  Stream<List<LostPet>> getRecentLostPets({int limit = 10}) {
+    return _lostPetsCollection
+        .where('isFound', isEqualTo: false)
+        .orderBy('reportedDate', descending: true)
+        .limit(limit)
+        .snapshots()
+        .asyncMap((snapshot) async {
+          final lostPets = <LostPet>[];
+          for (var doc in snapshot.docs) {
+            final lostPet = await LostPet.fromFirestore(doc, _db);
+            if (lostPet != null) {
+              lostPets.add(lostPet);
+            }
+          }
+          return lostPets;
+        });
+  }
+
+  Future<LostPet?> getLostPet(String lostPetId) async {
+    final doc = await _lostPetsCollection.doc(lostPetId).get();
+    if (!doc.exists) return null;
+    return LostPet.fromFirestore(doc, _db);
+  }
+
+  Stream<List<LostPet>> getUserLostPets(String userId) {
+    return _lostPetsCollection
+        .where('reportedByUserId', isEqualTo: userId)
+        .orderBy('reportedDate', descending: true)
+        .snapshots()
+        .asyncMap((snapshot) async {
+          final lostPets = <LostPet>[];
+          for (var doc in snapshot.docs) {
+            final lostPet = await LostPet.fromFirestore(doc, _db);
+            if (lostPet != null) {
+              lostPets.add(lostPet);
+            }
+          }
+          return lostPets;
+        });
+  }
+
+  // Leaderboard Operations
+  Stream<List<User>> getLeaderboardUsers({int limit = 50}) {
+    return _usersCollection
+        .orderBy('level', descending: true)
+        .orderBy('petsRescued', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => User.fromFirestore(doc)).toList());
+  }
+
+  Future<int> getUserRank(String userId) async {
+    // Get all users ordered by level and pets rescued
+    final snapshot = await _usersCollection
+        .orderBy('level', descending: true)
+        .orderBy('petsRescued', descending: true)
+        .get();
+    
+    // Find the index of the user
+    final index = snapshot.docs.indexWhere((doc) => doc.id == userId);
+    return index + 1; // Add 1 because rank starts from 1, not 0
+  }
+
+  Future<bool> isUsernameTaken(String username) async {
+    final query = await _usersCollection
+        .where('username', isEqualTo: username)
+        .limit(1)
+        .get();
+    return query.docs.isNotEmpty;
   }
 } 

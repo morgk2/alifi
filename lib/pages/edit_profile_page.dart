@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/placeholder_image.dart';
 import '../icons.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../widgets/spinning_loader.dart';
+import 'package:flutter/services.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -71,13 +72,27 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final user = authService.currentUser;
     if (user == null) return;
 
+    final newUsername = _usernameController.text.trim();
     final updatedUser = user.copyWith(
-      username: _usernameController.text.trim(),
+      username: newUsername,
       displayName: _displayNameController.text.trim(),
     );
 
     setState(() => _isSaving = true);
     try {
+      // Check if username is taken (and not the current user's username)
+      if (newUsername != user.username) {
+        final taken = await DatabaseService().isUsernameTaken(newUsername);
+        if (taken) {
+          setState(() => _isSaving = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('This username is already taken. Please choose another.')),
+            );
+          }
+          return;
+        }
+      }
       await DatabaseService().updateUser(updatedUser);
       authService.updateCurrentUser(updatedUser);
 
@@ -121,11 +136,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           TextButton(
             onPressed: _isSaving ? null : _saveChanges,
             child: _isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? SpinningLoader(size: 32, color: Colors.orange)
                 : const Text(
                     'Save',
                     style: TextStyle(
@@ -212,14 +223,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             TextFormField(
                               controller: _usernameController,
                               decoration: const InputDecoration(
-                                hintText: '@username',
+                                hintText: 'username',
                                 border: OutlineInputBorder(),
                               ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.deny(RegExp(r'@')),
+                              ],
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Username cannot be empty';
                                 }
-                                if (!RegExp(r'^@[a-zA-Z0-9_]{3,20}$').hasMatch(value.trim())) {
+                                if (!RegExp(r'^[a-zA-Z0-9_]{3,20}$').hasMatch(value.trim())) {
                                   return 'Invalid username (3-20 chars, letters, numbers, _)';
                                 }
                                 return null;
@@ -319,12 +333,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const SizedBox(height: 80),
-                        Image.asset(
-                          'assets/images/loading.gif',
-                          width: 64,
-                          height: 64,
-                          fit: BoxFit.contain,
-                        ),
+                        SpinningLoader(size: 64, color: Colors.orange),
                         const SizedBox(height: 16),
                         const Text('Saving...', style: TextStyle(fontSize: 16)),
                       ],
@@ -394,6 +403,48 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _SpinningLoader extends StatefulWidget {
+  @override
+  State<_SpinningLoader> createState() => _SpinningLoaderState();
+}
+
+class _SpinningLoaderState extends State<_SpinningLoader> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _controller.value * 6.28319, // 2*pi
+          child: child,
+        );
+      },
+      child: Image.asset(
+        'assets/images/loading.png',
+        width: 64,
+        height: 64,
       ),
     );
   }

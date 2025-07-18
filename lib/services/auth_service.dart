@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'local_storage_service.dart';
 import 'database_service.dart';
+import 'dart:math';
 
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -197,10 +198,24 @@ class AuthService extends ChangeNotifier {
 
         if (!userSnapshot.exists) {
           // Create new user document
+          String? username = user.displayName;
+          if (username == null || username.isEmpty) {
+            // Generate a random username
+            final rand = Random();
+            String candidate;
+            bool taken = true;
+            final dbService = DatabaseService();
+            do {
+              candidate = 'user${rand.nextInt(90000) + 10000}';
+              taken = await dbService.isUsernameTaken(candidate);
+            } while (taken);
+            username = candidate;
+          }
           final newUser = models.User(
             id: user.uid,
             email: user.email!,
             displayName: user.displayName,
+            username: username,
             photoURL: user.photoURL,
             createdAt: DateTime.now(), // This will be overwritten by server timestamp
             lastLoginAt: DateTime.now(), // This will be overwritten by server timestamp
@@ -211,7 +226,6 @@ class AuthService extends ChangeNotifier {
             following: const [],
             pets: const [],
           );
-          
           // Use server timestamp when creating the document
           final userData = newUser.toFirestore();
           userData['createdAt'] = FieldValue.serverTimestamp();

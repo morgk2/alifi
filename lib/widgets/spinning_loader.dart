@@ -6,7 +6,7 @@ class SpinningLoader extends StatefulWidget {
 
   const SpinningLoader({
     super.key,
-    this.size = 48.0,
+    this.size = 32.0,
     this.color,
   });
 
@@ -22,7 +22,7 @@ class _SpinningLoaderState extends State<SpinningLoader>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     )..repeat();
   }

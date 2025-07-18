@@ -47,7 +47,7 @@ class PlacesService {
       final encodedQuery = Uri.encodeComponent('$query veterinary');
       
       final url = '$_baseUrl/$encodedQuery.json'
-          '?access_token=${MapboxConfig.accessToken}'
+          '?access_token=${MapboxConfig.mapboxAccessToken}'
           '&proximity=${location.longitude},${location.latitude}'
           '&bbox=${bbox.join(',')}'
           '&limit=$limit'
@@ -111,7 +111,7 @@ class PlacesService {
       final encodedQuery = Uri.encodeComponent(query);
       
       final url = '$_baseUrl/$encodedQuery.json'
-          '?access_token=${MapboxConfig.accessToken}'
+          '?access_token=${MapboxConfig.mapboxAccessToken}'
           '&proximity=${location.longitude},${location.latitude}'
           '&bbox=${bbox.join(',')}'
           '&limit=$limit'

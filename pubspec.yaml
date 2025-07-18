@@ -33,12 +33,18 @@ dependencies:
   permission_handler: ^12.0.1
   uuid: ^4.3.3  # Added for generating unique IDs
   google_generative_ai: ^0.2.2
+  flutter_launcher_icons: ^0.14.4
+  google_maps_flutter: ^2.5.3  # Added for Google Maps integration
+  url_launcher: ^6.2.5  # Added for launching URLs (maps, phone)
+  timeago: ^3.6.1  # Added for formatting relative time
+  cached_network_image: ^3.4.1
+  flutter_image_compress: ^2.4.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
-  flutter_launcher_icons: ^0.14.4  # Downgraded version
+  flutter_launcher_icons: ^0.14.4
+  flutter_lints: ^2.0.0
 
 # Flutter launcher icons configuration
 flutter_launcher_icons:
@@ -67,6 +73,27 @@ flutter:
     - assets/images/dog_icon.png
     - assets/images/ai_lufi.png
     - assets/images/loading.png
+    - assets/images/3d_dog.png
+    - assets/images/3d_cat.png
+    - assets/images/3d_cat_bw.png
+    - assets/images/3d_dog_bw.png
+    - assets/images/3d_hamster.png
+    - assets/images/3d_fish.png
+    - assets/images/3d_guinea_pig.png
+    - assets/images/3d_duck.png
+    - assets/images/3d_lizzard.png
+    - assets/images/3d_monkey.png
+    - assets/images/3d_rabbit.png
+    - assets/images/bird_3d.png
+    - assets/images/3d_hamster_bw.png
+    - assets/images/3d_fish_bw.png
+    - assets/images/3d_guinea_pig_bw.png
+    - assets/images/3d_duck_bw.png
+    - assets/images/3d_lizzard_bw.png
+    - assets/images/3d_monkey_bw.png
+    - assets/images/3d_rabbit_bw.png
+    - assets/images/3d_bird_bw.png
+    - assets/images/leaderboard_3d.png
     - assets/fonts/Inter-Italic-VariableFont_opsz,wght.ttf
     - assets/fonts/Inter-VariableFont_opsz,wght.ttf
     - assets/fonts/InterDisplay-Regular.ttf

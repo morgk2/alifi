@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions for validation
+    function isValidUserData(data) {
+      return data.level is number 
+        && data.petsRescued is number 
+        && data.level >= 1 
+        && data.petsRescued >= 0
+        && data.createdAt is timestamp
+        && data.lastLoginAt is timestamp;
+    }
+
+    function isValidUserUpdate(data) {
+      let hasValidLeaderboardFields = (!('level' in data) || data.level is number && data.level >= resource.data.level)
+        && (!('petsRescued' in data) || data.petsRescued is number && data.petsRescued >= resource.data.petsRescued);
+      
+      return hasValidLeaderboardFields
+        && (!('lastLoginAt' in data) || data.lastLoginAt is timestamp);
+    }
+
+    function isValidLostPetData(data) {
+      return data.petId is string
+        && data.location is map 
+        && data.location.latitude is number
+        && data.location.longitude is number
+        && data.address is string
+        && data.lastSeenDate is timestamp
+        && data.reportedDate is timestamp
+        && data.isFound is bool
+        && data.reportedByUserId is string
+        && (!('additionalInfo' in data) || data.additionalInfo is string)
+        && (!('contactNumbers' in data) || data.contactNumbers is list);
+    }
+
+    // Allow public read access to users collection
+    match /users/{userId} {
+      allow read: if true;
+      
+      // Allow creation with valid initial data
+      allow create: if request.auth != null 
+        && request.auth.uid == userId
+        && isValidUserData(request.resource.data);
+      
+      // Allow updates with validated fields
+      allow update: if request.auth != null 
+        && request.auth.uid == userId
+        && isValidUserUpdate(request.resource.data);
+    }
+    
+    // Pet collection rules
+    match /pets/{petId} {
+      // Allow anyone to read pet data
+      allow read: if true;
+      
+      // Allow creation if user is authenticated and sets themselves as owner
+      allow create: if request.auth != null 
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.lastUpdatedAt is timestamp;
+      
+      // Allow updates if user is the owner and isn't changing ownership
+      allow update: if request.auth != null 
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.lastUpdatedAt is timestamp;
+      
+      // Allow deletion if user is the owner
+      allow delete: if request.auth != null 
+        && resource.data.ownerId == request.auth.uid;
+    }
+
+    // Lost pets collection rules
+    match /lost_pets/{lostPetId} {
+      // Allow anyone to read lost pet data
+      allow read: if true;
+      
+      // Allow creation if user is authenticated and data is valid
+      allow create: if request.auth != null 
+        && request.resource.data.reportedByUserId == request.auth.uid
+        && isValidLostPetData(request.resource.data);
+      
+      // Allow updates if user is the reporter and maintaining valid data
+      allow update: if request.auth != null 
+        && resource.data.reportedByUserId == request.auth.uid
+        && request.resource.data.reportedByUserId == resource.data.reportedByUserId
+        && isValidLostPetData(request.resource.data);
+      
+      // Allow deletion if user is the reporter
+      allow delete: if request.auth != null 
+        && resource.data.reportedByUserId == request.auth.uid;
+    }
+    
+    // Restrict all other collections to authenticated users
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+} 

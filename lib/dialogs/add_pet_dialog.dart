@@ -1,201 +1,315 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import '../services/database_service.dart';
 import '../models/pet.dart';
-import 'package:provider/provider.dart';
+import '../services/database_service.dart';
 import '../services/auth_service.dart';
-import 'base_dialog.dart';
-import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import '../widgets/spinning_loader.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:provider/provider.dart';
 
 class AddPetDialog extends StatefulWidget {
-  const AddPetDialog({super.key});
+  final Pet? pet;
+  const AddPetDialog({super.key, this.pet});
 
   @override
   State<AddPetDialog> createState() => _AddPetDialogState();
 }
 
-class _AddPetDialogState extends State<AddPetDialog> {
-  final PageController _wizardController = PageController();
-  int _currentStep = 0;
-  final int _totalSteps = 7;
+class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderStateMixin {
+  late AnimationController _pageController;
+  late Animation<double> _pageAnimation;
+  late Animation<Offset> _slideAnimation;
+  bool _isReverse = false;
   final TextEditingController _weightController = TextEditingController();
+  int _currentStep = 0;
+  
+  // Pet Type Selection
+  String? _selectedPetType;
+  final int _otherPetIndex = 0;
+  final List<String> _otherPetTypes = [
+    'Bird', 'Rabbit', 'Hamster', 'Fish',
+    'Snake', 'Lizard', 'Guinea Pig', 'Ferret',
+    'Turtle', 'Parrot', 'Mouse', 'Rat',
+    'Hedgehog', 'Chinchilla', 'Gerbil'
+  ];
+  bool _showOtherPetArrows = false;
+  bool _showOtherPetGrid = false;
+  int _selectedOtherPetIndex = -1;
+  final List<Map<String, String>> _otherPetGrid = [
+    {
+      'name': 'Hamster',
+      'color': 'assets/images/3d_hamster.png',
+      'bw': 'assets/images/3d_hamster_bw.png',
+    },
+    {
+      'name': 'Fish',
+      'color': 'assets/images/3d_fish.png',
+      'bw': 'assets/images/3d_fish_bw.png',
+    },
+    {
+      'name': 'Guinea Pig',
+      'color': 'assets/images/3d_guinea_pig.png',
+      'bw': 'assets/images/3d_guinea_pig_bw.png',
+    },
+    {
+      'name': 'Duck',
+      'color': 'assets/images/3d_duck.png',
+      'bw': 'assets/images/3d_duck_bw.png',
+    },
+    {
+      'name': 'Lizard',
+      'color': 'assets/images/3d_lizzard.png',
+      'bw': 'assets/images/3d_lizzard_bw.png',
+    },
+    {
+      'name': 'Monkey',
+      'color': 'assets/images/3d_monkey.png',
+      'bw': 'assets/images/3d_monkey_bw.png',
+    },
+    {
+      'name': 'Rabbit',
+      'color': 'assets/images/3d_rabbit.png',
+      'bw': 'assets/images/3d_rabbit_bw.png',
+    },
+    {
+      'name': 'Bird',
+      'color': 'assets/images/bird_3d.png',
+      'bw': 'assets/images/3d_bird_bw.png',
+    },
+  ];
+
+  // Pet Details
   final TextEditingController _nameController = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
-  bool _isLoading = false;
+  final TextEditingController _breedController = TextEditingController();
+  
+  // Birthday Selection
+  DateTime? _selectedDate;
+  String _petAge = '';
+  
+  // Weight Selection
+  double _weight = 0.0;
+  bool _isKg = true;
+  
+  // Photo Selection
+  File? _selectedImage;
+  
+  // Color Selection
+  Color _selectedColor = Colors.blue;
+  final List<Color> _presetColors = [
+    Colors.blue,
+    Colors.red,
+    Colors.green,
+    Colors.purple,
+    Colors.orange,
+    Colors.pink,
+    Colors.teal,
+    Colors.amber,
+  ];
 
-  // Pet data
-  String _petType = 'Dog';
-  String _gender = 'Male';
-  String? _breed;
-  DateTime? _birthday;
-  int? _age;
-  double? _weight;
-  String _weightUnit = 'kg';
-  Color _selectedColor = Colors.orange;
-  List<XFile> _selectedImages = [];
-  String? _name;
+  // Gender Selection
+  String _selectedGender = 'Unknown';
 
-  @override
-  void dispose() {
-    _weightController.dispose();
-    _nameController.dispose();
-    _wizardController.dispose();
-    super.dispose();
-  }
+  // Error message for top banner
+  String? _errorMessage;
+  bool _isSaving = false;
 
-  void _convertWeight() {
-    if (_weight != null) {
+  // Update weight methods
+  void _updateWeight(String value) {
+    final newWeight = double.tryParse(value);
+    if (newWeight != null) {
       setState(() {
-        if (_weightUnit == 'kg') {
-          _weight = double.parse((_weight! * 2.20462).toStringAsFixed(2));
-          _weightController.text = _weight.toString();
-          _weightUnit = 'lb';
-        } else {
-          _weight = double.parse((_weight! / 2.20462).toStringAsFixed(2));
-          _weightController.text = _weight.toString();
-          _weightUnit = 'kg';
-        }
+        _weight = newWeight;
       });
     }
   }
 
-  void _nextStep() async {
-    if (_currentStep < _totalSteps - 1) {
-      _wizardController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+  void _toggleWeightUnit() {
       setState(() {
+      if (_weight > 0) {
+        if (_isKg) {
+          // Convert kg to lb
+          _weight = _weight * 2.20462;
+          _weightController.text = _weight.toStringAsFixed(1);
+        } else {
+          // Convert lb to kg
+          _weight = _weight * 0.453592;
+          _weightController.text = _weight.toStringAsFixed(1);
+        }
+      }
+      _isKg = !_isKg;
+    });
+  }
+
+  Color _parseColor(String colorString) {
+    final hexMatch = RegExp(r'0x[a-fA-F0-9]{8}').firstMatch(colorString);
+    if (hexMatch != null) {
+      return Color(int.parse(hexMatch.group(0)!));
+    }
+    return Colors.blue;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = AnimationController(
+        duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _pageAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _pageController, curve: Curves.easeInOut),
+    );
+    _updateSlideAnimation();
+    // Start initial animation
+    _pageController.forward();
+    // Prefill fields if editing
+    if (widget.pet != null) {
+      _selectedPetType = widget.pet!.species;
+      _nameController.text = widget.pet!.name;
+      _breedController.text = widget.pet!.breed;
+      _selectedGender = widget.pet!.gender;
+      _selectedDate = DateTime.now().subtract(Duration(days: widget.pet!.age * 365));
+      _weight = widget.pet!.weight ?? 0.0;
+      _isKg = true;
+      _weightController.text = _weight > 0 ? _weight.toStringAsFixed(1) : '';
+      _selectedColor = _parseColor(widget.pet!.color);
+      // _selectedImage: not prefilled (would require loading from URL)
+    }
+  }
+
+  void _updateSlideAnimation() {
+    _slideAnimation = Tween<Offset>(
+      begin: Offset(_isReverse ? -1 : 1, 0),
+      end: Offset.zero,
+    ).animate(_pageAnimation);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _nameController.dispose();
+    _breedController.dispose();
+    _weightController.dispose();
+    super.dispose();
+  }
+
+  void _nextStep() {
+    if (_currentStep < 6) {
+      setState(() {
+        _isReverse = false;
+        _updateSlideAnimation();
         _currentStep++;
+        _pageController.forward(from: 0);
       });
     } else {
-      // Save pet
-      await _savePet();
+      _savePet();
     }
   }
 
   void _previousStep() {
     if (_currentStep > 0) {
-      _wizardController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
       setState(() {
+        _isReverse = true;
+        _updateSlideAnimation();
         _currentStep--;
+        _pageController.forward(from: 0);
       });
-    } else {
-      Navigator.of(context).pop();
     }
   }
 
   Future<void> _pickImage() async {
-    try {
-      final List<XFile> images = await _picker.pickMultiImage();
-      if (images.isNotEmpty) {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (image != null) {
         setState(() {
-          _selectedImages = images;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking image: $e')),
-        );
-      }
+        _selectedImage = File(image.path);
+      });
+    }
+  }
+
+  void _calculateAge() {
+    if (_selectedDate != null) {
+      final now = DateTime.now();
+      final difference = now.difference(_selectedDate!);
+      final years = (difference.inDays / 365).floor();
+      final months = ((difference.inDays % 365) / 30).floor();
+      
+      setState(() {
+        _petAge = years > 0 
+          ? '$years years ${months > 0 ? '$months months' : ''}'
+          : '$months months';
+      });
     }
   }
 
   Future<void> _savePet() async {
-    if (_name == null || _name!.isEmpty || _selectedImages.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill in all required fields and add at least one photo'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (_isSaving) return;
+    if (_selectedPetType == null || 
+        _nameController.text.isEmpty || 
+        _selectedDate == null || 
+        _weight == 0 || 
+        _selectedImage == null) {
+      setState(() {
+        _errorMessage = 'Please fill in all fields';
+      });
       return;
     }
 
-    setState(() => _isLoading = true);
-
+    setState(() { _isSaving = true; });
     try {
-      final authService = context.read<AuthService>();
+      final authService = Provider.of<AuthService>(context, listen: false);
       if (authService.currentUser == null) {
-        throw Exception('User not authenticated');
+        throw Exception('No user logged in');
       }
 
-      final userId = authService.currentUser!.id;
-      final dbService = DatabaseService();
+      // Calculate age in years
+      final now = DateTime.now();
+      final age = now.difference(_selectedDate!).inDays ~/ 365;
 
-      // Create a new pet
       final pet = Pet(
-        id: '', // Will be set by Firestore
-        name: _name!,
-        species: _petType,
-        breed: _breed ?? '',
-        color: _selectedColor.value.toRadixString(16),
-        age: _age ?? 0,
-        gender: _gender,
-        imageUrls: [], // Will be populated by createPetWithImages
-        ownerId: userId,
+        id: '',  // Will be set by Firestore
+        name: _nameController.text,
+        species: _selectedPetType!,
+        breed: _breedController.text,
+        color: '0x${_selectedColor.value.toRadixString(16)}',
+        age: age,
+        gender: _selectedGender,
+        imageUrls: [], // Will be updated after upload
+        ownerId: authService.currentUser!.id,
         createdAt: DateTime.now(),
         lastUpdatedAt: DateTime.now(),
-        medicalInfo: {},
-        dietaryInfo: {},
-        tags: [],
+        medicalInfo: {}, // Add medical info in future update
+        dietaryInfo: {}, // Add dietary info in future update
+        tags: [_selectedPetType!.toLowerCase()],
         weight: _weight,
       );
 
-      // Convert XFile list to path strings
-      final imagePaths = _selectedImages.map((xFile) => xFile.path).toList();
-
-      // Save pet with images
-      await dbService.createPetWithImages(pet, imagePaths);
+      final petId = await DatabaseService().createPetWithImages(
+        pet,
+        [_selectedImage!.path],
+        isGuest: authService.isGuestMode,
+      );
 
       if (mounted) {
         Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pet added successfully!')),
-        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding pet: $e')),
-        );
+        setState(() {
+          _errorMessage = 'Error adding pet: $e';
+        });
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() { _isSaving = false; });
     }
   }
 
-  Widget _buildProgressBar() {
-    return Row(
-      children: List.generate(_totalSteps, (index) {
-        final isActive = index <= _currentStep;
-        return Expanded(
-          child: Container(
-            height: 4,
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            decoration: BoxDecoration(
-              color: isActive ? Colors.orange : Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildTypeSelection() {
-    final types = ['Dog', 'Cat', 'Bird', 'Other'];
-    return Column(
+  Widget _buildPetTypeSelection() {
+    return FadeTransition(
+      opacity: _pageAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const Text(
@@ -206,313 +320,280 @@ class _AddPetDialogState extends State<AddPetDialog> {
           ),
         ),
         const SizedBox(height: 32),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          alignment: WrapAlignment.center,
-          children: types.map((type) {
-            final isSelected = _petType == type;
-            return GestureDetector(
-              onTap: () {
-                setState(() => _petType = type);
-                _nextStep();
-              },
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.orange.withOpacity(0.1) : Colors.grey[100],
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isSelected ? Colors.orange : Colors.grey[300]!,
-                    width: 2,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 500),
+              child: !_showOtherPetGrid
+                  ? Column(
+                      key: const ValueKey('mainRow'),
+                      children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Icon(
-                      Icons.pets,
-                      size: 48,
-                      color: isSelected ? Colors.orange : Colors.grey[400],
+                            AnimatedOpacity(
+                              opacity: !_showOtherPetGrid ? 1.0 : 0.0,
+                              duration: const Duration(milliseconds: 500),
+                              child: _buildPetTypeCircle('Cat', 'assets/images/cat_icon.png'),
+                            ),
+                            AnimatedOpacity(
+                              opacity: !_showOtherPetGrid ? 1.0 : 0.0,
+                              duration: const Duration(milliseconds: 500),
+                              child: _buildPetTypeCircle('Dog', 'assets/images/dog_icon.png'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        AnimatedSlide(
+                          duration: const Duration(milliseconds: 500),
+                          offset: _showOtherPetGrid ? const Offset(0, -1.2) : Offset.zero,
+                          child: _buildOtherPetTypeSelector(),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      key: const ValueKey('otherGrid'),
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeInOut,
+                          width: 180,
+                          height: 60,
+                          margin: const EdgeInsets.only(bottom: 24),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(color: Colors.grey, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Other',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                        AnimatedOpacity(
+                          opacity: _showOtherPetGrid ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 500),
+                          child: AnimatedSlide(
+                            duration: const Duration(milliseconds: 500),
+                            offset: _showOtherPetGrid ? Offset.zero : const Offset(0, 0.2),
+                            child: GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 4,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                childAspectRatio: 1,
+                              ),
+                              itemCount: _otherPetGrid.length,
+                              itemBuilder: (context, index) {
+                                final pet = _otherPetGrid[index];
+                                final isSelected = _selectedOtherPetIndex == index;
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedOtherPetIndex = index;
+                                      _selectedPetType = pet['name'];
+                                    });
+                                  },
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          AnimatedOpacity(
+                                            duration: const Duration(milliseconds: 400),
+                                            opacity: isSelected ? 0.0 : 1.0,
+                                            child: Image.asset(
+                                              pet['bw']!,
+                                              width: 48,
+                                              height: 48,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                          AnimatedOpacity(
+                                            duration: const Duration(milliseconds: 400),
+                                            opacity: isSelected ? 1.0 : 0.0,
+                                            child: Image.asset(
+                                              pet['color']!,
+                                              width: 48,
+                                              height: 48,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      AnimatedDefaultTextStyle(
+                                        duration: const Duration(milliseconds: 300),
+                                        style: TextStyle(
+                                          color: isSelected ? Colors.orange : Colors.grey,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                        child: Text(pet['name']!),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      type,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.orange : Colors.grey[600],
-                      ),
-                    ),
-                  ],
+            ),
+          ],
                 ),
               ),
-            );
-          }).toList(),
-        ),
-      ],
     );
   }
 
-  Widget _buildGenderSelection() {
-    final genders = ['Male', 'Female'];
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text(
-          'What is your pet\'s gender?',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 32),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: genders.map((gender) {
-            final isSelected = _gender == gender;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: GestureDetector(
-                onTap: () {
-                  setState(() => _gender = gender);
-                  _nextStep();
-                },
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.orange.withOpacity(0.1) : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isSelected ? Colors.orange : Colors.grey[300]!,
-                      width: 2,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        gender == 'Male' ? Icons.male : Icons.female,
-                        size: 48,
-                        color: isSelected ? Colors.orange : Colors.grey[400],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        gender,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.orange : Colors.grey[600],
-                        ),
+  Widget _buildPetTypeCircle(String type, String assetPath) {
+    final isSelected = _selectedPetType == type;
+            return GestureDetector(
+              onTap: () {
+        setState(() {
+          _selectedPetType = type;
+          _showOtherPetArrows = false;
+        });
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              // Glow effect with fade animation
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 500),
+                opacity: isSelected ? 1.0 : 0.0,
+              child: Container(
+                  width: 160,
+                  height: 160,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withOpacity(0.15), // Weaker glow
+                        blurRadius: 35, // Smoother blur
+                        spreadRadius: 15,
                       ),
                     ],
                   ),
                 ),
               ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPhotoSelection() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text(
-          'Add some photos',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 32),
-        if (_selectedImages.isEmpty)
-          GestureDetector(
-            onTap: _pickImage,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.grey[300]!,
-                  width: 2,
+              // Stack for both images with crossfade
+              Stack(
+                alignment: Alignment.center,
+                  children: [
+                  // Black and white image
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 400),
+                    opacity: isSelected ? 0.0 : 1.0,
+                    child: Image.asset(
+                      type == 'Cat' ? 'assets/images/3d_cat_bw.png' : 'assets/images/3d_dog_bw.png',
+                      width: type == 'Cat' ? 156 : 150, // Cat is 4% bigger
+                      height: type == 'Cat' ? 156 : 150,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  // Colored image
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 400),
+                    opacity: isSelected ? 1.0 : 0.0,
+                    child: Image.asset(
+                      type == 'Cat' ? 'assets/images/3d_cat.png' : 'assets/images/3d_dog.png',
+                      width: type == 'Cat' ? 156 : 150, // Cat is 4% bigger
+                      height: type == 'Cat' ? 156 : 150,
+                      fit: BoxFit.contain,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.add_photo_alternate,
-                    size: 64,
-                    color: Colors.grey[400],
+            ],
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'Add Photos',
+          // Text label with animated color
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 300),
                     style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
+              color: isSelected ? Colors.orange : Colors.grey,
                       fontWeight: FontWeight.bold,
+              fontSize: 20,
                     ),
+            child: Text(type),
                   ),
                 ],
               ),
-            ),
-          )
-        else
-          Column(
-            children: [
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _selectedImages.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == _selectedImages.length) {
+    );
+  }
+
+  Widget _buildOtherPetTypeSelector() {
+    final isSelected = _selectedPetType != null && _otherPetTypes.contains(_selectedPetType);
                       return GestureDetector(
-                        onTap: _pickImage,
-                        child: Container(
-                          width: 200,
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 2,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.add_photo_alternate,
-                                size: 48,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Add More',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                    return Stack(
-                      children: [
-                        Container(
-                          width: 200,
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 2,
-                            ),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: kIsWeb
-                                ? Image.network(
-                                    _selectedImages[index].path,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Image.file(
-                                    File(_selectedImages[index].path),
-                                    fit: BoxFit.cover,
-                                  ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 8,
-                          right: 16,
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedImages.removeAt(index);
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                size: 20,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                onTap: () {
+        setState(() {
+          _showOtherPetGrid = true;
+          _selectedOtherPetIndex = -1;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        width: _showOtherPetGrid ? 180 : 120,
+        height: _showOtherPetGrid ? 60 : 120,
+                  decoration: BoxDecoration(
+          color: _showOtherPetGrid ? Colors.white : (isSelected ? Colors.orange : Colors.white),
+          borderRadius: BorderRadius.circular(_showOtherPetGrid ? 30 : 60),
+                    border: Border.all(
+            color: _showOtherPetGrid ? Colors.grey : (isSelected ? Colors.orange : Colors.grey),
+                      width: 2,
+                    ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
-              ),
-            ],
-          ),
-        const SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: _selectedImages.isNotEmpty ? _nextStep : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(32),
+              ],
             ),
-          ),
-          child: const Text(
-            'Continue',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Text(
+              'Other',
+              key: ValueKey(_showOtherPetGrid),
+                        style: TextStyle(
+                color: _showOtherPetGrid ? Colors.grey : (isSelected ? Colors.white : Colors.grey),
+                          fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                        ),
+                      ),
+                  ),
+                ),
+      ),
     );
   }
 
-  // Add this method at the top of the class to maintain consistent text field styling
-  InputDecoration _getPillDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.grey),
-      filled: true,
-      fillColor: Colors.grey[100],
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30),
-        borderSide: const BorderSide(color: Colors.orange, width: 2),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-    );
-  }
-
-  Widget _buildNameStep() {
-    return Column(
+  Widget _buildPetDetailsStep() {
+    return FadeTransition(
+      opacity: _pageAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const Text(
@@ -523,85 +604,279 @@ class _AddPetDialogState extends State<AddPetDialog> {
           ),
         ),
         const SizedBox(height: 32),
-        TextField(
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(30),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: TextField(
           controller: _nameController,
-          onChanged: (value) => setState(() => _name = value),
-          decoration: _getPillDecoration('Pet Name*'),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          onChanged: (value) => setState(() => _breed = value),
-          decoration: _getPillDecoration('Breed (optional)'),
-        ),
-        const SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: _name?.isNotEmpty == true ? _nextStep : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(32),
+                decoration: const InputDecoration(
+                  hintText: 'Pet\'s name',
+                  border: InputBorder.none,
+                ),
+              ),
             ),
-          ),
-          child: const Text(
-            'Continue',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 24),
+            const Text(
+              'What breed is your pet?',
+                    style: TextStyle(
+                fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+            const SizedBox(height: 24),
+                        Container(
+                          decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(30),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: TextField(
+                controller: _breedController,
+                decoration: const InputDecoration(
+                  hintText: 'Pet\'s breed',
+                  border: InputBorder.none,
             ),
           ),
         ),
       ],
+        ),
+      ),
     );
   }
 
-  Widget _buildAgeSelection() {
-    return Column(
+  Widget _buildGenderStep() {
+    return FadeTransition(
+      opacity: _pageAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'What is your pet\'s gender?',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ChoiceChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.male, color: _selectedGender == 'Male' ? Colors.white : Colors.blue, size: 22),
+                      const SizedBox(width: 8),
+                      const Text('Male'),
+                    ],
+                  ),
+                  selected: _selectedGender == 'Male',
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedGender = 'Male';
+                    });
+                  },
+                  selectedColor: Colors.blue[400],
+                  backgroundColor: Colors.white,
+                  shape: const StadiumBorder(),
+                  labelStyle: TextStyle(
+                    color: _selectedGender == 'Male' ? Colors.white : Colors.blue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  side: BorderSide(color: Colors.blue[400]!, width: 2),
+                ),
+                const SizedBox(width: 16),
+                ChoiceChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.female, color: _selectedGender == 'Female' ? Colors.white : Colors.pink, size: 22),
+                      const SizedBox(width: 8),
+                      const Text('Female'),
+                    ],
+                  ),
+                  selected: _selectedGender == 'Female',
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedGender = 'Female';
+                    });
+                  },
+                  selectedColor: Colors.pink[300],
+                  backgroundColor: Colors.white,
+                  shape: const StadiumBorder(),
+                  labelStyle: TextStyle(
+                    color: _selectedGender == 'Female' ? Colors.white : Colors.pink,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  side: BorderSide(color: Colors.pink[300]!, width: 2),
+                ),
+                const SizedBox(width: 16),
+                ChoiceChip(
+                  label: const Text('Unknown'),
+                  selected: _selectedGender == 'Unknown',
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedGender = 'Unknown';
+                    });
+                  },
+                  selectedColor: Colors.grey[400],
+                  backgroundColor: Colors.white,
+                  shape: const StadiumBorder(),
+                  labelStyle: TextStyle(
+                    color: _selectedGender == 'Unknown' ? Colors.white : Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  side: BorderSide(color: Colors.grey[400]!, width: 2),
+                ),
+              ],
+        ),
+      ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBirthdayStep() {
+    return FadeTransition(
+      opacity: _pageAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+                          child: Column(
       mainAxisSize: MainAxisSize.min,
-      children: [
+                            children: [
         const Text(
-          'How old is your pet?',
+              'When was your pet born?',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 32),
-        TextField(
-          keyboardType: TextInputType.number,
+            _buildCustomDatePicker(),
+            if (_selectedDate != null) ...[
+              const SizedBox(height: 24),
+                              Text(
+                'Age: $_petAge',
+                style: const TextStyle(
+                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+      ],
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+  Widget _buildCustomDatePicker() {
+    final now = DateTime.now();
+    return Container(
+      height: 200,
+                          decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+      children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildDatePickerWheel(
+                items: List.generate(31, (i) => (i + 1).toString().padLeft(2, '0')),
+                selectedItem: _selectedDate?.day.toString().padLeft(2, '0') ?? '01',
           onChanged: (value) {
+                  final newDate = DateTime(
+                    _selectedDate?.year ?? now.year,
+                    _selectedDate?.month ?? now.month,
+                    int.parse(value),
+                  );
             setState(() {
-              _age = int.tryParse(value);
+                    _selectedDate = newDate;
+                    _calculateAge();
             });
           },
-          decoration: _getPillDecoration('Age in years'),
-        ),
-        const SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: _age != null ? _nextStep : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(32),
-            ),
+              ),
+              _buildDatePickerWheel(
+                items: List.generate(12, (i) => (i + 1).toString().padLeft(2, '0')),
+                selectedItem: _selectedDate?.month.toString().padLeft(2, '0') ?? '01',
+                onChanged: (value) {
+                  final newDate = DateTime(
+                    _selectedDate?.year ?? now.year,
+                    int.parse(value),
+                    _selectedDate?.day ?? 1,
+                  );
+                              setState(() {
+                    _selectedDate = newDate;
+                    _calculateAge();
+                              });
+                            },
+              ),
+              _buildDatePickerWheel(
+                items: List.generate(
+                  30,
+                  (i) => (now.year - i).toString(),
+                ),
+                selectedItem: _selectedDate?.year.toString() ?? now.year.toString(),
+          onChanged: (value) {
+                  final newDate = DateTime(
+                    int.parse(value),
+                    _selectedDate?.month ?? now.month,
+                    _selectedDate?.day ?? 1,
+                  );
+            setState(() {
+                    _selectedDate = newDate;
+                    _calculateAge();
+            });
+          },
+              ),
+            ],
           ),
-          child: const Text(
-            'Continue',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildWeightSelection() {
-    return Column(
+  Widget _buildDatePickerWheel({
+    required List<String> items,
+    required String selectedItem,
+    required Function(String) onChanged,
+  }) {
+    return SizedBox(
+      width: 80,
+      height: 200,
+      child: ListWheelScrollView(
+        itemExtent: 40,
+        diameterRatio: 1.5,
+        physics: const FixedExtentScrollPhysics(),
+        children: items.map((item) {
+          return Center(
+            child: Text(
+              item,
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: item == selectedItem ? FontWeight.bold : FontWeight.normal,
+                color: item == selectedItem ? Colors.orange : Colors.black,
+              ),
+            ),
+          );
+        }).toList(),
+        onSelectedItemChanged: (index) => onChanged(items[index]),
+      ),
+    );
+  }
+
+  Widget _buildWeightStep() {
+    return FadeTransition(
+      opacity: _pageAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const Text(
@@ -613,259 +888,257 @@ class _AddPetDialogState extends State<AddPetDialog> {
         ),
         const SizedBox(height: 32),
         Row(
+              mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
+                Container(
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
               child: TextField(
                 controller: _weightController,
                 keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  setState(() {
-                    _weight = double.tryParse(value);
-                  });
-                },
-                decoration: _getPillDecoration('Weight in $_weightUnit'),
+                    onChanged: _updateWeight,
+                    decoration: const InputDecoration(
+                      hintText: 'Weight',
+                      border: InputBorder.none,
+                    ),
               ),
             ),
             const SizedBox(width: 16),
-            TextButton(
-              onPressed: _convertWeight,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
+                GestureDetector(
+                  onTap: _toggleWeightUnit,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                _weightUnit == 'kg' ? 'Switch to lb' : 'Switch to kg',
-                style: const TextStyle(color: Colors.orange),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: _weight != null ? _nextStep : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(32),
-            ),
-          ),
-          child: const Text(
-            'Continue',
-            style: TextStyle(
-              fontSize: 16,
+                      _isKg ? 'kg' : 'lb',
+                      style: const TextStyle(
+                        color: Colors.white,
               fontWeight: FontWeight.bold,
+                      ),
             ),
           ),
         ),
       ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildColorSelection() {
-    return SingleChildScrollView(
+  Widget _buildPhotoStep() {
+    return FadeTransition(
+      opacity: _pageAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Choose a color for your pet\'s profile',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+              'Add a photo of your pet',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
           ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 250, // Reduced height for color grid
-            child: BlockPicker(
+        ),
+        const SizedBox(height: 32),
+            GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(20),
+                  image: _selectedImage != null
+                      ? DecorationImage(
+                          image: FileImage(_selectedImage!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: _selectedImage == null
+                    ? const Icon(
+                        Icons.add_photo_alternate,
+                        size: 64,
+                        color: Colors.grey,
+                      )
+                    : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorStep() {
+    return FadeTransition(
+      opacity: _pageAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+                              child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+              'Choose a color for your pet\'s profile',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 32),
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              alignment: WrapAlignment.center,
+          children: [
+                ..._presetColors.map((color) => _buildColorCircle(color)),
+                _buildCustomColorCircle(),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorCircle(Color color) {
+    final isSelected = _selectedColor.value == color.value;
+    return GestureDetector(
+      onTap: () {
+                  setState(() {
+          _selectedColor = color;
+                  });
+                },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+          border: Border.all(
+            color: isSelected ? Colors.white : Colors.transparent,
+            width: 3,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: isSelected
+            ? const Icon(
+                Icons.check,
+                                                  color: Colors.white,
+              )
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildCustomColorCircle() {
+    return GestureDetector(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Pick a color'),
+            content: SingleChildScrollView(
+              child: ColorPicker(
               pickerColor: _selectedColor,
               onColorChanged: (color) {
-                setState(() => _selectedColor = color);
-              },
-              availableColors: const [
-                Colors.red,
-                Colors.pink,
-                Colors.purple,
-                Colors.deepPurple,
-                Colors.indigo,
-                Colors.blue,
-                Colors.lightBlue,
-                Colors.cyan,
-                Colors.teal,
-                Colors.green,
-                Colors.lightGreen,
-                Colors.lime,
-                Colors.yellow,
-                Colors.amber,
-                Colors.orange,
-                Colors.deepOrange,
-              ],
-              itemBuilder: (color, isCurrentColor, onTap) => Container(
-                margin: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: color,
-                  border: isCurrentColor
-                      ? Border.all(color: Colors.white, width: 4)
-                      : null,
-                  boxShadow: isCurrentColor
-                      ? [
-                          BoxShadow(
-                            color: color.withOpacity(0.8),
-                            blurRadius: 8,
-                          )
-                        ]
-                      : null,
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: onTap,
-                    borderRadius: BorderRadius.circular(50),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                    ),
-                  ),
-                ),
+                  setState(() {
+                    _selectedColor = color;
+                  });
+                },
+                pickerAreaHeightPercent: 0.8,
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
+            actions: [
               TextButton(
-                onPressed: _previousStep,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                ),
-                child: const Text(
-                  'Back',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  // Show confirmation dialog
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return Dialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.pets,
-                                size: 48,
-                                color: Colors.orange,
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'Add Your Pet?',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Are you sure you want to add this pet to your profile?',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  TextButton(
-                                    onPressed: () => Navigator.of(context).pop(),
-                                    child: const Text(
-                                      'Cancel',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: _isLoading
-                                        ? null
-                                        : () {
-                                            Navigator.of(context).pop();
-                                            _savePet();
-                                          },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.orange,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 32,
-                                        vertical: 16,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(32),
-                                      ),
-                                    ),
-                                    child: _isLoading
-                                        ? const SizedBox(
-                                            width: 24,
-                                            height: 24,
-                                            child: SpinningLoader(
-                                              size: 24,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Text(
-                                            'Confirm',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(32),
-                  ),
-                  elevation: 2,
-                ),
-                child: const Text(
-                  'Confirm',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Done'),
               ),
             ],
+                            ),
+                          );
+                        },
+      child: Container(
+        width: 60,
+        height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+          gradient: const SweepGradient(
+            colors: [
+              Colors.red,
+              Colors.yellow,
+              Colors.green,
+              Colors.blue,
+              Colors.purple,
+              Colors.red,
+            ],
+          ),
+          boxShadow: [
+                          BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.color_lens,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+            children: [
+              Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+              Text(
+                'Step ${_currentStep + 1} of 7',
+                style: const TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+              Text(
+                '${((_currentStep + 1) / 7 * 100).round()}%',
+                style: const TextStyle(
+                  color: Colors.grey,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+              ),
+            ],
+                                  ),
+                                  const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: (_currentStep + 1) / 7,
+            backgroundColor: Colors.grey[200],
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
+            borderRadius: BorderRadius.circular(10),
+            minHeight: 8,
           ),
         ],
       ),
@@ -874,53 +1147,188 @@ class _AddPetDialogState extends State<AddPetDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final dialogWidth = screenSize.width;
+    final dialogHeight = screenSize.height;
+    final safeAreaPadding = MediaQuery.of(context).padding;
+
     return Dialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      insetPadding: EdgeInsets.zero, // Remove default padding
+      child: Stack(
+        children: [
+          SizedBox(
+        width: dialogWidth,
+        height: dialogHeight,
+        child: Column(
+          children: [
+            // Top safe area padding
+            SizedBox(height: safeAreaPadding.top),
+
+                // Error banner
+                if (_errorMessage != null && _errorMessage!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: Material(
+                      color: Colors.red[400],
+                      borderRadius: BorderRadius.circular(12),
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                        leading: const Icon(Icons.error_outline, color: Colors.white),
+                        title: Text(
+                          _errorMessage!,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () => setState(() => _errorMessage = null),
+                        ),
+                      ),
+                    ),
+                  ),
+            
+            // Header with cancel button and title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: const Text(
+                                          'Cancel',
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                      ),
+                  Text(
+                    widget.pet != null ? 'Edit existing pet' : 'Add Pet',
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  // Empty space for symmetry
+                  SizedBox(width: 70),
+                ],
+              ),
+            ),
+            
+            // Progress bar
+            _buildProgressBar(),
+            
+            // Main content
+            Expanded(
+              child: GestureDetector(
+                onHorizontalDragEnd: (details) {
+                  if (details.primaryVelocity != null) {
+                    if (details.primaryVelocity! < 0) {
+                      // Swipe left to go to next step
+                      if (_currentStep < 6) {
+                        setState(() {
+                          _isReverse = false;
+                          _updateSlideAnimation();
+                          _currentStep++;
+                          _pageController.forward(from: 0);
+                        });
+                      } else {
+                        _savePet();
+                      }
+                    } else if (details.primaryVelocity! > 0) {
+                      // Swipe right to go to previous step
+                      if (_currentStep > 0) {
+                        setState(() {
+                          _isReverse = true;
+                          _updateSlideAnimation();
+                          _currentStep--;
+                          _pageController.forward(from: 0);
+                        });
+                      }
+                    }
+                  }
+                },
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
+                  child: [
+                    _buildPetTypeSelection(),
+                    _buildPetDetailsStep(),
+                      _buildGenderStep(),
+                    _buildBirthdayStep(),
+                    _buildWeightStep(),
+                    _buildPhotoStep(),
+                    _buildColorStep(),
+                  ][_currentStep],
+                  ),
+                ),
+              ),
+            ),
+            
+            // Navigation buttons
+            Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                bottom: 24 + safeAreaPadding.bottom, // Add safe area padding at bottom
+              ),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(
+                  // Back button (hidden on first step)
+                  _currentStep > 0
+                      ? TextButton.icon(
                     onPressed: _previousStep,
                     icon: const Icon(Icons.arrow_back),
-                    color: Colors.grey,
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                    color: Colors.grey,
-                  ),
-                ],
-              ),
-              _buildProgressBar(),
-              const SizedBox(height: 32),
-              SizedBox(
-                height: 500, // Increased height to accommodate buttons
-                child: PageView(
-                  controller: _wizardController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _buildTypeSelection(),
-                    _buildGenderSelection(),
-                    _buildPhotoSelection(),
-                    _buildNameStep(),
-                    _buildAgeSelection(),
-                    _buildWeightSelection(),
-                    _buildColorSelection(),
-                  ],
+                          label: const Text('Back'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey,
+                          ),
+                        )
+                      : const SizedBox(width: 100), // Empty space for alignment
+                  
+                  // Next/Add button
+                  ElevatedButton(
+                    onPressed: _isSaving ? null : _nextStep,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    child: Text(
+                      _currentStep == 6 ? 'Add Pet' : 'Next',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ),
             ],
           ),
+            ),
+          ],
         ),
+          ),
+          if (_isSaving)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.2),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

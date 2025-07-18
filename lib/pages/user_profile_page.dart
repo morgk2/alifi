@@ -115,90 +115,139 @@ class _UserProfilePageState extends State<UserProfilePage> {
   Widget build(BuildContext context) {
     final currentUser = context.read<AuthService>().currentUser;
     final isCurrentUser = currentUser?.id == widget.user.id;
+    final user = widget.user;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isCurrentUser ? 'Your Profile' : 'User Profile'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+        title: Text(
+          (user.displayName != null && user.displayName!.isNotEmpty)
+              ? user.displayName!
+              : (user.username != null && user.username!.isNotEmpty ? user.username! : 'Profile'),
+          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Profile header
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.symmetric(horizontal: 0),
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              color: Colors.white,
               child: Column(
                 children: [
+                  if (user.photoURL != null && user.photoURL!.isNotEmpty)
                   CircleAvatar(
-                    radius: 50,
-                    backgroundImage: widget.user.photoURL != null
-                        ? NetworkImage(widget.user.photoURL!)
-                        : null,
-                    child: widget.user.photoURL == null
-                        ? Text(
-                            widget.user.displayName?[0].toUpperCase() ??
-                                widget.user.email[0].toUpperCase(),
-                            style: const TextStyle(fontSize: 32),
-                          )
-                        : null,
+                      radius: 54,
+                      backgroundImage: NetworkImage(user.photoURL!),
+                    )
+                  else
+                    const CircleAvatar(
+                      radius: 54,
+                      backgroundColor: Colors.grey,
+                      child: Icon(Icons.person, size: 54, color: Colors.white),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    widget.user.displayName ?? 'No name',
+                    user.displayName ?? '',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (widget.user.username != null) ...[
+                  if (user.username != null && user.username!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      '@${widget.user.username}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
+                      '@${user.username!}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
                   const SizedBox(height: 16),
-                  // Followers count row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // Stats row
+                  Column(
                     children: [
-                      Column(
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            '${widget.user.followersCount}',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: Text(
+                                (user.petsRescued).toString(),
+                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
-                          Text(
-                            'Followers',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
+                          _ProfileStatDivider(),
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: Text(
+                                (user.followersCount).toString(),
+                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          _ProfileStatDivider(),
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: Text(
+                                (user.level).toString(),
+                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(width: 32),
-                      Column(
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '${widget.user.followingCount}',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              child: Text(
+                                'Pets\nRescued',
+                                style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
-                          Text(
-                            'Following',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
+                          _ProfileStatDivider(),
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              child: Text(
+                                'Followers',
+                                style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          _ProfileStatDivider(),
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              child: Text(
+                                'Level',
+                                style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                         ],
@@ -207,18 +256,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   ),
                   const SizedBox(height: 16),
                   if (!isCurrentUser && currentUser != null)
-                    SizedBox(
-                      width: 200,
-                      height: 40,
-                      child: ElevatedButton(
+                    OutlinedButton(
                         onPressed: _isLoadingFollow ? null : _toggleFollow,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _isFollowing ? Colors.grey[200] : const Color(0xFFFF9E42),
-                          foregroundColor: _isFollowing ? Colors.black87 : Colors.white,
-                          elevation: 0,
+                      style: OutlinedButton.styleFrom(
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        side: BorderSide(color: _isFollowing ? Colors.grey : const Color(0xFFFFB300)),
+                        foregroundColor: _isFollowing ? Colors.grey : const Color(0xFFFFB300),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        backgroundColor: _isFollowing ? Colors.grey[100] : Colors.white,
                         ),
                         child: _isLoadingFollow
                             ? const SizedBox(
@@ -226,60 +273,138 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF9E42)),
+                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFB300)),
                                 ),
                               )
                             : Text(
                                 _isFollowing ? 'Following' : 'Follow',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    )
-                  else if (isCurrentUser)
-                    ElevatedButton(
-                      onPressed: () {
-                        // TODO: Navigate to edit profile page
-                      },
-                      child: const Text('Edit Profile'),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
                     ),
                 ],
               ),
             ),
-            const Divider(),
-            // Pets section
-            Padding(
-              padding: const EdgeInsets.all(16),
+            // Achievements
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    isCurrentUser ? 'Your Pets' : 'User\'s Pets',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.emoji_events, size: 24, color: Colors.black),
+                        SizedBox(width: 8),
+                        Text('Achievements', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  if (_isLoading)
-                    const Center(child: SpinningLoader(color: Colors.orange))
-                  else if (_userPets.isEmpty)
-                    Center(
-                      child: Text(
-                        isCurrentUser
-                            ? 'You haven\'t added any pets yet'
-                            : 'This user hasn\'t added any pets yet',
-                        style: TextStyle(
-                          color: Colors.grey[600],
+                  const SizedBox(height: 16),
+                  FutureBuilder<List<Achievement>>(
+                    future: _fetchAchievements(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: SpinningLoader(color: Colors.orange));
+                      }
+                      final achievements = snapshot.data ?? [];
+                      return SizedBox(
+                        height: 150,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: achievements.length,
+                          itemBuilder: (context, index) {
+                            return _AchievementBadge(achievement: achievements[index]);
+                          },
                         ),
-                      ),
-                    )
-                  else
-                    Column(
-                      children: _userPets.map(_buildPetCard).toList(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            // Owned pets
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.pets, size: 22, color: Colors.black),
+                        SizedBox(width: 8),
+                        Text('Owned pets', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      ],
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  _isLoading
+                      ? const Center(child: SpinningLoader(color: Colors.orange))
+                      : _userPets.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 24),
+                              child: Text('No pets found.', style: TextStyle(color: Colors.grey)),
+                            )
+                          : SizedBox(
+                              height: 120,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                itemCount: _userPets.length,
+                                itemBuilder: (context, index) {
+                                  final pet = _userPets[index];
+                                  return Container(
+                                    width: 100,
+                                    margin: const EdgeInsets.only(right: 16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.06),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        pet.imageUrls.isNotEmpty
+                                            ? CircleAvatar(
+                                                radius: 32,
+                                                backgroundImage: NetworkImage(pet.imageUrls.first),
+                                              )
+                                            : const CircleAvatar(
+                                                radius: 32,
+                                                backgroundColor: Colors.grey,
+                                                child: Icon(Icons.pets, color: Colors.white),
+                                              ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          pet.name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        Text(
+                                          pet.breed,
+                                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -288,4 +413,191 @@ class _UserProfilePageState extends State<UserProfilePage> {
       ),
     );
   }
+
+  // Dummy data for achievements and activities (replace with real data as needed)
+  Future<List<Achievement>> _fetchAchievements() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    return [
+      const Achievement(
+        title: 'First Reunion',
+        description: 'Helped reunite your first pet with its owner',
+        icon: Icons.emoji_emotions,
+      ),
+      const Achievement(
+        title: 'Guardian Angel',
+        description: 'Helped rescue pets 3 days in a row',
+        icon: Icons.pets,
+      ),
+      const Achievement(
+        title: 'Neighborhood Hero',
+        description: '3 confirmed rescues in same location',
+        icon: Icons.star,
+      ),
+    ];
+  }
+
+  Future<List<Activity>> _fetchActivities() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    return [
+      const Activity(
+        text: 'Rescued a pet',
+        time: '23 hours ago',
+        icon: Icons.volunteer_activism,
+      ),
+      const Activity(
+        text: 'Donated',
+        time: '2 days ago',
+        icon: Icons.attach_money,
+      ),
+      const Activity(
+        text: 'Bought accessory',
+        time: 'a week ago',
+        icon: Icons.shopping_cart,
+      ),
+    ];
+  }
+}
+
+class _ProfileStat extends StatelessWidget {
+  final String label;
+  final int value;
+  const _ProfileStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value.toString(),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 13, color: Colors.grey),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileStatDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 18),
+      width: 1.5,
+      height: 32,
+      color: Colors.grey[300],
+    );
+  }
+}
+
+class _AchievementBadge extends StatelessWidget {
+  final Achievement achievement;
+  const _AchievementBadge({required this.achievement});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 110,
+      height: 150,
+      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.amber[50],
+            child: Icon(achievement.icon, size: 32, color: Colors.amber[800]),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            achievement.title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            achievement.description,
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActivityCard extends StatelessWidget {
+  final Activity activity;
+  const _ActivityCard({required this.activity});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(activity.icon, size: 28, color: Colors.black),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          activity.text,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          activity.time,
+          style: const TextStyle(fontSize: 11, color: Colors.grey),
+        ),
+      ],
+    );
+  }
+}
+
+class Achievement {
+  final String title;
+  final String description;
+  final IconData icon;
+
+  const Achievement({
+    required this.title,
+    required this.description,
+    required this.icon,
+  });
+}
+
+class Activity {
+  final String text;
+  final String time;
+  final IconData icon;
+
+  const Activity({
+    required this.text,
+    required this.time,
+    required this.icon,
+  });
 } 

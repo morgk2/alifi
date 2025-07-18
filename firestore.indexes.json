@@ -1,0 +1,51 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "lost_pets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isFound",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "location",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastSeenDate",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "lost_pets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isFound",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "reportedDate",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "lost_pets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "reportedByUserId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "reportedDate",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+} 

@@ -7,6 +7,7 @@ import 'map_page.dart';
 import 'my_pets_page.dart';
 import 'marketplace_page.dart';
 import 'user_search_page.dart';
+import 'package:latlong2/latlong.dart' as latlong;
 
 class PageContainer extends StatefulWidget {
   const PageContainer({super.key});
@@ -22,19 +23,31 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
   late List<Widget> _pages;
+  latlong.LatLng? _pendingCenterLocation;
 
   @override
   void initState() {
     super.initState();
     _pages = [
       HomePage(
-        onNavigateToMap: () => setState(() => _currentIndex = 1),
+        onNavigateToMap: (pet) {
+          setState(() {
+            _pendingCenterLocation = pet.location;
+            _currentIndex = 1;
+          });
+        },
       ),
       MapPage(
         onSearchFocusChange: (isVisible) {
           if (_isVisible != isVisible) {
             _toggleVisibility();
           }
+        },
+        centerOnLocation: _pendingCenterLocation,
+        onMapCentered: () {
+          setState(() {
+            _pendingCenterLocation = null;
+          });
         },
       ),
       const MyPetsPage(),

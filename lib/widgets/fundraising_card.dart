@@ -166,11 +166,11 @@ class FundraisingCard extends StatelessWidget {
                     Icon(Icons.add, size: 20),
                     SizedBox(width: 8),
                     Text(
-                      'Contribute',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  'Contribute',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                     ),
                   ],
                 ),

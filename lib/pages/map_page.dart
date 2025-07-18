@@ -1,21 +1,30 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' as latlong;
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../config/mapbox_config.dart';
 import '../services/places_service.dart';
+import '../services/database_service.dart';
+import '../models/lost_pet.dart';
 import '../dialogs/report_missing_pet_dialog.dart';
 import '../dialogs/add_business_dialog.dart';
 import '../widgets/spinning_loader.dart';
+import 'user_profile_page.dart';
+import 'package:intl/intl.dart';
+import '../models/user.dart';
 
 class MapPage extends StatefulWidget {
   final Function(bool)? onSearchFocusChange;
+  final latlong.LatLng? centerOnLocation;
+  final VoidCallback? onMapCentered;
   
   const MapPage({
     super.key,
     this.onSearchFocusChange,
+    this.centerOnLocation,
+    this.onMapCentered,
   });
 
   @override
@@ -25,9 +34,11 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
   final PlacesService _placesService = PlacesService();
+  final DatabaseService _databaseService = DatabaseService();
   bool _locationEnabled = false;
   Position? _currentPosition;
   List<PlaceSearchResult> _searchResults = [];
+  List<LostPet> _nearbyLostPets = [];
   bool _isLoading = false;
   
   late AnimationController _animationController;
@@ -101,9 +112,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
       // Move map to current location
       _mapController.move(
-        LatLng(position.latitude, position.longitude),
+        latlong.LatLng(position.latitude, position.longitude),
         15.0,
       );
+
+      // Load nearby lost pets
+      _loadNearbyLostPets(position);
 
       // Start listening to location updates
       Geolocator.getPositionStream().listen((Position position) {
@@ -111,15 +125,24 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           setState(() {
             _currentPosition = position;
           });
-          _mapController.move(
-            LatLng(position.latitude, position.longitude),
-            15.0, // Use a fixed zoom level instead of the deprecated zoom property
-          );
+          _loadNearbyLostPets(position);
         }
       });
     } catch (e) {
       print('Error getting location: $e');
     }
+  }
+
+  void _loadNearbyLostPets(Position position) {
+    final userLocation = latlong.LatLng(position.latitude, position.longitude);
+    _databaseService.getNearbyLostPets(
+      userLocation: userLocation,
+      radiusInKm: 10,
+    ).listen((pets) {
+      if (mounted) {
+        setState(() => _nearbyLostPets = pets);
+      }
+    });
   }
 
   void _onSearchFocusChange() {
@@ -165,7 +188,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       // Remove the forced 'veterinary' keyword so all business types can be found
       final results = await _placesService.searchNearbyBroad(
         query: query,
-        location: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+        location: latlong.LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
         radiusKm: 20, // Increased search radius
         limit: 15, // Increased limit
       );
@@ -176,18 +199,9 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           _isLoading = false;
         });
 
-        // Add markers for search results
+        // Optionally, center the map to the first result
         if (results.isNotEmpty) {
-          // Center the map to show all results
-          final bounds = LatLngBounds.fromPoints(
-            results.map((r) => r.location).toList(),
-          );
-          _mapController.fitCamera(
-            CameraFit.bounds(
-              bounds: bounds,
-              padding: const EdgeInsets.all(50.0),
-            ),
-          );
+          _mapController.move(results.first.location, 15.0);
         }
       }
     } catch (e) {
@@ -397,7 +411,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: 32),
-          const CircularProgressIndicator(),
+          const SpinningLoader(color: Colors.orange),
           const SizedBox(height: 16),
           const Text('Searching...', style: TextStyle(color: Colors.grey)),
         ],
@@ -523,48 +537,75 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: LatLng(
-                37.7749, // Default latitude (e.g., San Francisco)
-                -122.4194, // Default longitude (e.g., San Francisco)
-              ),
-              initialZoom: 12.0, // Default zoom level
-              // Remove interaction options as they're not needed in newer versions
+              initialCenter: _currentPosition != null
+                  ? latlong.LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                  : const latlong.LatLng(36.7538, 3.0588), // Default to Algiers
+              initialZoom: 15,
+              maxZoom: 18,
+              minZoom: 3,
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=${MapboxConfig.accessToken}',
+                urlTemplate: MapboxConfig.mapboxStyleUrl,
                 additionalOptions: const {
-                  'accessToken': MapboxConfig.accessToken,
-                  'id': 'mapbox.streets',
+                  'accessToken': MapboxConfig.mapboxAccessToken,
+                  'id': MapboxConfig.mapboxStyleId,
                 },
               ),
+              // Lost pet circles
+              CircleLayer(
+                circles: _nearbyLostPets.map((pet) => CircleMarker(
+                  point: pet.location,
+                  radius: 500, // 500 meters radius
+                  color: Colors.red.withOpacity(0.2),
+                  borderColor: Colors.red,
+                  borderStrokeWidth: 2,
+                  useRadiusInMeter: true,
+                )).toList(),
+              ),
               // Current location marker
-              if (_locationEnabled && _currentPosition != null)
+              if (_currentPosition != null)
                 MarkerLayer(
                   markers: [
                     Marker(
-                      point: LatLng(
-                        _currentPosition!.latitude,
-                        _currentPosition!.longitude,
-                      ),
-                      width: 30,
-                      height: 30,
+                      point: latlong.LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                      width: 20,
+                      height: 20,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.3),
+                          color: Colors.blue,
                           shape: BoxShape.circle,
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.location_on,
-                            color: Colors.blue,
-                            size: 20,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 2,
                           ),
                         ),
                       ),
                     ),
                   ],
                 ),
+              // Lost pet markers
+              MarkerLayer(
+                markers: _nearbyLostPets.map((pet) => Marker(
+                  point: pet.location,
+                  width: 40,
+                  height: 40,
+                  child: GestureDetector(
+                    onTap: () => _showLostPetDetails(pet),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.pets,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                )).toList(),
+              ),
             ],
           ),
 
@@ -581,16 +622,20 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
                           child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Colors.white.withOpacity(0.25),
                                 borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 1.5,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 3),
                                   ),
                                 ],
                               ),
@@ -618,26 +663,38 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Container(
+                      ClipOval(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                          child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                              color: Colors.orange.withOpacity(0.25),
                           shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.orange.withOpacity(0.6),
+                                width: 1.5,
+                              ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 3),
                             ),
                           ],
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.add),
+                              icon: Icon(
+                                Icons.add,
+                                color: Colors.orange[700],
+                              ),
                           onPressed: () {
                             final RenderBox button =
                                 context.findRenderObject() as RenderBox;
                             final position = button.localToGlobal(Offset.zero);
                             _toggleMenu(context, position);
                           },
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -649,6 +706,200 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showLostPetDetails(LostPet pet) async {
+    final owner = await showGeneralDialog<User?>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Lost Pet Details',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 350),
+      pageBuilder: (context, anim1, anim2) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        final offset = Tween<Offset>(
+          begin: const Offset(0, 0.25),
+          end: Offset.zero,
+        ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic));
+        return SlideTransition(
+          position: offset,
+          child: Opacity(
+            opacity: anim1.value,
+            child: Center(
+              child: _LostPetDialog(pet: pet),
+            ),
+          ),
+        );
+      },
+    );
+    if (owner != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => UserProfilePage(user: owner),
+        ),
+      );
+    }
+  }
+}
+
+class _LostPetDialog extends StatelessWidget {
+  final LostPet pet;
+  const _LostPetDialog({required this.pet});
+
+  String _formatLastSeen(DateTime date) {
+    // Example: July 18, 2025 at 2:51 AM
+    return DateFormat('MMMM d, y').format(date) +
+        ' at ' + DateFormat('h:mm a').format(date);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, size: 28),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+                if (pet.pet.imageUrls.isNotEmpty)
+                  Center(
+                    child: CircleAvatar(
+                      radius: 48,
+                      backgroundImage: NetworkImage(pet.pet.imageUrls.first),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    pet.pet.name,
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    pet.pet.species,
+                    style: const TextStyle(fontSize: 15, color: Colors.grey, fontWeight: FontWeight.w500),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (pet.pet.description != null && pet.pet.description!.isNotEmpty)
+                  Center(
+                    child: Text(
+                      pet.pet.description!,
+                      style: const TextStyle(fontSize: 16, color: Colors.black87),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                if (pet.additionalInfo != null && pet.additionalInfo!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Center(
+                      child: Text(
+                        pet.additionalInfo!,
+                        style: const TextStyle(fontSize: 15, color: Colors.black54, fontStyle: FontStyle.italic),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.access_time, color: Colors.red, size: 20),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'Last seen: ' + _formatLastSeen(pet.lastSeenDate),
+                        style: const TextStyle(fontSize: 15, color: Colors.red),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.location_on, color: Colors.red, size: 20),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        pet.address,
+                        style: const TextStyle(fontSize: 15, color: Colors.grey),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (pet.reward != null && pet.reward!.isNotEmpty)
+                  Center(
+                    child: Text(
+                      'Reward: ${pet.reward}',
+                      style: const TextStyle(fontSize: 15, color: Colors.orange, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      // Fetch the owner's user data and return it to the parent
+                      final db = DatabaseService();
+                      final owner = await db.getUser(pet.reportedByUserId);
+                      if (owner != null && context.mounted) {
+                        Navigator.of(context).pop(owner);
+                      }
+                    },
+                    icon: const Icon(Icons.account_circle),
+                    label: const Text("Show Owner's Profile"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF9E42),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    'Account user: ${pet.reportedByUserId}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

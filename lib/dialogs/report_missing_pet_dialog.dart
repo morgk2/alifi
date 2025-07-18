@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:alifi/models/pet.dart';
 
 class ReportMissingPetDialog extends StatefulWidget {
-  const ReportMissingPetDialog({super.key});
+  final Pet? pet;
+  const ReportMissingPetDialog({super.key, this.pet});
 
   @override
   State<ReportMissingPetDialog> createState() => _ReportMissingPetDialogState();
@@ -28,12 +30,17 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
   // For swipeable steps
   final PageController _pageController = PageController();
   int _currentStep = 0;
-  final int _totalSteps = 5; // Updated to include Last Seen and Reward steps
+  int get _totalSteps => widget.pet == null ? 5 : 3;
 
-  bool get _isValid =>
-      _selectedImage != null &&
+  bool get _isValid {
+    if (widget.pet != null) {
+      return _descriptionController.text.trim().isNotEmpty && _rewardController.text.trim().isNotEmpty;
+    }
+    return _selectedImage != null &&
       _nameController.text.trim().isNotEmpty &&
-      _descriptionController.text.trim().isNotEmpty;
+      _descriptionController.text.trim().isNotEmpty &&
+      _rewardController.text.trim().isNotEmpty;
+  }
 
   @override
   void initState() {
@@ -47,6 +54,12 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
       curve: Curves.easeOut,
     );
     _animationController.forward();
+    if (widget.pet != null) {
+      _descriptionController.text = widget.pet!.description ?? '';
+      _nameController.text = widget.pet!.name;
+      // Optionally set _selectedType, _selectedImage, etc. if needed
+      // Optionally set _lastSeen if pet has a last seen field
+    }
   }
 
   @override
@@ -373,6 +386,478 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
     });
   }
 
+  Widget _stepWidgetForIndex(int index) {
+    if (widget.pet == null) {
+      switch (index) {
+        case 0:
+          // Step 1: Pet Type Selector
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                double availableWidth = constraints.maxWidth;
+                double circleSize = 120;
+                double iconSize = 64;
+                if (availableWidth < 350) {
+                  circleSize = 96;
+                  iconSize = 48;
+                }
+                bool showCircle = availableWidth >= 250;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Select Pet Type',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: _petTypes.map((petType) {
+                        final isSelected = _selectedType == petType['type'];
+                        return GestureDetector(
+                          onTap: () => setState(() => _selectedType = petType['type']),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16),
+                            child: showCircle
+                                ? AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    width: circleSize,
+                                    height: circleSize,
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? Colors.red[100] : Colors.grey[200],
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isSelected ? Colors.red : Colors.grey[400]!,
+                                        width: isSelected ? 4 : 1,
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Image.asset(
+                                        petType['asset'],
+                                        width: iconSize,
+                                        height: iconSize,
+                                        color: isSelected ? Colors.red : Colors.grey[700],
+                                        colorBlendMode: BlendMode.srcIn,
+                                      ),
+                                    ),
+                                  )
+                                : Image.asset(
+                                    petType['asset'],
+                                    width: iconSize,
+                                    height: iconSize,
+                                    color: isSelected ? Colors.red : Colors.grey[700],
+                                    colorBlendMode: BlendMode.srcIn,
+                                  ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
+        case 1:
+          // Step 2: Image and Name
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: GestureDetector(
+                    onTap: () => _pickImage(),
+                    child: Container(
+                      height: 120,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.grey[300]!,
+                          width: 2,
+                        ),
+                      ),
+                      child: _selectedImage != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.asset(
+                                _selectedImage!,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_a_photo,
+                                  size: 32,
+                                  color: Colors.grey,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Required',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  'Pet Name',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter your pet\'s name (Required)',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        case 2:
+          // Step 3: Description
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Description',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _descriptionController,
+                    maxLines: 6,
+                    decoration: const InputDecoration(
+                      hintText: 'Describe your pet - size, color, distinctive features... (Required)',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _rewardController,
+                  decoration: const InputDecoration(
+                    labelText: 'Reward (optional)',
+                    hintText: 'e.g. 1000 DZD or "Generous reward"',
+                  ),
+                  keyboardType: TextInputType.text,
+                ),
+              ],
+            ),
+          );
+        case 3:
+          // Step 4: Last seen
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Last seen',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _selectDate(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            '${_lastSeen.month}/${_lastSeen.day}/${_lastSeen.year}',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _selectTime(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            _lastSeenTime.format(context),
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Location',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: const TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Enter the location where your pet was last seen',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        case 4:
+          // Step 5: Reward (optional)
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Reward (optional)',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _rewardController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter reward amount in DZD (Optional)',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+      }
+    } else {
+      // widget.pet != null (edit mode)
+      switch (index) {
+        case 0:
+          // Step 1: Description
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Description',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _descriptionController,
+                    maxLines: 6,
+                    decoration: const InputDecoration(
+                      hintText: 'Describe your pet - size, color, distinctive features... (Required)',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        case 1:
+          // Step 2: Last seen
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Last seen',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _selectDate(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            '${_lastSeen.month}/${_lastSeen.day}/${_lastSeen.year}',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _selectTime(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            _lastSeenTime.format(context),
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Location',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: const TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Enter the location where your pet was last seen',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        case 2:
+          // Step 3: Reward (optional)
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Reward (optional)',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: _rewardController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter reward amount in DZD (Optional)',
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+      }
+    }
+    // fallback
+    return const SizedBox.shrink();
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -416,349 +901,42 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                     ),
                       const SizedBox(height: 16),
                       SizedBox(
-                        height: 420, // Fixed height for PageView
-                        child: PageView(
+                        height: 480, // Increased size
+                        child: PageView.builder(
                           controller: _pageController,
                           physics: const BouncingScrollPhysics(),
+                          itemCount: _totalSteps,
                           onPageChanged: (index) => setState(() => _currentStep = index),
-                          children: [
-                            // Step 1: Pet Type Selector
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                double availableWidth = constraints.maxWidth;
-                                double circleSize = 120; // Increased from 72
-                                double iconSize = 64; // Increased from 40
-                                if (availableWidth < 350) {
-                                  circleSize = 96; // Increased from 48
-                                  iconSize = 48; // Increased from 28
-                                }
-                                bool showCircle = availableWidth >= 250;
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    const Text(
-                                      'Select Pet Type',
-                                      style: TextStyle(
-                                        fontSize: 18, // Increased from 16
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 32), // Increased from 24
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: _petTypes.map((petType) {
-                                        final isSelected = _selectedType == petType['type'];
-                                        return GestureDetector(
-                                          onTap: () => setState(() => _selectedType = petType['type']),
-                                          child: Container(
-                                            margin: const EdgeInsets.symmetric(horizontal: 16), // Increased from 8
-                                            child: showCircle
-                                                ? AnimatedContainer(
-                                                    duration: const Duration(milliseconds: 200),
-                                                    width: circleSize,
-                                                    height: circleSize,
-                                                    decoration: BoxDecoration(
-                                                      color: isSelected ? Colors.red[100] : Colors.grey[200],
-                                                      shape: BoxShape.circle,
-                                                      border: Border.all(
-                                                        color: isSelected ? Colors.red : Colors.grey[400]!,
-                                                        width: isSelected ? 4 : 1, // Increased from 3
-                                                      ),
-                                                    ),
-                                                    child: Padding(
-                                                      padding: const EdgeInsets.all(16.0), // Increased from 8
-                                                      child: Image.asset(
-                                                        petType['asset'],
-                                                        width: iconSize,
-                                                        height: iconSize,
-                                                        color: isSelected ? Colors.red : Colors.grey[700],
-                                                        colorBlendMode: BlendMode.srcIn,
-                                                      ),
-                                                    ),
-                                                  )
-                                                : Image.asset(
-                                                    petType['asset'],
-                                                    width: iconSize,
-                                                    height: iconSize,
-                                                    color: isSelected ? Colors.red : Colors.grey[700],
-                                                    colorBlendMode: BlendMode.srcIn,
-                                                  ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                            // Step 2: Image and Name
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                    Center(
-                      child: GestureDetector(
-                        onTap: () => _pickImage(),
-                        child: Container(
-                          height: 100,
-                          width: 100,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 2,
-                            ),
-                          ),
-                          child: _selectedImage != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: Image.asset(
-                                    _selectedImage!,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : const Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add_a_photo,
-                                      size: 32,
-                                      color: Colors.grey,
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Required',
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                          itemBuilder: (context, index) {
+                            return RepaintBoundary(
+                              child: _stepWidgetForIndex(index),
+                            );
+                          },
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Pet Name',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.grey[300]!,
-                          width: 1,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          hintText: 'Enter your pet\'s name (Required)',
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Adjusted padding
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                              ],
-                            ),
-                            // Step 3: Description
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                    const Text(
-                      'Description',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.grey[300]!,
-                          width: 1,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _descriptionController,
-                        maxLines: 4,
-                        decoration: const InputDecoration(
-                                      hintText: 'Describe your pet - size, color, distinctive features... (Required)',
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Adjusted padding
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                              ],
-                            ),
-                            // Step 4: Last seen
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                    const Text(
-                      'Last seen',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _selectDate(context),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Colors.grey[300]!,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Text(
-                                '${_lastSeen.month}/${_lastSeen.day}/${_lastSeen.year}',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _selectTime(context),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Colors.grey[300]!,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Text(
-                                _lastSeenTime.format(context),
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                              ],
-                            ),
-                            // Step 5: Reward (optional)
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                    const Text(
-                      'Reward (optional)',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.grey[300]!,
-                          width: 1,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _rewardController,
-                                    keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                                      hintText: 'Enter reward amount in DZD (Optional)',
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Adjusted padding
-                          border: InputBorder.none,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          if (_currentStep > 0)
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back_ios),
-                              onPressed: _prevStep,
-                            )
-                          else
-                            const SizedBox(width: 48),
-                          Text('Step ${_currentStep + 1} of $_totalSteps'),
-                          if (_currentStep < _totalSteps - 1)
-                            IconButton(
-                              icon: const Icon(Icons.arrow_forward_ios),
-                              onPressed: _nextStep,
-                            )
-                          else
-                            const SizedBox(width: 48),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () {
-                              _animationController.reverse().then((_) {
-                                Navigator.of(context).pop();
-                              });
-                            },
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                            child: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextButton(
-                            onPressed: _showConfirmationDialog,
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.red,
+                    if (_currentStep == _totalSteps - 1)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 8),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: _isValid ? _showConfirmationDialog : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF9E42),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(24),
                               ),
                             ),
                             child: const Text(
-                              'Report',
-                              style: TextStyle(fontSize: 16),
+                              'Confirm',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
                   ],
                   ),
                 ),
