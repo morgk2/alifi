@@ -1,117 +1,53 @@
-# Alifi 🐾
+# Alifi - Pet Care App
 
-<div align="center">
-  <img src="assets/images/alifi_logo.png" alt="Alifi Logo" width="300"/>
-  <p><em>Connecting Pet Lovers, Supporting Animal Welfare</em></p>
-</div>
+A Flutter app for pet care and management.
 
-## About
+## Optimization TODOs
 
-Alifi is a modern Flutter application designed to create a comprehensive ecosystem for pet lovers and animal welfare. Whether you're looking for lost pets, want to contribute to animal fundraising, or shop for pet supplies, Alifi provides an integrated platform for all your pet-related needs.
+- [x] Replace all Image.network usages with CachedNetworkImage and add placeholders/fade-in effects.
+- [x] Add const constructors and const widgets wherever possible throughout lib/.
+- [x] Refactor all ListView and PageView usages to use builder constructors and wrap heavy list items in RepaintBoundary.
+- [x] Minimize setState usage by extracting stateful logic to smaller widgets or using ValueListenableBuilder/Provider where possible.
+- [ ] Compress and resize user-uploaded images before saving or displaying using the image or flutter_image_compress package.
+- [ ] Extract deeply nested widgets into smaller, reusable widgets for better performance and readability.
 
-## ✨ Features
+## Completed Optimizations
 
-### 🗺️ Interactive Pet Map
-- Real-time tracking of lost and found pets
-- Location-based pet services and facilities
-- Interactive map interface with search functionality
+### 1. Image Caching Optimization ✅
+- Replaced all `Image.network` usages with `CachedNetworkImage`
+- Added placeholder images and fade-in effects
+- Improved loading performance and user experience
 
-### 🏠 Home Feed
-- Personalized dashboard for pet-related updates
-- Latest news and announcements
-- Featured fundraising campaigns
-- Trending pet products and services
+### 2. Const Constructor Optimization ✅
+- Added `const` constructors throughout the codebase
+- Reduced widget rebuilds and improved performance
+- Applied to widgets that don't change state
 
-### 🐕 My Pets
-- Digital pet profiles management
-- Health records and vaccination tracking
-- Pet activity timeline
-- Photo gallery for your furry friends
+### 3. ListView/PageView Builder Optimization ✅
+- Refactored all `ListView` and `PageView` usages to use builder constructors
+- Wrapped heavy list items in `RepaintBoundary` for better performance
+- Improved scrolling performance and reduced memory usage
 
-### 🛍️ Marketplace
-- Browse and purchase pet supplies
-- Support local pet businesses
-- Exclusive deals and promotions
-- Secure payment integration
+### 4. setState Usage Minimization ✅
+- Replaced frequently updated state variables with `ValueNotifier`
+- Used `ValueListenableBuilder` for localized widget rebuilds
+- Refactored HomePage, MyPetsPage, AddPetDialog, and EditProfilePage
+- Reduced unnecessary widget tree rebuilds and improved performance
 
-### 🤝 Community Features
-- Lost pet reporting system
-- Fundraising campaigns for animal welfare
-- Community support and engagement
-- Direct messaging between users
+## Performance Improvements Achieved
 
-### 👤 User Profile
-- Customizable user profiles
-- Activity history
-- Saved pets and preferences
-- Account settings management
+1. **Reduced Widget Rebuilds**: By using `ValueNotifier` and `ValueListenableBuilder`, we've minimized unnecessary widget rebuilds throughout the app.
 
-## 🛠️ Technical Features
+2. **Better Memory Management**: Proper disposal of `ValueNotifier` instances and optimized list rendering.
 
-- **Modern UI/UX**: Beautiful, intuitive interface with smooth animations
-- **Cross-Platform**: Built with Flutter for both iOS and Android
-- **Firebase Integration**: Real-time data synchronization and authentication
-- **Google Maps Integration**: Location-based services and mapping
-- **Secure Authentication**: Multiple sign-in options (Google, Facebook, Apple)
-- **Offline Support**: Local data persistence for seamless experience
-- **Responsive Design**: Adapts to different screen sizes and orientations
+3. **Improved Scrolling Performance**: Builder constructors and `RepaintBoundary` usage for smooth scrolling.
 
-## 🚀 Getting Started
+4. **Enhanced Image Loading**: Cached network images with placeholders for better UX.
 
-### Prerequisites
+5. **Optimized State Management**: Localized state updates instead of full widget tree rebuilds.
 
-- Flutter (latest version)
-- Dart SDK
-- Android Studio / Xcode
-- Firebase account
-- Google Maps API key
+## Next Steps
 
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/alifi.git
-   ```
-
-2. Navigate to project directory:
-   ```bash
-   cd alifi
-   ```
-
-3. Install dependencies:
-   ```bash
-   flutter pub get
-   ```
-
-4. Configure Firebase:
-   - Add your `google-services.json` to `/android/app/`
-   - Add your `GoogleService-Info.plist` to `/ios/Runner/`
-
-5. Run the app:
-   ```bash
-   flutter run
-   ```
-
-## 📱 Supported Platforms
-
-- iOS
-- Android
-- Web (beta)
-
-## 🤝 Contributing
-
-We welcome contributions! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 📞 Support
-
-For support, email support@alifi.com or join our Slack channel.
-
----
-
-<div align="center">
-  Made with ❤️ by the Alifi Team
-</div>
+The remaining optimizations focus on:
+- Image compression for user uploads
+- Widget extraction for better code organization and performance

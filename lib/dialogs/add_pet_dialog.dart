@@ -21,6 +21,14 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
   late Animation<Offset> _slideAnimation;
   bool _isReverse = false;
   final TextEditingController _weightController = TextEditingController();
+  
+  // Replace setState variables with ValueNotifier for better performance
+  final ValueNotifier<int> _currentStepNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<bool> _isSavingNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<String?> _errorMessageNotifier = ValueNotifier<String?>(null);
+  final ValueNotifier<double> _weightNotifier = ValueNotifier<double>(0.0);
+  final ValueNotifier<bool> _isKgNotifier = ValueNotifier<bool>(true);
+  
   int _currentStep = 0;
   
   // Pet Type Selection
@@ -117,27 +125,25 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
   void _updateWeight(String value) {
     final newWeight = double.tryParse(value);
     if (newWeight != null) {
-      setState(() {
-        _weight = newWeight;
-      });
+      _weightNotifier.value = newWeight;
     }
   }
 
   void _toggleWeightUnit() {
-      setState(() {
-      if (_weight > 0) {
-        if (_isKg) {
-          // Convert kg to lb
-          _weight = _weight * 2.20462;
-          _weightController.text = _weight.toStringAsFixed(1);
-        } else {
-          // Convert lb to kg
-          _weight = _weight * 0.453592;
-          _weightController.text = _weight.toStringAsFixed(1);
-        }
+    if (_weightNotifier.value > 0) {
+      if (_isKgNotifier.value) {
+        // Convert kg to lb
+        final newWeight = _weightNotifier.value * 2.20462;
+        _weightNotifier.value = newWeight;
+        _weightController.text = newWeight.toStringAsFixed(1);
+      } else {
+        // Convert lb to kg
+        final newWeight = _weightNotifier.value * 0.453592;
+        _weightNotifier.value = newWeight;
+        _weightController.text = newWeight.toStringAsFixed(1);
       }
-      _isKg = !_isKg;
-    });
+    }
+    _isKgNotifier.value = !_isKgNotifier.value;
   }
 
   Color _parseColor(String colorString) {
@@ -169,7 +175,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
       _selectedGender = widget.pet!.gender;
       _selectedDate = DateTime.now().subtract(Duration(days: widget.pet!.age * 365));
       _weight = widget.pet!.weight ?? 0.0;
+      _weightNotifier.value = _weight;
       _isKg = true;
+      _isKgNotifier.value = true;
       _weightController.text = _weight > 0 ? _weight.toStringAsFixed(1) : '';
       _selectedColor = _parseColor(widget.pet!.color);
       // _selectedImage: not prefilled (would require loading from URL)
@@ -189,6 +197,14 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
     _nameController.dispose();
     _breedController.dispose();
     _weightController.dispose();
+    
+    // Dispose ValueNotifiers
+    _currentStepNotifier.dispose();
+    _isSavingNotifier.dispose();
+    _errorMessageNotifier.dispose();
+    _weightNotifier.dispose();
+    _isKgNotifier.dispose();
+    
     super.dispose();
   }
 
@@ -198,8 +214,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         _isReverse = false;
         _updateSlideAnimation();
         _currentStep++;
-        _pageController.forward(from: 0);
+        _currentStepNotifier.value = _currentStep;
       });
+      _pageController.forward();
     } else {
       _savePet();
     }
@@ -211,8 +228,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         _isReverse = true;
         _updateSlideAnimation();
         _currentStep--;
-        _pageController.forward(from: 0);
+        _currentStepNotifier.value = _currentStep;
       });
+      _pageController.forward(from: 0);
     }
   }
 
@@ -243,19 +261,17 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
   }
 
   Future<void> _savePet() async {
-    if (_isSaving) return;
+    if (_isSavingNotifier.value) return;
     if (_selectedPetType == null || 
         _nameController.text.isEmpty || 
         _selectedDate == null || 
-        _weight == 0 || 
+        _weightNotifier.value == 0 || 
         _selectedImage == null) {
-      setState(() {
-        _errorMessage = 'Please fill in all fields';
-      });
+      _errorMessageNotifier.value = 'Please fill in all fields';
       return;
     }
 
-    setState(() { _isSaving = true; });
+    _isSavingNotifier.value = true;
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       if (authService.currentUser == null) {
@@ -281,7 +297,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         medicalInfo: {}, // Add medical info in future update
         dietaryInfo: {}, // Add dietary info in future update
         tags: [_selectedPetType!.toLowerCase()],
-        weight: _weight,
+        weight: _weightNotifier.value,
       );
 
       final petId = await DatabaseService().createPetWithImages(
@@ -300,7 +316,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         });
       }
     } finally {
-      if (mounted) setState(() { _isSaving = false; });
+      if (mounted) _isSavingNotifier.value = false;
     }
   }
 
@@ -920,7 +936,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                       borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                      _isKg ? 'kg' : 'lb',
+                      _isKgNotifier.value ? 'kg' : 'lb',
                       style: const TextStyle(
                         color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -1166,27 +1182,34 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
             SizedBox(height: safeAreaPadding.top),
 
                 // Error banner
-                if (_errorMessage != null && _errorMessage!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: Material(
-                      color: Colors.red[400],
-                      borderRadius: BorderRadius.circular(12),
-                      child: ListTile(
-                        dense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                        leading: const Icon(Icons.error_outline, color: Colors.white),
-                        title: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ValueListenableBuilder<String?>(
+                  valueListenable: _errorMessageNotifier,
+                  builder: (context, errorMessage, child) {
+                    if (errorMessage != null && errorMessage.isNotEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: Material(
+                          color: Colors.red[400],
+                          borderRadius: BorderRadius.circular(12),
+                          child: ListTile(
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                            leading: const Icon(Icons.error_outline, color: Colors.white),
+                            title: Text(
+                              errorMessage,
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              onPressed: () => _errorMessageNotifier.value = null,
+                            ),
+                          ),
                         ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white),
-                          onPressed: () => setState(() => _errorMessage = null),
-                        ),
-                      ),
-                    ),
-                  ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
             
             // Header with cancel button and title
             Padding(
@@ -1232,8 +1255,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                           _isReverse = false;
                           _updateSlideAnimation();
                           _currentStep++;
-                          _pageController.forward(from: 0);
+                          _currentStepNotifier.value = _currentStep;
                         });
+                        _pageController.forward(from: 0);
                       } else {
                         _savePet();
                       }
@@ -1244,8 +1268,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                           _isReverse = true;
                           _updateSlideAnimation();
                           _currentStep--;
-                          _pageController.forward(from: 0);
+                          _currentStepNotifier.value = _currentStep;
                         });
+                        _pageController.forward(from: 0);
                       }
                     }
                   }
@@ -1291,7 +1316,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                   
                   // Next/Add button
                   ElevatedButton(
-                    onPressed: _isSaving ? null : _nextStep,
+                    onPressed: _isSavingNotifier.value ? null : _nextStep,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
@@ -1317,17 +1342,24 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
           ],
         ),
           ),
-          if (_isSaving)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withOpacity(0.2),
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+          ValueListenableBuilder<bool>(
+            valueListenable: _isSavingNotifier,
+            builder: (context, isSaving, child) {
+              if (isSaving) {
+                return Positioned.fill(
+                  child: Container(
+                    color: Colors.black.withOpacity(0.2),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ],
       ),
     );

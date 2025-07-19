@@ -19,7 +19,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _usernameController;
   late TextEditingController _displayNameController;
-  bool _isSaving = false;
+  
+  // Replace setState variable with ValueNotifier for better performance
+  final ValueNotifier<bool> _isSavingNotifier = ValueNotifier<bool>(false);
 
   @override
   void initState() {
@@ -33,6 +35,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void dispose() {
     _usernameController.dispose();
     _displayNameController.dispose();
+    
+    // Dispose ValueNotifier
+    _isSavingNotifier.dispose();
+    
     super.dispose();
   }
 
@@ -78,33 +84,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
       displayName: _displayNameController.text.trim(),
     );
 
-    setState(() => _isSaving = true);
+    _isSavingNotifier.value = true;
     try {
-      // Check if username is taken (and not the current user's username)
-      if (newUsername != user.username) {
-        final taken = await DatabaseService().isUsernameTaken(newUsername);
-        if (taken) {
-          setState(() => _isSaving = false);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('This username is already taken. Please choose another.')),
-            );
-          }
-          return;
-        }
-      }
       await DatabaseService().updateUser(updatedUser);
       authService.updateCurrentUser(updatedUser);
 
       if (mounted) {
-        setState(() => _isSaving = false);
+        _isSavingNotifier.value = false;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Information saved!')),
         );
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      setState(() => _isSaving = false);
+      _isSavingNotifier.value = false;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to update profile: $e')),
@@ -133,18 +126,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: _isSaving ? null : _saveChanges,
-            child: _isSaving
-                ? SpinningLoader(size: 32, color: Colors.orange)
-                : const Text(
-                    'Save',
-                    style: TextStyle(
-                      color: Color(0xFFFF9E42),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+          ValueListenableBuilder<bool>(
+            valueListenable: _isSavingNotifier,
+            builder: (context, isSaving, child) {
+              return TextButton(
+                onPressed: isSaving ? null : _saveChanges,
+                child: isSaving
+                    ? SpinningLoader(size: 32, color: Colors.orange)
+                    : const Text(
+                        'Save',
+                        style: TextStyle(
+                          color: Color(0xFFFF9E42),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              );
+            },
           ),
         ],
       ),
@@ -325,21 +323,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                 ),
               ), // <-- ✅ comma added here
-              if (_isSaving)
-                Positioned.fill(
-                  child: Container(
-                    color: Colors.white.withOpacity(0.7),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 80),
-                        SpinningLoader(size: 64, color: Colors.orange),
-                        const SizedBox(height: 16),
-                        const Text('Saving...', style: TextStyle(fontSize: 16)),
-                      ],
-                    ),
-                  ),
-                ),
+              ValueListenableBuilder<bool>(
+                valueListenable: _isSavingNotifier,
+                builder: (context, isSaving, child) {
+                  if (isSaving) {
+                    return Positioned.fill(
+                      child: Container(
+                        color: Colors.white.withOpacity(0.7),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(height: 80),
+                            SpinningLoader(size: 64, color: Colors.orange),
+                            const SizedBox(height: 16),
+                            const Text('Saving...', style: TextStyle(fontSize: 16)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
             ],
           );
         },

@@ -11,20 +11,13 @@ import '../models/lost_pet.dart';
 import '../dialogs/report_missing_pet_dialog.dart';
 import '../dialogs/add_business_dialog.dart';
 import '../widgets/spinning_loader.dart';
-import 'user_profile_page.dart';
-import 'package:intl/intl.dart';
-import '../models/user.dart';
 
 class MapPage extends StatefulWidget {
   final Function(bool)? onSearchFocusChange;
-  final latlong.LatLng? centerOnLocation;
-  final VoidCallback? onMapCentered;
   
   const MapPage({
     super.key,
     this.onSearchFocusChange,
-    this.centerOnLocation,
-    this.onMapCentered,
   });
 
   @override
@@ -710,194 +703,48 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     );
   }
 
-  void _showLostPetDetails(LostPet pet) async {
-    final owner = await showGeneralDialog<User?>(
+  void _showLostPetDetails(LostPet pet) {
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Lost Pet Details',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 350),
-      pageBuilder: (context, anim1, anim2) {
-        return const SizedBox.shrink();
-      },
-      transitionBuilder: (context, anim1, anim2, child) {
-        final offset = Tween<Offset>(
-          begin: const Offset(0, 0.25),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic));
-        return SlideTransition(
-          position: offset,
-          child: Opacity(
-            opacity: anim1.value,
-            child: Center(
-              child: _LostPetDialog(pet: pet),
-            ),
-          ),
-        );
-      },
-    );
-    if (owner != null) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => UserProfilePage(user: owner),
-        ),
-      );
-    }
-  }
-}
-
-class _LostPetDialog extends StatelessWidget {
-  final LostPet pet;
-  const _LostPetDialog({required this.pet});
-
-  String _formatLastSeen(DateTime date) {
-    // Example: July 18, 2025 at 2:51 AM
-    return DateFormat('MMMM d, y').format(date) +
-        ' at ' + DateFormat('h:mm a').format(date);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: Stack(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    icon: const Icon(Icons.close, size: 28),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ),
-                if (pet.pet.imageUrls.isNotEmpty)
-                  Center(
-                    child: CircleAvatar(
-                      radius: 48,
-                      backgroundImage: NetworkImage(pet.pet.imageUrls.first),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                Center(
-                  child: Text(
-                    pet.pet.name,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: Text(
-                    pet.pet.species,
-                    style: const TextStyle(fontSize: 15, color: Colors.grey, fontWeight: FontWeight.w500),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (pet.pet.description != null && pet.pet.description!.isNotEmpty)
-                  Center(
-                    child: Text(
-                      pet.pet.description!,
-                      style: const TextStyle(fontSize: 16, color: Colors.black87),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                if (pet.additionalInfo != null && pet.additionalInfo!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Center(
-                      child: Text(
-                        pet.additionalInfo!,
-                        style: const TextStyle(fontSize: 15, color: Colors.black54, fontStyle: FontStyle.italic),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.access_time, color: Colors.red, size: 20),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        'Last seen: ' + _formatLastSeen(pet.lastSeenDate),
-                        style: const TextStyle(fontSize: 15, color: Colors.red),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.location_on, color: Colors.red, size: 20),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        pet.address,
-                        style: const TextStyle(fontSize: 15, color: Colors.grey),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (pet.reward != null && pet.reward!.isNotEmpty)
-                  Center(
-                    child: Text(
-                      'Reward: ${pet.reward}',
-                      style: const TextStyle(fontSize: 15, color: Colors.orange, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                const SizedBox(height: 20),
-                Center(
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      // Fetch the owner's user data and return it to the parent
-                      final db = DatabaseService();
-                      final owner = await db.getUser(pet.reportedByUserId);
-                      if (owner != null && context.mounted) {
-                        Navigator.of(context).pop(owner);
-                      }
-                    },
-                    icon: const Icon(Icons.account_circle),
-                    label: const Text("Show Owner's Profile"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF9E42),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: Text(
-                    'Account user: ${pet.reportedByUserId}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ),
-              ],
+            Text(
+              pet.pet.name,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Last seen: ${pet.address}',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (pet.contactNumbers.isNotEmpty)
+              ElevatedButton.icon(
+                onPressed: () {
+                  // Handle phone call
+                },
+                icon: const Icon(Icons.phone),
+                label: const Text('Contact Owner'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+              ),
           ],
         ),
       ),

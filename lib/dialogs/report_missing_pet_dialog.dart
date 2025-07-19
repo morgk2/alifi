@@ -34,12 +34,11 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
 
   bool get _isValid {
     if (widget.pet != null) {
-      return _descriptionController.text.trim().isNotEmpty && _rewardController.text.trim().isNotEmpty;
+      return _descriptionController.text.trim().isNotEmpty;
     }
     return _selectedImage != null &&
       _nameController.text.trim().isNotEmpty &&
-      _descriptionController.text.trim().isNotEmpty &&
-      _rewardController.text.trim().isNotEmpty;
+      _descriptionController.text.trim().isNotEmpty;
   }
 
   @override
@@ -568,15 +567,6 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _rewardController,
-                  decoration: const InputDecoration(
-                    labelText: 'Reward (optional)',
-                    hintText: 'e.g. 1000 DZD or "Generous reward"',
-                  ),
-                  keyboardType: TextInputType.text,
-                ),
               ],
             ),
           );
@@ -912,29 +902,6 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                               child: _stepWidgetForIndex(index),
                             );
                           },
-                        ),
-                      ),
-                    if (_currentStep == _totalSteps - 1)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 8),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: _isValid ? _showConfirmationDialog : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF9E42),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                            ),
-                            child: const Text(
-                              'Confirm',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                          ),
                         ),
                       ),
                   ],

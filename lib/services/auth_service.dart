@@ -59,21 +59,28 @@ class AuthService extends ChangeNotifier {
 
       // Set up auth state listener
       _auth.authStateChanges().listen((firebaseUser) async {
+        print('AuthService: Auth state changed - firebaseUser: ${firebaseUser?.email ?? 'null'}');
         if (firebaseUser == null) {
+          print('AuthService: Firebase user is null, clearing current user');
           _currentUser = null;
           _isLoadingUser = false;
           await _prefs?.remove('user_id');
           // Don't notify if in guest mode
           if (!_isGuestMode) {
+            print('AuthService: Notifying listeners (user signed out)');
             notifyListeners();
           }
         } else {
+          print('AuthService: Firebase user authenticated: ${firebaseUser.email}');
           _isLoadingUser = true;
+          print('AuthService: Notifying listeners (loading user)');
           notifyListeners();
           // Try to load from Firestore, but always set _currentUser at minimum
           try {
+            print('AuthService: Loading user data from Firestore...');
             await _loadUserData(firebaseUser.uid);
             if (_currentUser == null) {
+              print('AuthService: Firestore load failed, creating fallback user');
               // Fallback if Firestore fails
               _currentUser = models.User(
                 id: firebaseUser.uid,
@@ -85,8 +92,11 @@ class AuthService extends ChangeNotifier {
                 linkedAccounts: {'google': true},
               );
               await _prefs?.setString('user_id', firebaseUser.uid);
+            } else {
+              print('AuthService: User data loaded successfully from Firestore');
             }
           } catch (e) {
+            print('AuthService: Error loading user data: $e');
             // Fallback if anything fails
             _currentUser = models.User(
               id: firebaseUser.uid,
@@ -100,10 +110,11 @@ class AuthService extends ChangeNotifier {
             await _prefs?.setString('user_id', firebaseUser.uid);
           }
           _isLoadingUser = false;
+          print('AuthService: Notifying listeners (user loaded)');
           notifyListeners();
         }
       }, onError: (error) {
-        print('Error in auth state listener: $error');
+        print('AuthService: Error in auth state listener: $error');
         // Continue without auth state listener
       });
 
@@ -152,64 +163,139 @@ class AuthService extends ChangeNotifier {
 
   Future<models.User?> signInWithGoogle() async {
     try {
+      print('Starting Google Sign-In process...');
       GoogleSignInAccount? googleUser;
       
       if (kIsWeb) {
+        print('Web platform detected, using web sign-in flow');
         // For web, try interactive sign in directly
         try {
-          googleUser = await _googleSignIn.signIn();
+          googleUser = await _googleSignIn.signIn().timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              print('Google Sign-In timed out on web');
+              throw TimeoutException('Google Sign-In timed out');
+            },
+          );
+          print('Web Google Sign-In completed: ${googleUser?.email}');
         } catch (e) {
           print('Error during Google sign in: $e');
           // If there's a popup error, try signing out first
           if (e.toString().contains('popup_closed_by_user') || 
               e.toString().contains('popup_blocked')) {
+            print('Popup error detected, trying sign out and retry...');
             await _googleSignIn.signOut();
             await _auth.signOut();
             // Try sign in again
-            googleUser = await _googleSignIn.signIn();
+            googleUser = await _googleSignIn.signIn().timeout(
+              const Duration(seconds: 30),
+              onTimeout: () {
+                print('Google Sign-In retry timed out on web');
+                throw TimeoutException('Google Sign-In retry timed out');
+              },
+            );
+            print('Retry Google Sign-In completed: ${googleUser?.email}');
           } else {
             rethrow;
           }
         }
       } else {
+        print('Mobile platform detected, using mobile sign-in flow');
         // For mobile, sign out first to prevent duplicate ID issues
+        print('Signing out from previous sessions...');
         await _googleSignIn.signOut();
         await _auth.signOut();
-        googleUser = await _googleSignIn.signIn();
+        print('Previous sessions cleared, starting new sign-in...');
+        
+        try {
+          googleUser = await _googleSignIn.signIn().timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              print('Google Sign-In timed out on mobile');
+              throw TimeoutException('Google Sign-In timed out');
+            },
+          );
+          print('Mobile Google Sign-In completed: ${googleUser?.email}');
+        } catch (e) {
+          print('Mobile Google Sign-In error: $e');
+          // Try one more time without signing out first
+          print('Retrying Google Sign-In without sign out...');
+          try {
+            googleUser = await _googleSignIn.signIn().timeout(
+              const Duration(seconds: 30),
+              onTimeout: () {
+                print('Google Sign-In retry timed out on mobile');
+                throw TimeoutException('Google Sign-In retry timed out');
+              },
+            );
+            print('Mobile Google Sign-In retry completed: ${googleUser?.email}');
+          } catch (retryError) {
+            print('Mobile Google Sign-In retry failed: $retryError');
+            rethrow;
+          }
+        }
       }
       
-      if (googleUser == null) return null;
+      if (googleUser == null) {
+        print('Google Sign-In returned null user');
+        return null;
+      }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      print('Getting Google authentication...');
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          print('Google authentication timed out');
+          throw TimeoutException('Google authentication timed out');
+        },
+      );
+      print('Google authentication obtained');
+      
+      print('Creating Firebase credential...');
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final userCredential = await _auth.signInWithCredential(credential);
+      print('Signing in to Firebase with credential...');
+      final userCredential = await _auth.signInWithCredential(credential).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          print('Firebase sign-in timed out');
+          throw TimeoutException('Firebase sign-in timed out');
+        },
+      );
       final user = userCredential.user;
-      if (user == null) return null;
+      if (user == null) {
+        print('Firebase sign-in returned null user');
+        return null;
+      }
+      print('Firebase sign-in successful: ${user.email}');
 
       // Check if user exists in Firestore
+      print('Checking Firestore for existing user...');
       final userDoc = _firestore.collection('users').doc(user.uid);
       
       try {
-        final userSnapshot = await userDoc.get();
+        final userSnapshot = await userDoc.get().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            print('Firestore query timed out');
+            throw TimeoutException('Firestore query timed out');
+          },
+        );
+        print('Firestore query completed, user exists: ${userSnapshot.exists}');
 
         if (!userSnapshot.exists) {
+          print('Creating new user document...');
           // Create new user document
           String? username = user.displayName;
           if (username == null || username.isEmpty) {
-            // Generate a random username
+            print('Generating random username...');
+            // Generate a random username without checking availability
             final rand = Random();
-            String candidate;
-            bool taken = true;
-            final dbService = DatabaseService();
-            do {
-              candidate = 'user${rand.nextInt(90000) + 10000}';
-              taken = await dbService.isUsernameTaken(candidate);
-            } while (taken);
-            username = candidate;
+            username = 'user${rand.nextInt(90000) + 10000}';
+            print('Generated username: $username');
           }
           final newUser = models.User(
             id: user.uid,
@@ -230,10 +316,18 @@ class AuthService extends ChangeNotifier {
           final userData = newUser.toFirestore();
           userData['createdAt'] = FieldValue.serverTimestamp();
           userData['lastLoginAt'] = FieldValue.serverTimestamp();
-          await userDoc.set(userData);
+          await userDoc.set(userData).timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              print('Firestore user creation timed out');
+              throw TimeoutException('Firestore user creation timed out');
+            },
+          );
+          print('New user document created successfully');
           _currentUser = newUser;
           await _prefs?.setString('user_id', user.uid);
         } else {
+          print('Updating existing user...');
           // Update existing user's last login while preserving relationships and pets
           final existingUser = models.User.fromFirestore(userSnapshot);
           final updatedUser = existingUser.copyWith(
@@ -247,15 +341,24 @@ class AuthService extends ChangeNotifier {
             pets: existingUser.pets, // Preserve existing pets
           );
           await DatabaseService().updateUser(updatedUser);
+          print('Existing user updated successfully');
           _currentUser = updatedUser;
           await _prefs?.setString('user_id', user.uid);
         }
 
+        print('Notifying listeners and returning user...');
         notifyListeners();
+        
+        // Double-check that the auth state listener has been triggered
+        print('Checking if Firebase auth state is properly set...');
+        final currentFirebaseUser = _auth.currentUser;
+        print('Current Firebase user: ${currentFirebaseUser?.email ?? 'null'}');
+        
         return _currentUser;
       } catch (e) {
         print('Error accessing Firestore: $e');
         // Even if Firestore fails, return a basic user object
+        print('Creating fallback user object...');
         _currentUser = models.User(
           id: user.uid,
           email: user.email!,

@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/gestures.dart';
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'widgets/spinning_loader.dart';
 import 'services/database_service.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 Future<void> main() async {
   try {
@@ -176,18 +178,24 @@ class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
+    
+    print('AuthWrapper: isInitialized=${authService.isInitialized}, isLoadingUser=${authService.isLoadingUser}, isAuthenticated=${authService.isAuthenticated}');
+    print('AuthWrapper: currentUser=${authService.currentUser?.email ?? 'null'}, isGuestMode=${authService.isGuestMode}');
 
     // Show splash screen while initializing or loading user
     if (!authService.isInitialized || authService.isLoadingUser) {
+      print('AuthWrapper: Showing splash screen');
       return const SplashScreen();
     }
 
     // If authenticated, show main app
     if (authService.isAuthenticated) {
+      print('AuthWrapper: User is authenticated, showing main app');
       return const PageContainer();
     }
 
     // If not authenticated, show login page
+    print('AuthWrapper: User is not authenticated, showing login page');
     return const LoginPage();
   }
 }
@@ -296,10 +304,66 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> _handleGoogleSignIn(BuildContext context) async {
+    print('LoginPage: Google Sign-In button pressed');
     final authService = context.read<AuthService>();
+    print('LoginPage: Calling authService.signInWithGoogle()');
     final user = await authService.signInWithGoogle();
+    print('LoginPage: signInWithGoogle() returned: ${user?.email ?? 'null'}');
     if (user != null && mounted) {
+      print('LoginPage: User signed in successfully, navigating to home');
       _navigateToHome(context);
+    } else {
+      print('LoginPage: Sign-in failed or user is null');
+    }
+  }
+
+  void _debugAuthState(BuildContext context) async {
+    final authService = context.read<AuthService>();
+    print('Debug Auth State:');
+    print('isInitialized: ${authService.isInitialized}');
+    print('isLoadingUser: ${authService.isLoadingUser}');
+    print('isAuthenticated: ${authService.isAuthenticated}');
+    print('currentUser: ${authService.currentUser?.email ?? 'null'}');
+    print('isGuestMode: ${authService.isGuestMode}');
+    
+    // Check Firebase auth state directly
+    try {
+      final firebaseAuth = FirebaseAuth.instance;
+      final firebaseUser = firebaseAuth.currentUser;
+      print('Firebase Auth State:');
+      print('Current Firebase user: ${firebaseUser?.email ?? 'null'}');
+      print('Firebase user ID: ${firebaseUser?.uid ?? 'null'}');
+      print('Firebase user display name: ${firebaseUser?.displayName ?? 'null'}');
+      
+      // Show a dialog with the debug info
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Debug Info'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('AuthService initialized: ${authService.isInitialized}'),
+                Text('AuthService loading: ${authService.isLoadingUser}'),
+                Text('AuthService authenticated: ${authService.isAuthenticated}'),
+                Text('AuthService user: ${authService.currentUser?.email ?? 'null'}'),
+                Text('Firebase user: ${firebaseUser?.email ?? 'null'}'),
+                Text('Guest mode: ${authService.isGuestMode}'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error checking Firebase auth state: $e');
     }
   }
 
@@ -362,6 +426,16 @@ class _LoginPageState extends State<LoginPage>
                       onPressed: () => _handleGoogleSignIn(context),
                     ),
                     const SizedBox(height: 12),
+                    // Debug button for testing
+                    if (kDebugMode)
+                      _SocialButton(
+                        text: 'Debug: Check Auth State',
+                        icon: AppIcons.googleIcon,
+                        color: Colors.orange,
+                        textColor: Colors.white,
+                        onPressed: () => _debugAuthState(context),
+                      ),
+                    if (kDebugMode) const SizedBox(height: 12),
                     _SocialButton(
                       text: 'Continue with Apple',
                       icon: AppIcons.appleIcon,

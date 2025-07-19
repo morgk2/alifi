@@ -377,7 +377,6 @@ class DatabaseService {
     required String reportedByUserId,
     String? additionalInfo,
     List<String> contactNumbers = const [],
-    String? reward,
   }) async {
     final lostPet = {
       'petId': pet.id,
@@ -389,7 +388,6 @@ class DatabaseService {
       'reportedByUserId': reportedByUserId,
       'additionalInfo': additionalInfo,
       'contactNumbers': contactNumbers,
-      'reward': reward,
     };
 
     final docRef = await _lostPetsCollection.add(lostPet);
@@ -495,13 +493,5 @@ class DatabaseService {
     // Find the index of the user
     final index = snapshot.docs.indexWhere((doc) => doc.id == userId);
     return index + 1; // Add 1 because rank starts from 1, not 0
-  }
-
-  Future<bool> isUsernameTaken(String username) async {
-    final query = await _usersCollection
-        .where('username', isEqualTo: username)
-        .limit(1)
-        .get();
-    return query.docs.isNotEmpty;
   }
 } 

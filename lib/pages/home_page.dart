@@ -6,7 +6,6 @@ import 'package:timeago/timeago.dart' as timeago;
 import '../models/fundraising.dart';
 import '../models/lost_pet.dart';
 import '../models/store_item.dart';
-import '../models/user.dart';
 import '../services/database_service.dart';
 import '../icons.dart';
 import '../widgets/placeholder_image.dart';
@@ -21,16 +20,9 @@ import '../main.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'user_profile_page.dart';
-import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart' show Distance, LengthUnit, LatLng;
-import 'package:latlong2/latlong.dart' as latlong;
-import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
-  final void Function(LostPet pet) onNavigateToMap;
+  final VoidCallback onNavigateToMap;
 
   const HomePage({
     super.key,
@@ -46,15 +38,13 @@ class _HomePageState extends State<HomePage> {
   final ScrollController _storeScrollController = ScrollController();
   final ScrollController _mainScrollController = ScrollController();
   final DatabaseService _databaseService = DatabaseService();
-  final ValueNotifier<bool> _showHeader = ValueNotifier<bool>(false);
-  final ValueNotifier<bool> _isAtTop = ValueNotifier<bool>(false);
-  final ValueNotifier<int> _currentPetPage = ValueNotifier<int>(0);
-  final ValueNotifier<int> _currentStorePage = ValueNotifier<int>(0);
-  Position? _currentPosition;
-  bool _locationEnabled = false;
-  List<LostPet> _lostPets = [];
-  List<LostPet> _filteredLostPets = [];
-  final Distance _distance = const Distance();
+  
+  // Replace setState variables with ValueNotifier for better performance
+  final ValueNotifier<bool> _showHeaderNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _isAtTopNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<int> _currentPetPageNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<int> _currentStorePageNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<List<LostPet>> _lostPetsNotifier = ValueNotifier<List<LostPet>>([]);
 
   // Use mock data for store items
   final List<StoreItem> _storeItems = StoreItem.mockItems;
@@ -65,45 +55,16 @@ class _HomePageState extends State<HomePage> {
     _petsScrollController.addListener(_onPetScroll);
     _storeScrollController.addListener(_onStoreScroll);
     _mainScrollController.addListener(_onMainScroll);
-    _initializeLocationAndLoadPets();
-  }
-
-  Future<void> _initializeLocationAndLoadPets() async {
-    try {
-      final status = await Geolocator.requestPermission();
-      if (status == LocationPermission.denied || status == LocationPermission.deniedForever) {
-        _locationEnabled = false;
-      } else {
-        _locationEnabled = true;
-        _currentPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      }
-    } catch (e) {
-      _locationEnabled = false;
-    }
     _loadRecentLostPets();
   }
 
   Future<void> _loadRecentLostPets() async {
+    // Subscribe to recent lost pets stream
     _databaseService.getRecentLostPets().listen((pets) {
       if (mounted) {
-        setState(() {
-          _lostPets = pets;
-          _filterLostPetsByLocation();
-        });
+        _lostPetsNotifier.value = pets;
       }
     });
-  }
-
-  void _filterLostPetsByLocation() {
-    if (_locationEnabled && _currentPosition != null) {
-      final userLatLng = LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
-      _filteredLostPets = _lostPets.where((pet) {
-        final double dist = _distance.as(LengthUnit.Meter, userLatLng, latlong.LatLng(pet.location.latitude, pet.location.longitude));
-        return dist <= 500.0;
-      }).toList();
-    } else {
-      _filteredLostPets = List.from(_lostPets);
-    }
   }
 
   @override
@@ -114,17 +75,29 @@ class _HomePageState extends State<HomePage> {
     _petsScrollController.dispose();
     _storeScrollController.dispose();
     _mainScrollController.dispose();
+    
+    // Dispose ValueNotifiers
+    _showHeaderNotifier.dispose();
+    _isAtTopNotifier.dispose();
+    _currentPetPageNotifier.dispose();
+    _currentStorePageNotifier.dispose();
+    _lostPetsNotifier.dispose();
+    
     super.dispose();
   }
 
   void _onPetScroll() {
     if (!_petsScrollController.hasClients) return;
+    
     final double offset = _petsScrollController.offset;
-    final double itemWidth = MediaQuery.of(context).size.width * 0.85 + 16.0;
+    final double itemWidth = MediaQuery.of(context).size.width * 0.85 + 16.0; // Width + horizontal margin
     final int page = (offset / itemWidth).round();
-    if (page != _currentPetPage.value) {
-      _currentPetPage.value = page;
+    
+    if (page != _currentPetPageNotifier.value) {
+      _currentPetPageNotifier.value = page;
     }
+
+    // If the scroll is ending (user lifts finger), snap to the nearest item
     if (!_petsScrollController.position.isScrollingNotifier.value) {
       final double targetOffset = page * itemWidth;
       _petsScrollController.animateTo(
@@ -140,25 +113,29 @@ class _HomePageState extends State<HomePage> {
     final double offset = _storeScrollController.offset;
     final double itemWidth = MediaQuery.of(context).size.width * 0.6;
     final int page = (offset / itemWidth).round();
-    if (page != _currentStorePage.value) {
-      _currentStorePage.value = page;
+    if (page != _currentStorePageNotifier.value) {
+      _currentStorePageNotifier.value = page;
     }
   }
 
   void _onMainScroll() {
     if (!_mainScrollController.hasClients) return;
+    
+    // Show header when scrolling up, hide when scrolling down
     if (_mainScrollController.position.userScrollDirection == ScrollDirection.reverse && _mainScrollController.offset > 100) {
-      if (_showHeader.value) {
-        _showHeader.value = false;
+      if (_showHeaderNotifier.value) {
+        _showHeaderNotifier.value = false;
       }
     } else if (_mainScrollController.position.userScrollDirection == ScrollDirection.forward && _mainScrollController.offset > 100) {
-      if (!_showHeader.value) {
-        _showHeader.value = true;
+      if (!_showHeaderNotifier.value) {
+        _showHeaderNotifier.value = true;
       }
     }
+
+    // Check if we're at the top of the scroll
     final bool isAtTop = _mainScrollController.offset < 5;
-    if (isAtTop != _isAtTop.value) {
-      _isAtTop.value = isAtTop;
+    if (isAtTop != _isAtTopNotifier.value) {
+      _isAtTopNotifier.value = isAtTop;
     }
   }
 
@@ -168,82 +145,6 @@ class _HomePageState extends State<HomePage> {
         builder: (context) => const SettingsPage(),
       ),
     );
-  }
-
-  void _showLostPetDetails(LostPet pet) async {
-    final user = await showGeneralDialog<User?>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Lost Pet Details',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 350),
-      pageBuilder: (context, anim1, anim2) {
-        return const SizedBox.shrink();
-      },
-      transitionBuilder: (context, anim1, anim2, child) {
-        final offset = Tween<Offset>(
-          begin: const Offset(0, 0.25),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic));
-        return SlideTransition(
-          position: offset,
-          child: Opacity(
-            opacity: anim1.value,
-            child: Center(
-              child: Material(
-                color: Colors.transparent,
-                child: Stack(
-                  children: [
-                    Container(
-                      width: MediaQuery.of(context).size.width * 0.85,
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.10),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: SingleChildScrollView(
-                        child: _LostPetDialogContent(pet: pet),
-                      ),
-                    ),
-                    // X close button
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            shape: BoxShape.circle,
-                          ),
-                          padding: const EdgeInsets.all(8),
-                          child: const Icon(Icons.close, size: 22, color: Colors.black54),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-    if (user != null) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => UserProfilePage(user: user),
-        ),
-      );
-    }
   }
 
   @override
@@ -343,120 +244,120 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          // Collapsible header
+          // Collapsible header with ValueListenableBuilder
           ValueListenableBuilder<bool>(
-            valueListenable: _showHeader,
-            builder: (context, showHeader, _) {
+            valueListenable: _showHeaderNotifier,
+            builder: (context, showHeader, child) {
               return ValueListenableBuilder<bool>(
-                valueListenable: _isAtTop,
-                builder: (context, isAtTop, __) {
+                valueListenable: _isAtTopNotifier,
+                builder: (context, isAtTop, child) {
                   return AnimatedSlide(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
                     offset: Offset(0, (showHeader && !isAtTop) ? 0 : -1),
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  width: double.infinity,
-                  height: 56 + MediaQuery.of(context).padding.top,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.85),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Colors.grey[300]!,
-                        width: 0.5,
-                      ),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: 20,
-                      right: 20,
-                      top: MediaQuery.of(context).padding.top,
-                    ),
-                    child: SizedBox(
-                      height: 56,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Center text
-                          const Center(
-                            child: Text(
-                              'alifi',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFF59E0B),
+                    child: ClipRect(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          width: double.infinity,
+                          height: 56 + MediaQuery.of(context).padding.top,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.85),
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Colors.grey[300]!,
+                                width: 0.5,
                               ),
                             ),
                           ),
-                          // Left and right elements
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Row(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              left: 20,
+                              right: 20,
+                              top: MediaQuery.of(context).padding.top,
+                            ),
+                            child: SizedBox(
+                              height: 56,
+                              child: Stack(
+                                alignment: Alignment.center,
                                 children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.menu),
-                                    onPressed: () => _navigateToSettings(context),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => const LeaderboardPage(),
-                                        ),
-                                      );
-                                    },
-                                    child: Image.asset(
-                                      'assets/images/leaderboard_3d.png',
-                                    width: 28,
-                                    height: 28,
+                                  // Center text
+                                  const Center(
+                                    child: Text(
+                                      'alifi',
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFF59E0B),
+                                      ),
                                     ),
+                                  ),
+                                  // Left and right elements
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.menu),
+                                            onPressed: () => _navigateToSettings(context),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          GestureDetector(
+                                            onTap: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (context) => const LeaderboardPage(),
+                                                ),
+                                              );
+                                            },
+                                            child: Image.asset(
+                                              'assets/images/leaderboard_3d.png',
+                                            width: 28,
+                                            height: 28,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Row(
+                                        children: [
+                                          _buildHeaderButton(
+                                            icon: AppIcons.bellIcon,
+                                            onTap: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (context) => const NotificationPage(),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          const SizedBox(width: 8),
+                                          GestureDetector(
+                                            onTap: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (context) => const ProfilePage(),
+                                                ),
+                                              );
+                                            },
+                                            child: const CircleAvatar(
+                                              radius: 16,
+                                              backgroundColor: Colors.grey,
+                                              child: Icon(Icons.person, color: Colors.white),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              Row(
-                                children: [
-                                  _buildHeaderButton(
-                                    icon: AppIcons.bellIcon,
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => const NotificationPage(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(width: 8),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => const ProfilePage(),
-                                        ),
-                                      );
-                                    },
-                                    child: const CircleAvatar(
-                                      radius: 16,
-                                      backgroundColor: Colors.grey,
-                                      child: Icon(Icons.person, color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                            ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ),
-            ),
                   );
                 },
               );
@@ -582,24 +483,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildGreeting() {
-    return Consumer<AuthService>(
-      builder: (context, authService, _) {
-        final user = authService.currentUser;
-        final name = user?.displayName?.isNotEmpty == true
-            ? user!.displayName
-            : (user?.username?.isNotEmpty == true ? user!.username : 'user');
-        return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-              'Good afternoon, $name!',
-              style: const TextStyle(
+          'Good afternoon, user!',
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             color: Colors.grey,
           ),
         ),
-            const Text(
+        Text(
           "What's new?",
           style: TextStyle(
             fontFamily: 'Montserrat',
@@ -609,208 +504,217 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ],
-        );
-      },
     );
   }
 
   Widget _buildWhatsNewSlider() {
-    final petsToShow = _filteredLostPets;
-    if (petsToShow.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'No lost pets reported nearby',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
+    return ValueListenableBuilder<List<LostPet>>(
+      valueListenable: _lostPetsNotifier,
+      builder: (context, lostPets, child) {
+        if (lostPets.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'No lost pets reported nearby',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                ),
+              ),
             ),
-          ),
-        ),
-      );
-    }
+          );
+        }
 
-    return Column(
-      children: [
-        SizedBox(
-          height: 220,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final containerWidth = constraints.maxWidth;
-              final itemWidth = MediaQuery.of(context).size.width * 0.85;
-              final totalWidth = itemWidth * petsToShow.length + 16.0 * (petsToShow.length - 1);
+        return Column(
+          children: [
+            SizedBox(
+              height: 220,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final containerWidth = constraints.maxWidth;
+                  final itemWidth = MediaQuery.of(context).size.width * 0.85;
+                  final totalWidth = itemWidth * lostPets.length + 16.0 * (lostPets.length - 1);
 
-              return ScrollableFadeContainer(
-                scrollController: _petsScrollController,
-                containerWidth: containerWidth,
-                contentWidth: totalWidth,
-                child: ListView.builder(
-                  controller: _petsScrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const PageScrollPhysics().applyTo(
-                    const BouncingScrollPhysics(),
-                  ),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: (MediaQuery.of(context).size.width - itemWidth) / 2,
-                  ),
-                  itemCount: petsToShow.length,
-                  itemBuilder: (context, index) {
-                    final lostPet = petsToShow[index];
-                    final width = MediaQuery.of(context).size.width * 0.85;
-                    return GestureDetector(
-                      onTap: () => _showLostPetDetails(lostPet),
-                      child: AnimatedScale(
-                      scale: _currentPetPage.value == index ? 1.0 : 0.92,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOutCubic,
-                      child: Container(
-                        width: width,
-                        margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 24.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(90),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(50),
-                                child: lostPet.pet.imageUrls.isNotEmpty
-                                    ? CachedNetworkImage(
-    imageUrl: lostPet.pet.imageUrls.first,
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-    placeholder: (context, url) => const PlaceholderImage(
-      width: 100,
-      height: 100,
-      isCircular: true,
-    ),
-    errorWidget: (context, url, error) => const PlaceholderImage(
-                                          width: 100,
-                                          height: 100,
-                                          isCircular: true,
-                                        ),
-    fadeInDuration: const Duration(milliseconds: 300),
-                                      )
-                                    : const PlaceholderImage(
-                                        width: 100,
-                                        height: 100,
-                                        isCircular: true,
-                                      ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      lostPet.pet.name,
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        const Text(
-                                          'Last seen: ',
-                                          style: TextStyle(color: Colors.grey),
-                                        ),
-                                        Text(
-                                          timeago.format(lostPet.lastSeenDate),
-                                          style: TextStyle(
-                                            color: Colors.orange[700],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        const Text(
-                                          'Location: ',
-                                          style: TextStyle(color: Colors.grey),
-                                        ),
-                                        Expanded(
-                                          child: Text(
-                                            lostPet.address,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    ElevatedButton(
-                                        onPressed: () => widget.onNavigateToMap(lostPet),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFFF59E0B),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        minimumSize: const Size(120, 36),
-                                        elevation: 4,
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.map, size: 18),
-                                          SizedBox(width: 4),
-                                          Text('Open maps'),
-                                        ],
-                                      ),
+                  return ScrollableFadeContainer(
+                    scrollController: _petsScrollController,
+                    containerWidth: containerWidth,
+                    contentWidth: totalWidth,
+                    child: ListView.builder(
+                      controller: _petsScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const PageScrollPhysics().applyTo(
+                        const BouncingScrollPhysics(),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: (MediaQuery.of(context).size.width - itemWidth) / 2,
+                      ),
+                      itemCount: lostPets.length,
+                      itemBuilder: (context, index) {
+                        final lostPet = lostPets[index];
+                        final width = MediaQuery.of(context).size.width * 0.85;
+                        return ValueListenableBuilder<int>(
+                          valueListenable: _currentPetPageNotifier,
+                          builder: (context, currentPage, child) {
+                            return AnimatedScale(
+                              scale: currentPage == index ? 1.0 : 0.92,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOutCubic,
+                              child: Container(
+                                width: width,
+                                margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 24.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(90),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 8),
+                                      spreadRadius: 2,
                                     ),
                                   ],
                                 ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Row(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(50),
+                                        child: lostPet.pet.imageUrls.isNotEmpty
+                                            ? CachedNetworkImage(
+                                                imageUrl: lostPet.pet.imageUrls.first,
+                                                width: 100,
+                                                height: 100,
+                                                fit: BoxFit.cover,
+                                                placeholder: (context, url) => const PlaceholderImage(
+                                                  width: 100,
+                                                  height: 100,
+                                                  isCircular: true,
+                                                ),
+                                                errorWidget: (context, url, error) => const PlaceholderImage(
+                                                  width: 100,
+                                                  height: 100,
+                                                  isCircular: true,
+                                                ),
+                                                fadeInDuration: const Duration(milliseconds: 300),
+                                              )
+                                            : const PlaceholderImage(
+                                                width: 100,
+                                                height: 100,
+                                                isCircular: true,
+                                              ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              lostPet.pet.name,
+                                              style: const TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              children: [
+                                                const Text(
+                                                  'Last seen: ',
+                                                  style: TextStyle(color: Colors.grey),
+                                                ),
+                                                Text(
+                                                  timeago.format(lostPet.lastSeenDate),
+                                                  style: TextStyle(
+                                                    color: Colors.orange[700],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                const Text(
+                                                  'Location: ',
+                                                  style: TextStyle(color: Colors.grey),
+                                                ),
+                                                Expanded(
+                                                  child: Text(
+                                                    lostPet.address,
+                                                    style: const TextStyle(
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            ElevatedButton(
+                                              onPressed: widget.onNavigateToMap,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFFF59E0B),
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                minimumSize: const Size(120, 36),
+                                                elevation: 4,
+                                              ),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.map, size: 18),
+                                                  SizedBox(width: 4),
+                                                  Text('Open maps'),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            petsToShow.length,
-            (index) => Container(
-              width: 8,
-              height: 8,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _currentPetPage.value == index
-                    ? const Color(0xFFF59E0B)
-                    : Colors.grey[300],
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
             ),
-          ),
-        ),
-      ],
+            const SizedBox(height: 16),
+            ValueListenableBuilder<int>(
+              valueListenable: _currentPetPageNotifier,
+              builder: (context, currentPage, child) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    lostPets.length,
+                    (index) => Container(
+                      width: 8,
+                      height: 8,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: currentPage == index
+                            ? const Color(0xFFF59E0B)
+                            : Colors.grey[300],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -942,181 +846,33 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _storeItems.length,
-                  (index) => Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _currentStorePage.value == index
-                          ? const Color(0xFFF59E0B)
-                          : Colors.grey[300],
+              ValueListenableBuilder<int>(
+                valueListenable: _currentStorePageNotifier,
+                builder: (context, currentPage, child) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      _storeItems.length,
+                      (index) => Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: currentPage == index
+                              ? const Color(0xFFF59E0B)
+                              : Colors.grey[300],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 24),
             ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SpinningLoader extends StatefulWidget {
-  @override
-  State<_SpinningLoader> createState() => _SpinningLoaderState();
-}
-
-class _SpinningLoaderState extends State<_SpinningLoader> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.rotate(
-          angle: _controller.value * 6.28319, // 2*pi
-          child: child,
-        );
-      },
-      child: Image.asset(
-        'assets/images/loading.png',
-        width: 40,
-        height: 40,
-      ),
-    );
-  }
-}
-
-class _LostPetDialogContent extends StatelessWidget {
-  final LostPet pet;
-  const _LostPetDialogContent({required this.pet});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        if (pet.pet.imageUrls.isNotEmpty)
-          CircleAvatar(
-            radius: 60,
-            backgroundImage: NetworkImage(pet.pet.imageUrls.first),
-            backgroundColor: Colors.grey[200],
-          )
-        else
-          CircleAvatar(
-            radius: 60,
-            backgroundColor: Colors.grey[200],
-            child: Icon(Icons.pets, size: 48, color: Colors.grey[400]),
-          ),
-        const SizedBox(height: 16),
-        Text(
-          pet.pet.name,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          pet.pet.breed,
-          style: const TextStyle(fontSize: 16, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Last seen: ${pet.address}',
-          style: const TextStyle(fontSize: 15, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Reported: ${pet.lastSeenDate}',
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
-        ),
-        if (pet.reward != null && pet.reward!.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.yellow[100],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.card_giftcard, color: Colors.orange, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Reward: ${pet.reward}',
-                  style: const TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-        if (pet.additionalInfo != null && pet.additionalInfo!.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            pet.additionalInfo!,
-            style: const TextStyle(fontSize: 15),
-            textAlign: TextAlign.center,
-          ),
-        ],
-        const SizedBox(height: 16),
-        FutureBuilder<User?>(
-          future: DatabaseService().getUser(pet.reportedByUserId),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return SizedBox(
-                height: 40,
-                width: 40,
-                child: _SpinningLoader(),
-              );
-            }
-            final user = snapshot.data;
-            if (user == null) {
-              return const SizedBox();
-            }
-            return ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop(user);
-              },
-              icon: const Icon(Icons.person),
-              label: const Text("Visit Owner's Profile"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-      ],
     );
   }
 }
