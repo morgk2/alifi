@@ -680,4 +680,25 @@ class DatabaseService {
           }).toList();
         });
   }
+
+  // Adoption Center Operations
+  Stream<List<Pet>> getNearbyPets() {
+    return _petsCollection
+        .where('isForAdoption', isEqualTo: true)
+        .where('isActive', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .limit(10)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => Pet.fromFirestore(doc)).toList());
+  }
+
+  Stream<List<Pet>> getNewListings() {
+    return _petsCollection
+        .where('isForAdoption', isEqualTo: true)
+        .where('isActive', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .limit(30)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => Pet.fromFirestore(doc)).toList());
+  }
 } 

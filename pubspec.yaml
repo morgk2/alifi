@@ -107,6 +107,7 @@ flutter:
     - assets/images/paypal_logo.png
     - assets/images/stripe_logo.png
     - assets/images/visa_mastercard.png
+    - assets/images/adoption.png
     - assets/fonts/Inter-Italic-VariableFont_opsz,wght.ttf
     - assets/fonts/Inter-VariableFont_opsz,wght.ttf
     - assets/fonts/InterDisplay-Regular.ttf

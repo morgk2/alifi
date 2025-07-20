@@ -8,8 +8,6 @@ class Pet {
   final String color;
   final int age;
   final String gender;
-  final String? microchipId;
-  final String? description;
   final List<String> imageUrls;
   final String ownerId;
   final DateTime createdAt;
@@ -18,7 +16,10 @@ class Pet {
   final Map<String, dynamic> dietaryInfo;
   final List<String> tags;
   final bool isActive;
-  final double? weight; // Added weight property
+  final bool isForAdoption;
+  final double? weight;
+  final String? microchipId;
+  final String? description;
 
   Pet({
     required this.id,
@@ -28,8 +29,6 @@ class Pet {
     required this.color,
     required this.age,
     required this.gender,
-    this.microchipId,
-    this.description,
     required this.imageUrls,
     required this.ownerId,
     required this.createdAt,
@@ -37,8 +36,11 @@ class Pet {
     required this.medicalInfo,
     required this.dietaryInfo,
     required this.tags,
-    this.isActive = true,
-    this.weight, // Added weight parameter
+    required this.isActive,
+    this.isForAdoption = false,
+    this.weight,
+    this.microchipId,
+    this.description,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -49,8 +51,6 @@ class Pet {
       'color': color,
       'age': age,
       'gender': gender,
-      'microchipId': microchipId,
-      'description': description,
       'imageUrls': imageUrls,
       'ownerId': ownerId,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -59,39 +59,42 @@ class Pet {
       'dietaryInfo': dietaryInfo,
       'tags': tags,
       'isActive': isActive,
-      'weight': weight, // Added weight to Firestore data
+      'isForAdoption': isForAdoption,
+      'weight': weight,
+      'microchipId': microchipId,
+      'description': description,
     };
   }
 
   factory Pet.fromFirestore(DocumentSnapshot doc) {
     try {
-      print('Converting document ${doc.id} to Pet'); // Debug log
-    final data = doc.data() as Map<String, dynamic>;
-      print('Document data: $data'); // Debug log
+      print('Converting document ${doc.id} to Pet');
+      final data = doc.data() as Map<String, dynamic>;
+      print('Document data: $data');
     
-    // Helper function to safely convert timestamps
-    DateTime getTimestamp(dynamic value) {
-      if (value == null) return DateTime.now();
-      if (value is Timestamp) return value.toDate();
-      return DateTime.now();
-    }
-
-    // Helper function to safely convert maps
-    Map<String, dynamic> getMap(dynamic value) {
-      if (value == null) return {};
-      if (value is Map) {
-        // Convert LinkedMap to regular Map
-        return Map<String, dynamic>.from(value.map((key, val) => MapEntry(key.toString(), val)));
+      // Helper function to safely convert timestamps
+      DateTime getTimestamp(dynamic value) {
+        if (value == null) return DateTime.now();
+        if (value is Timestamp) return value.toDate();
+        return DateTime.now();
       }
-      return {};
-    }
 
-    // Helper function to safely convert lists
-    List<String> getStringList(dynamic value) {
-      if (value == null) return [];
-      if (value is List) return List<String>.from(value.map((e) => e.toString()));
-      return [];
-    }
+      // Helper function to safely convert maps
+      Map<String, dynamic> getMap(dynamic value) {
+        if (value == null) return {};
+        if (value is Map) {
+          // Convert LinkedMap to regular Map
+          return Map<String, dynamic>.from(value.map((key, val) => MapEntry(key.toString(), val)));
+        }
+        return {};
+      }
+
+      // Helper function to safely convert lists
+      List<String> getStringList(dynamic value) {
+        if (value == null) return [];
+        if (value is List) return List<String>.from(value.map((e) => e.toString()));
+        return [];
+      }
 
       // Helper function to safely get string value
       String getString(dynamic value, String defaultValue) {
@@ -129,30 +132,31 @@ class Pet {
       }
 
       final pet = Pet(
-      id: doc.id,
+        id: doc.id,
         name: getString(data['name'], ''),
         species: getString(data['species'], ''),
         breed: getString(data['breed'], ''),
         color: getString(data['color'], ''),
         age: getInt(data['age'], 0),
         gender: getString(data['gender'], ''),
-      microchipId: data['microchipId']?.toString(),
-      description: data['description']?.toString(),
-      imageUrls: getStringList(data['imageUrls']),
+        imageUrls: getStringList(data['imageUrls']),
         ownerId: getString(data['ownerId'], ''),
-      createdAt: getTimestamp(data['createdAt']),
-      lastUpdatedAt: getTimestamp(data['lastUpdatedAt']),
-      medicalInfo: getMap(data['medicalInfo']),
-      dietaryInfo: getMap(data['dietaryInfo']),
-      tags: getStringList(data['tags']),
+        createdAt: getTimestamp(data['createdAt']),
+        lastUpdatedAt: getTimestamp(data['lastUpdatedAt']),
+        medicalInfo: getMap(data['medicalInfo']),
+        dietaryInfo: getMap(data['dietaryInfo']),
+        tags: getStringList(data['tags']),
         isActive: getBool(data['isActive'], true),
+        isForAdoption: getBool(data['isForAdoption'], false),
         weight: getDouble(data['weight']),
+        microchipId: data['microchipId']?.toString(),
+        description: data['description']?.toString(),
       );
-      print('Successfully converted to Pet: ${pet.name}'); // Debug log
+      print('Successfully converted to Pet: ${pet.name}');
       return pet;
     } catch (e, stackTrace) {
-      print('Error converting document to Pet: $e'); // Debug log
-      print('Stack trace: $stackTrace'); // Debug log
+      print('Error converting document to Pet: $e');
+      print('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -165,8 +169,6 @@ class Pet {
     String? color,
     int? age,
     String? gender,
-    String? microchipId,
-    String? description,
     List<String>? imageUrls,
     String? ownerId,
     DateTime? createdAt,
@@ -175,7 +177,10 @@ class Pet {
     Map<String, dynamic>? dietaryInfo,
     List<String>? tags,
     bool? isActive,
-    double? weight, // Added weight to copyWith
+    bool? isForAdoption,
+    double? weight,
+    String? microchipId,
+    String? description,
   }) {
     return Pet(
       id: id ?? this.id,
@@ -185,8 +190,6 @@ class Pet {
       color: color ?? this.color,
       age: age ?? this.age,
       gender: gender ?? this.gender,
-      microchipId: microchipId ?? this.microchipId,
-      description: description ?? this.description,
       imageUrls: imageUrls ?? this.imageUrls,
       ownerId: ownerId ?? this.ownerId,
       createdAt: createdAt ?? this.createdAt,
@@ -195,7 +198,10 @@ class Pet {
       dietaryInfo: dietaryInfo ?? this.dietaryInfo,
       tags: tags ?? this.tags,
       isActive: isActive ?? this.isActive,
-      weight: weight ?? this.weight, // Added weight to new instance
+      isForAdoption: isForAdoption ?? this.isForAdoption,
+      weight: weight ?? this.weight,
+      microchipId: microchipId ?? this.microchipId,
+      description: description ?? this.description,
     );
   }
 } 

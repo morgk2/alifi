@@ -60,8 +60,6 @@ class LocalStorageService {
           color: map['color'] ?? '',
           age: map['age'] ?? 0,
           gender: map['gender'] ?? '',
-          microchipId: map['microchipId'],
-          description: map['description'],
           imageUrls: List<String>.from(map['imageUrls'] ?? []),
           ownerId: 'guest',
           createdAt: map['createdAt'] ?? DateTime.now(),
@@ -71,6 +69,8 @@ class LocalStorageService {
           tags: List<String>.from(map['tags'] ?? []),
           isActive: map['isActive'] ?? true,
           weight: (map['weight'] as num?)?.toDouble(),
+          microchipId: map['microchipId']?.toString(),
+          description: map['description']?.toString(),
         );
       }).toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Sort by creation time, newest first

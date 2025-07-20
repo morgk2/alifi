@@ -168,148 +168,81 @@ class AuthService extends ChangeNotifier {
       
       if (kIsWeb) {
         print('Web platform detected, using web sign-in flow');
-        // Web sign-in implementation remains unchanged
         try {
           googleUser = await _googleSignIn.signIn();
           print('Web Google Sign-In completed: ${googleUser?.email}');
         } catch (e) {
           print('Error during web Google sign in: $e');
-            rethrow;
+          rethrow;
         }
       } else {
         print('Mobile platform detected, using mobile sign-in flow');
         
-        // First, ensure we're signed out of everything
         try {
-          print('Signing out of previous sessions...');
-          await Future.wait([
-            _googleSignIn.signOut(),
-            _auth.signOut(),
-          ]);
-          print('Successfully signed out of previous sessions');
-        } catch (e) {
-          print('Error during sign out (non-critical): $e');
-          // Continue anyway as this is just cleanup
-        }
-
-        // Try to get currently signed in account first
-        try {
-          print('Checking for existing Google Sign-In...');
-          googleUser = await _googleSignIn.signInSilently();
-          if (googleUser != null) {
-            print('Found existing Google Sign-In: ${googleUser.email}');
+          // Try interactive sign-in directly
+          print('Starting interactive Google Sign-In...');
+          googleUser = await _googleSignIn.signIn();
+          
+          if (googleUser == null) {
+            print('Interactive Google Sign-In cancelled by user');
+            return null;
           }
+          
+          print('Interactive Google Sign-In successful: ${googleUser.email}');
         } catch (e) {
-          print('Error checking existing sign-in (non-critical): $e');
-          // Continue to interactive sign-in
-        }
-
-        // If no existing sign-in, try interactive sign-in
-        if (googleUser == null) {
-          try {
-            print('Starting interactive Google Sign-In...');
-            googleUser = await _googleSignIn.signIn();
-            if (googleUser != null) {
-              print('Interactive Google Sign-In successful: ${googleUser.email}');
-            } else {
-              print('Interactive Google Sign-In cancelled by user');
-              return null;
-            }
-          } catch (e) {
-            print('Error during interactive Google Sign-In: $e');
-            
-            // Handle specific Android errors
-            if (e.toString().contains('network_error')) {
-              print('Network error detected, checking connection...');
-              throw Exception('Please check your internet connection and try again');
-            } else if (e.toString().contains('sign_in_failed')) {
-              print('Sign-in failed, possibly due to Play Services');
-              throw Exception('Google Sign-In failed. Please ensure Google Play Services is up to date');
-            } else if (e.toString().contains('sign_in_canceled')) {
-              print('Sign-in was cancelled by the user');
-              return null;
-            }
-            
-            rethrow;
-          }
+          print('Error during interactive Google Sign-In: $e');
+          rethrow;
         }
       }
-      
+
       if (googleUser == null) {
         print('Google Sign-In returned null user');
         return null;
       }
 
-      print('Getting Google authentication...');
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      print('Got Google authentication tokens');
-      
-      print('Creating Firebase credential...');
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      print('Signing in to Firebase...');
-      final UserCredential authResult = await _auth.signInWithCredential(credential);
-      final firebaseUser = authResult.user;
-
-      if (firebaseUser == null) {
-        print('Firebase sign-in failed - null user');
-        throw Exception('Failed to sign in with Google');
-      }
-
-      print('Successfully signed in to Firebase: ${firebaseUser.email}');
-
-      // Create or update user document
-      final userDoc = _firestore.collection('users').doc(firebaseUser.uid);
-      final now = DateTime.now();
-
       try {
-        print('Checking if user exists in Firestore...');
-        final docSnapshot = await userDoc.get();
+        print('Getting Google authentication...');
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        print('Got Google authentication tokens');
 
-        if (!docSnapshot.exists) {
-          print('Creating new user document in Firestore...');
-          final newUser = models.User(
-            id: firebaseUser.uid,
-            email: firebaseUser.email ?? '',
-            displayName: firebaseUser.displayName ?? 'User${Random().nextInt(10000)}',
-            photoURL: firebaseUser.photoURL,
-            createdAt: now,
-            lastLoginAt: now,
-            linkedAccounts: {'google': true},
-            accountType: 'normal',
-            isVerified: false,
-          );
+        print('Creating Firebase credential...');
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
 
-          await userDoc.set(newUser.toFirestore());
-          _currentUser = newUser;
-          print('New user document created successfully');
-        } else {
-          print('Updating existing user document...');
-          await userDoc.update({
-            'lastLoginAt': now,
-            'linkedAccounts.google': true,
-            if (firebaseUser.photoURL != null) 'photoURL': firebaseUser.photoURL,
-          });
-          
-          _currentUser = models.User.fromFirestore(docSnapshot);
-          print('Existing user document updated successfully');
+        print('Signing in to Firebase...');
+        final userCredential = await _auth.signInWithCredential(credential);
+        final firebaseUser = userCredential.user;
+
+        if (firebaseUser == null) {
+          print('Firebase sign-in failed: null user');
+          return null;
         }
 
-        await _prefs?.setString('user_id', firebaseUser.uid);
-        notifyListeners();
-        
-        print('Google Sign-In process completed successfully');
-        return _currentUser;
+        print('Firebase sign-in successful: ${firebaseUser.email}');
+
+        // Create or update user document
+        final userData = models.User(
+          id: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+          createdAt: DateTime.now(),
+          lastLoginAt: DateTime.now(),
+          linkedAccounts: {'google': true},
+        );
+
+        await DatabaseService().createUser(userData);
+        print('User data saved to Firestore');
+
+        return userData;
       } catch (e) {
-        print('Error updating Firestore user document: $e');
-        // Still return the user even if Firestore update fails
-        return _currentUser;
+        print('Error during Firebase sign-in: $e');
+        rethrow;
       }
     } catch (e) {
-      print('Error during Google Sign-In process: $e');
+      print('Error in signInWithGoogle: $e');
       rethrow;
     }
   }

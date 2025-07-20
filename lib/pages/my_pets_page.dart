@@ -13,6 +13,7 @@ import '../widgets/spinning_loader.dart';
 import 'dart:ui';
 import '../dialogs/report_missing_pet_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../pages/adoption_center_page.dart';
 
 // Helper to parse color string to Color
 Color _parseColor(String colorString) {
@@ -823,10 +824,12 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                       SizedBox(width: 8),
                 Text(
                         'My pets',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
+                        style: const TextStyle(
+                          fontFamily: 'Montserrat',
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.black,
+                        ),
                       ),
                     ],
                   ),
@@ -836,6 +839,32 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                        onPressed: () {},
                        icon: const Icon(Icons.search, size: 24),
                      ),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) {
+                              return SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.0, 1.0),
+                                  end: Offset.zero,
+                                ).animate(CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeOutCubic,
+                                )),
+                                child: const AdoptionCenterPage(),
+                              );
+                            },
+                            transitionDuration: const Duration(milliseconds: 500),
+                          ),
+                        );
+                      },
+                      icon: Image.asset(
+                        'assets/images/adoption.png',
+                        width: 24,
+                        height: 24,
+                      ),
+                    ),
                      PopupMenuButton<String>(
                        icon: const Icon(Icons.more_vert),
                        color: Colors.white,

@@ -298,6 +298,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         dietaryInfo: {}, // Add dietary info in future update
         tags: [_selectedPetType!.toLowerCase()],
         weight: _weightNotifier.value,
+        isActive: true,
       );
 
       // Save pet to Firestore with local image paths
