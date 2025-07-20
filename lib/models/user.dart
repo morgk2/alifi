@@ -16,6 +16,10 @@ class User {
   final List<String> pets;
   final int level;
   final int petsRescued;
+  final bool isAdmin;
+  final String accountType;
+  final bool isVerified;
+  final List<String> searchTokens;
 
   User({
     required this.id,
@@ -33,6 +37,10 @@ class User {
     this.pets = const [],
     this.level = 1,
     this.petsRescued = 0,
+    this.isAdmin = false,
+    this.accountType = 'normal',
+    this.isVerified = false,
+    this.searchTokens = const [],
   });
 
   Map<String, dynamic> toFirestore() {
@@ -54,6 +62,11 @@ class User {
       'pets': pets,
       'level': level,
       'petsRescued': petsRescued,
+      'isAdmin': isAdmin,
+      'accountType': accountType,
+      'isVerified': isVerified,
+      'email_lower': email.toLowerCase(),
+      'searchTokens': searchTokens,
     };
   }
 
@@ -83,6 +96,10 @@ class User {
       pets: List<String>.from(data['pets'] ?? []),
       level: data['level'] ?? 1,
       petsRescued: data['petsRescued'] ?? 0,
+      isAdmin: data['isAdmin'] ?? false,
+      accountType: data['accountType'] ?? 'normal',
+      isVerified: data['isVerified'] ?? false,
+      searchTokens: List<String>.from(data['searchTokens'] ?? []),
     );
   }
 
@@ -102,6 +119,10 @@ class User {
     List<String>? pets,
     int? level,
     int? petsRescued,
+    bool? isAdmin,
+    String? accountType,
+    bool? isVerified,
+    List<String>? searchTokens,
   }) {
     return User(
       id: id ?? this.id,
@@ -119,6 +140,10 @@ class User {
       pets: pets ?? this.pets,
       level: level ?? this.level,
       petsRescued: petsRescued ?? this.petsRescued,
+      isAdmin: isAdmin ?? this.isAdmin,
+      accountType: accountType ?? this.accountType,
+      isVerified: isVerified ?? this.isVerified,
+      searchTokens: searchTokens ?? this.searchTokens,
     );
   }
 } 

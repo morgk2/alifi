@@ -5,6 +5,7 @@ import '../services/database_service.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../widgets/spinning_loader.dart';
+import '../widgets/verification_badge.dart';
 
 class UserProfilePage extends StatefulWidget {
   final User user;
@@ -153,12 +154,21 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       child: Icon(Icons.person, size: 54, color: Colors.white),
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    user.displayName ?? '',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        user.displayName ?? '',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (user.isVerified) ...[
+                        const SizedBox(width: 8),
+                        const VerificationBadge(size: 20),
+                      ],
+                    ],
                   ),
                   if (user.username != null && user.username!.isNotEmpty) ...[
                     const SizedBox(height: 4),

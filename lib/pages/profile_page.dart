@@ -7,6 +7,7 @@ import '../services/database_service.dart'; // Added import for DatabaseService
 // Added import for UserSearchPage
 import '../widgets/spinning_loader.dart';
 import '../models/pet.dart'; // Added import for Pet model
+import '../widgets/verification_badge.dart';
 
 // Models for database-driven content
 class Achievement {
@@ -150,13 +151,26 @@ class ProfilePage extends StatelessWidget {
                             child: Icon(Icons.person, size: 54, color: Colors.white),
                         ),
                       const SizedBox(height: 16),
-                      Text(
-                          user?.displayName ?? '',
-                        style: const TextStyle(
-                            fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            user?.displayName ?? '',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
+                          if (user?.isVerified ?? false) ...[
+                            const SizedBox(width: 8),
+                            const VerificationBadge(size: 20),
+                          ],
+                        ],
+                      ),
+                      if (user?.isVerified ?? false) ...[
+                        const SizedBox(height: 4),
+                        const VerificationBadge(size: 20),
+                      ],
                         const SizedBox(height: 16),
                         // Stats row
                         Column(

@@ -18,6 +18,7 @@ class PageContainer extends StatefulWidget {
 class _PageContainerState extends State<PageContainer> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   bool _isVisible = true;
+  bool _isAIAssistantExpanded = false;
   late AnimationController _hideController;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -33,6 +34,16 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
             _currentIndex = 1;
           });
         },
+        onAIAssistantExpanded: (expanded) {
+          setState(() {
+            _isAIAssistantExpanded = expanded;
+            if (expanded) {
+              _hideController.forward();
+            } else {
+              _hideController.reverse();
+            }
+          });
+        },
       ),
       MapPage(
         onSearchFocusChange: (isVisible) {
@@ -43,6 +54,7 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
       ),
       const MyPetsPage(),
       const MarketplacePage(),
+      const UserSearchPage(), // Add search as a regular page
     ];
 
     _hideController = AnimationController(
@@ -155,11 +167,11 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
                   position: _slideAnimation,
                   child: GestureDetector(
                     onTap: () {
-                      if (!_isVisible) {
+                      if (!_isVisible && !_isAIAssistantExpanded) {
                         _toggleVisibility();
                       }
                     },
-                    child: _buildBottomNavBar(),
+                    child: _isAIAssistantExpanded ? const SizedBox.shrink() : _buildBottomNavBar(),
                   ),
                 ),
               ),
@@ -205,6 +217,8 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
     final Color defaultIconColor = isDarkBg ? Colors.white : Colors.black;
     final Color activeIconColor = const Color(0xFFFF9E42);
 
+    final int searchPageIndex = 4;
+
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -232,19 +246,29 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
                         AnimatedPositioned(
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
-                          left: _currentIndex * itemWidth,
+                          left: (_currentIndex < searchPageIndex ? _currentIndex : 0) * itemWidth,
                           top: 4,
-                          child: Container(
-                            width: indicatorWidth,
-                            height: indicatorHeight,
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300]!.withOpacity(0.85),
-                                borderRadius: BorderRadius.circular(indicatorRadius),
-                                border: Border.all(
-                                  color: Colors.black.withOpacity(0.15),
-                                  width: 1,
+                          child: AnimatedSlide(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            offset: _currentIndex == searchPageIndex ? const Offset(2.5, 0) : Offset.zero,
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 250),
+                              opacity: _currentIndex == searchPageIndex ? 0.0 : 1.0,
+                              curve: Curves.easeInOut,
+                              child: Container(
+                                width: indicatorWidth,
+                                height: indicatorHeight,
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300]!.withOpacity(0.85),
+                                    borderRadius: BorderRadius.circular(indicatorRadius),
+                                    border: Border.all(
+                                      color: Colors.black.withOpacity(0.15),
+                                      width: 1,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -307,34 +331,29 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
             ),
             const SizedBox(width: 8),
             GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const UserSearchPage(),
-                  ),
-                );
-              },
+              onTap: () => setState(() => _currentIndex = searchPageIndex),
               child: ClipRRect(
-              borderRadius: BorderRadius.circular(32),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  width: searchButtonSize,
-                  height: searchButtonSize,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.45),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: Center(
-                    child: SvgPicture.string(
-                      AppIcons.searchIcon,
-                      width: iconSize,
-                      height: iconSize,
-                      colorFilter: ColorFilter.mode(
-                        defaultIconColor,
-                        BlendMode.srcIn,
+                borderRadius: BorderRadius.circular(32),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    width: searchButtonSize,
+                    height: searchButtonSize,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.45),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Center(
+                      child: SvgPicture.string(
+                        AppIcons.searchIcon,
+                        width: iconSize,
+                        height: iconSize,
+                        colorFilter: ColorFilter.mode(
+                          _currentIndex == searchPageIndex
+                              ? activeIconColor
+                              : defaultIconColor,
+                          BlendMode.srcIn,
                         ),
                       ),
                     ),

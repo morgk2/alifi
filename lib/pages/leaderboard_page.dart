@@ -5,6 +5,8 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import 'user_profile_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/spinning_loader.dart';
+import '../widgets/verification_badge.dart';
 
 class LeaderboardPage extends StatelessWidget {
   const LeaderboardPage({Key? key}) : super(key: key);
@@ -82,14 +84,23 @@ class LeaderboardPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            user.displayName ?? 'User',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                user.displayName ?? 'User',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (user.isVerified) ...[
+                const SizedBox(width: 4),
+                const VerificationBadge(size: 16),
+              ],
+            ],
           ),
           Text(
             'Level ${user.level}',
@@ -180,6 +191,10 @@ class LeaderboardPage extends StatelessWidget {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                      if (user.isVerified) ...[
+                        const SizedBox(width: 8),
+                        const VerificationBadge(size: 16),
+                      ],
                     ],
                   ),
                 ],
@@ -207,7 +222,7 @@ class LeaderboardPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Home',
+          'Leaderboard',
           style: TextStyle(
             color: Colors.black,
             fontSize: 20,
@@ -255,7 +270,8 @@ class LeaderboardPage extends StatelessWidget {
 
                 if (!snapshot.hasData) {
                   return const Center(
-                    child: CircularProgressIndicator(
+                    child: SpinningLoader(
+                      size: 40,
                       color: Colors.orange,
                     ),
                   );

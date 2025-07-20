@@ -64,7 +64,10 @@ class Pet {
   }
 
   factory Pet.fromFirestore(DocumentSnapshot doc) {
+    try {
+      print('Converting document ${doc.id} to Pet'); // Debug log
     final data = doc.data() as Map<String, dynamic>;
+      print('Document data: $data'); // Debug log
     
     // Helper function to safely convert timestamps
     DateTime getTimestamp(dynamic value) {
@@ -90,26 +93,68 @@ class Pet {
       return [];
     }
 
-    return Pet(
+      // Helper function to safely get string value
+      String getString(dynamic value, String defaultValue) {
+        if (value == null) return defaultValue;
+        return value.toString();
+      }
+
+      // Helper function to safely get int value
+      int getInt(dynamic value, int defaultValue) {
+        if (value == null) return defaultValue;
+        if (value is num) return value.toInt();
+        try {
+          return int.parse(value.toString());
+        } catch (e) {
+          return defaultValue;
+        }
+      }
+
+      // Helper function to safely get bool value
+      bool getBool(dynamic value, bool defaultValue) {
+        if (value == null) return defaultValue;
+        if (value is bool) return value;
+        return defaultValue;
+      }
+
+      // Helper function to safely get double value
+      double? getDouble(dynamic value) {
+        if (value == null) return null;
+        if (value is num) return value.toDouble();
+        try {
+          return double.parse(value.toString());
+        } catch (e) {
+          return null;
+        }
+      }
+
+      final pet = Pet(
       id: doc.id,
-      name: data['name']?.toString() ?? '',
-      species: data['species']?.toString() ?? '',
-      breed: data['breed']?.toString() ?? '',
-      color: data['color']?.toString() ?? '',
-      age: (data['age'] as num?)?.toInt() ?? 0,
-      gender: data['gender']?.toString() ?? '',
+        name: getString(data['name'], ''),
+        species: getString(data['species'], ''),
+        breed: getString(data['breed'], ''),
+        color: getString(data['color'], ''),
+        age: getInt(data['age'], 0),
+        gender: getString(data['gender'], ''),
       microchipId: data['microchipId']?.toString(),
       description: data['description']?.toString(),
       imageUrls: getStringList(data['imageUrls']),
-      ownerId: data['ownerId']?.toString() ?? '',
+        ownerId: getString(data['ownerId'], ''),
       createdAt: getTimestamp(data['createdAt']),
       lastUpdatedAt: getTimestamp(data['lastUpdatedAt']),
       medicalInfo: getMap(data['medicalInfo']),
       dietaryInfo: getMap(data['dietaryInfo']),
       tags: getStringList(data['tags']),
-      isActive: data['isActive'] as bool? ?? true,
-      weight: (data['weight'] as num?)?.toDouble(), // Added weight from Firestore data
-    );
+        isActive: getBool(data['isActive'], true),
+        weight: getDouble(data['weight']),
+      );
+      print('Successfully converted to Pet: ${pet.name}'); // Debug log
+      return pet;
+    } catch (e, stackTrace) {
+      print('Error converting document to Pet: $e'); // Debug log
+      print('Stack trace: $stackTrace'); // Debug log
+      rethrow;
+    }
   }
 
   Pet copyWith({

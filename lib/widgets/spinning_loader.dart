@@ -6,7 +6,7 @@ class SpinningLoader extends StatefulWidget {
 
   const SpinningLoader({
     super.key,
-    this.size = 32.0,
+    this.size = 40,
     this.color,
   });
 
@@ -14,15 +14,14 @@ class SpinningLoader extends StatefulWidget {
   State<SpinningLoader> createState() => _SpinningLoaderState();
 }
 
-class _SpinningLoaderState extends State<SpinningLoader>
-    with SingleTickerProviderStateMixin {
+class _SpinningLoaderState extends State<SpinningLoader> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
     )..repeat();
   }

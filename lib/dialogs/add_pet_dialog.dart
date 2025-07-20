@@ -132,17 +132,17 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
   void _toggleWeightUnit() {
     if (_weightNotifier.value > 0) {
       if (_isKgNotifier.value) {
-        // Convert kg to lb
+          // Convert kg to lb
         final newWeight = _weightNotifier.value * 2.20462;
         _weightNotifier.value = newWeight;
         _weightController.text = newWeight.toStringAsFixed(1);
-      } else {
-        // Convert lb to kg
+        } else {
+          // Convert lb to kg
         final newWeight = _weightNotifier.value * 0.453592;
         _weightNotifier.value = newWeight;
         _weightController.text = newWeight.toStringAsFixed(1);
+        }
       }
-    }
     _isKgNotifier.value = !_isKgNotifier.value;
   }
 
@@ -300,9 +300,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         weight: _weightNotifier.value,
       );
 
-      final petId = await DatabaseService().createPetWithImages(
+      // Save pet to Firestore with local image paths
+      final petId = await DatabaseService().createPet(
         pet,
-        [_selectedImage!.path],
         isGuest: authService.isGuestMode,
       );
 
@@ -1187,29 +1187,29 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                   builder: (context, errorMessage, child) {
                     if (errorMessage != null && errorMessage.isNotEmpty) {
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        child: Material(
-                          color: Colors.red[400],
-                          borderRadius: BorderRadius.circular(12),
-                          child: ListTile(
-                            dense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                            leading: const Icon(Icons.error_outline, color: Colors.white),
-                            title: Text(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: Material(
+                      color: Colors.red[400],
+                      borderRadius: BorderRadius.circular(12),
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                        leading: const Icon(Icons.error_outline, color: Colors.white),
+                        title: Text(
                               errorMessage,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.close, color: Colors.white),
-                              onPressed: () => _errorMessageNotifier.value = null,
-                            ),
-                          ),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                              onPressed: () => _errorMessageNotifier.value = null,
+                        ),
+                      ),
+                    ),
                       );
                     }
                     return const SizedBox.shrink();
                   },
-                ),
+                  ),
             
             // Header with cancel button and title
             Padding(
@@ -1347,19 +1347,19 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
             builder: (context, isSaving, child) {
               if (isSaving) {
                 return Positioned.fill(
-                  child: Container(
-                    color: Colors.black.withOpacity(0.2),
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-                      ),
-                    ),
+              child: Container(
+                color: Colors.black.withOpacity(0.2),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
                   ),
+                ),
+              ),
                 );
               }
               return const SizedBox.shrink();
             },
-          ),
+            ),
         ],
       ),
     );

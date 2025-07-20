@@ -71,20 +71,20 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
     final dbService = DatabaseService();
     dbService.getUserPets(authService.currentUser!.id).listen((pets) {
       if (mounted) {
-        // Check if this is a new pet being added
+          // Check if this is a new pet being added
         final isNewPet = pets.length > _petsNotifier.value.length;
         _petsNotifier.value = pets;
         _isLoadingNotifier.value = false;
-        
-        // If a new pet was added, animate to it
-        if (isNewPet && _pageController.hasClients) {
-          // Animate to the new pet (which will be at the start since we order by createdAt desc)
-            _pageController.animateToPage(
-            0,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
+          
+          // If a new pet was added, animate to it
+          if (isNewPet && _pageController.hasClients) {
+            // Animate to the new pet (which will be at the start since we order by createdAt desc)
+              _pageController.animateToPage(
+              0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
       }
     });
   }
@@ -117,14 +117,14 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
         ),
       ),
       errorWidget: (context, url, error) => Center(
-        child: Text(
-          pet.name,
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
+          child: Text(
+            pet.name,
+            style: const TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+            ),
           ),
-        ),
       ),
       fadeInDuration: const Duration(milliseconds: 300),
     );
@@ -361,155 +361,155 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
       valueListenable: _isLoadingNotifier,
       builder: (context, isLoading, child) {
         if (isLoading) {
-          return const Center(child: SpinningLoader(color: Colors.orange));
-        }
+      return const Center(child: SpinningLoader(color: Colors.orange));
+    }
 
         return ValueListenableBuilder<List<Pet>>(
           valueListenable: _petsNotifier,
           builder: (context, pets, child) {
             if (pets.isEmpty) {
-              return _buildEmptyState();
-            }
+      return _buildEmptyState();
+    }
 
-            return Column(
-              children: [
-                SizedBox(
-                  height: 200,
-                  child: PageView.builder(
-                    controller: _pageController,
+    return Column(
+          children: [
+            SizedBox(
+          height: 200,
+          child: PageView.builder(
+            controller: _pageController,
                     itemCount: pets.length + 1, // +1 for add button
-                    physics: const BouncingScrollPhysics(),
-                    itemBuilder: (context, index) {
-                      final pageOffset = (index - (_pageController.page ?? 0));
-                      final scale = 1.0 - (pageOffset.abs() * 0.1);
+            physics: const BouncingScrollPhysics(),
+            itemBuilder: (context, index) {
+              final pageOffset = (index - (_pageController.page ?? 0));
+              final scale = 1.0 - (pageOffset.abs() * 0.1);
 
-                      // Add pet button
+              // Add pet button
                       if (index == pets.length) {
-                        return Transform.scale(
-                          scale: scale.clamp(0.9, 1.0),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 0),
-                            child: Column(
-                              children: [
-                                GestureDetector(
-                                  onTap: _showAddPetDialog,
-                                  child: Container(
-                                    width: 140,
-                                    height: 140,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.grey[300]!,
-                                        width: 6,
-                                      ),
-                                    ),
-                                    child: Center(
-                                      child: Icon(
-                                        Icons.add,
-                                        size: 48,
-                                        color: Colors.grey[400],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Add new pet',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
+                return Transform.scale(
+                  scale: scale.clamp(0.9, 1.0),
+                            child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 0),
+      child: Column(
+        children: [
+                              GestureDetector(
+                          onTap: _showAddPetDialog,
+            child: Container(
+                            width: 140,
+                            height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                                color: Colors.grey[300]!,
+                                width: 6,
+                              ),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.add,
+                                size: 48,
+                                color: Colors.grey[400],
+                              ),
                             ),
                           ),
-                        );
-                      }
-
-                      final pet = pets[index];
-                      return Transform.scale(
-                        scale: scale.clamp(0.9, 1.0),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 0),
-                          child: Column(
-                            children: [
-                              SizedBox(
-                                width: 140,
-                                height: 140,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: _parseColor(pet.color),
-                                      width: 6,
-                                    ),
-                                  ),
-                                  child: ClipOval(
-                                    child: Container(
-                                      color: Colors.white, // Always white inside
-                                      child: _buildPetImage(pet),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                pet.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ],
-                          ),
                         ),
-                      );
-                    },
+                        const SizedBox(height: 16),
+          Text(
+                          'Add new pet',
+            style: TextStyle(
+                            fontSize: 16,
+              color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
+              ],
+            ),
+      ),
+    );
+  }
+
+                      final pet = pets[index];
+              return Transform.scale(
+                scale: scale.clamp(0.9, 1.0),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
+      child: Column(
+                                children: [
+                      SizedBox(
+                        width: 140,
+                        height: 140,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: _parseColor(pet.color),
+                              width: 6,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: Container(
+              color: Colors.white, // Always white inside
+                              child: _buildPetImage(pet),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        pet.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                    ),
+                  ],
+                ),
+                ),
+              );
+            },
+          ),
+        ),
                 ValueListenableBuilder<int>(
                   valueListenable: _currentPetPageNotifier,
                   builder: (context, currentPage, child) {
                     if (pets.isNotEmpty && currentPage < pets.length) {
                       return Expanded(
-                        child: AnimatedBuilder(
-                          animation: _pageController,
-                          builder: (context, child) {
-                            if (_pageController.position.haveDimensions) {
-                              final page = _pageController.page ?? 0;
+            child: AnimatedBuilder(
+              animation: _pageController,
+              builder: (context, child) {
+                if (_pageController.position.haveDimensions) {
+                  final page = _pageController.page ?? 0;
                               final pageOffset = (page - currentPage);
-                              final slide = pageOffset * 200.0; // Adjust this value to control slide distance
-                              final opacity = 1.0 - (pageOffset.abs() * 0.5).clamp(0.0, 1.0);
-                              final scale = 1.0 - (pageOffset.abs() * 0.1).clamp(0.0, 0.1);
+                  final slide = pageOffset * 200.0; // Adjust this value to control slide distance
+                  final opacity = 1.0 - (pageOffset.abs() * 0.5).clamp(0.0, 1.0);
+                  final scale = 1.0 - (pageOffset.abs() * 0.1).clamp(0.0, 0.1);
 
-                              return Transform.translate(
-                                offset: Offset(-slide, 0),
-                                child: Opacity(
-                                  opacity: opacity,
-                                  child: Transform.scale(
-                                    scale: scale,
-                                    alignment: Alignment.topCenter,
-                                    child: child,
-                                  ),
-                                ),
-                              );
-                            }
-                            return child!;
-                          },
-                          child: SingleChildScrollView(
+                  return Transform.translate(
+                    offset: Offset(-slide, 0),
+                    child: Opacity(
+                      opacity: opacity,
+                      child: Transform.scale(
+                        scale: scale,
+                        alignment: Alignment.topCenter,
+                        child: child,
+                      ),
+                    ),
+                  );
+                }
+                return child!;
+              },
+      child: SingleChildScrollView(
                             child: _buildPetDetailsPanel(pets[currentPage]),
-                          ),
-                        ),
+                ),
+              ),
                       );
                     }
                     return const SizedBox.shrink();
                   },
-                ),
-              ],
+            ),
+          ],
             );
           },
         );
@@ -670,10 +670,23 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
   }
 
   void _showReportMissingPetDialog() async {
+    final authService = context.read<AuthService>();
+    if (authService.currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to report a missing pet'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (_petsNotifier.value.isEmpty) {
       await showDialog(
         context: context,
-        builder: (context) => const ReportMissingPetDialog(),
+        builder: (context) => ReportMissingPetDialog(
+          userId: authService.currentUser!.id,
+        ),
       );
     } else {
       await showDialog(
@@ -721,7 +734,10 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                                   Navigator.of(context).pop();
                                   await showDialog(
                                     context: context,
-                                    builder: (context) => ReportMissingPetDialog(pet: pet),
+                                    builder: (context) => ReportMissingPetDialog(
+                                      pet: pet,
+                                      userId: authService.currentUser!.id,
+                                    ),
                                   );
                                 },
                                 child: const Text('Report'),

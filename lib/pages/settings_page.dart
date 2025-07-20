@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import 'edit_profile_page.dart';
 import '../dialogs/report_problem_dialog.dart';
+import 'admin/add_product_page.dart';
+import 'admin/bulk_import_page.dart';
+import 'admin/user_management_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -152,6 +155,49 @@ class SettingsPage extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          if (authService.currentUser?.isAdmin ?? false) // Add admin check
+            _buildSection(
+              title: 'Admin Tools',
+              children: [
+                _SettingsTile(
+                  icon: Icons.add_shopping_cart,
+                  title: 'Add AliExpress Product',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddProductPage(),
+                      ),
+                    );
+                  },
+                ),
+                _SettingsTile(
+                  icon: Icons.upload_file,
+                  title: 'Bulk Import Products',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BulkImportPage(),
+                      ),
+                    );
+                  },
+                ),
+                _SettingsTile(
+                  icon: Icons.manage_accounts,
+                  title: 'User Management',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const UserManagementPage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           const SizedBox(height: 24),
           if (authService.isAuthenticated)
             _buildSection(

@@ -18,6 +18,196 @@ class _ContributePageState extends State<ContributePage> {
   double? _customAmount;
   double _selectedAmount = 200; // Default selected amount
 
+  Widget _buildAmountButton(double amount) {
+    final bool isSelected = _selectedAmount == amount && _customAmount == null;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedAmount = amount;
+          _customAmount = null;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(50),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          amount.toStringAsFixed(0),
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[800],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomAmountButton() {
+    final bool isSelected = _customAmount != null;
+    
+    return GestureDetector(
+      onTap: () {
+        // Show custom amount input dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Enter custom amount'),
+            content: TextField(
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                hintText: 'Enter amount in DZD',
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _customAmount = double.tryParse(value);
+                });
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  setState(() {
+                    _selectedAmount = _customAmount ?? _selectedAmount;
+                  });
+                },
+                child: const Text('Confirm'),
+              ),
+            ],
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(50),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          'Custom',
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[800],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodButton(String method) {
+    if (method == 'PayPal') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(50),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Image.asset(
+          'assets/images/paypal_logo.png',
+          height: 36,
+        ),
+      );
+    } else if (method == 'CIB_SB') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(50),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/cib_logo.png',
+              height: 24,
+            ),
+            Container(
+              height: 24,
+              width: 1,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: Colors.grey[300],
+            ),
+            Image.asset(
+              'assets/images/sb_logo.png',
+              height: 24,
+            ),
+          ],
+        ),
+      );
+    } else if (method == 'visa_mastercard') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(50),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Image.asset(
+          'assets/images/visa_mastercard.png',
+          height: 20,
+        ),
+      );
+    } else if (method == 'stripe') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(50),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Image.asset(
+          'assets/images/stripe_logo.png',
+          height: 24,
+        ),
+      );
+    } else {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(50),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        child: Image.asset(
+          'assets/images/${method.toLowerCase()}_logo.png',
+          height: 24,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final double progress = widget.fundraising.currentAmount / widget.fundraising.goalAmount;
@@ -166,132 +356,15 @@ class _ContributePageState extends State<ContributePage> {
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  _buildPaymentMethodButton('CIB'),
-                  _buildPaymentMethodButton('SB'),
                   _buildPaymentMethodButton('PayPal'),
+                  _buildPaymentMethodButton('CIB_SB'),
+                  _buildPaymentMethodButton('visa_mastercard'),
                   _buildPaymentMethodButton('stripe'),
                 ],
               ),
-              const SizedBox(height: 12),
-              // Credit card logos
-              Center(
-                child: Image.asset(
-                  'assets/images/visa_mastercard.png',
-                  height: 30,
-                ),
-              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildAmountButton(double amount) {
-    final bool isSelected = _selectedAmount == amount && _customAmount == null;
-    
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedAmount = amount;
-          _customAmount = null;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[300]!,
-            width: 1,
-          ),
-        ),
-        child: Text(
-          amount.toStringAsFixed(0),
-          style: TextStyle(
-            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[800],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCustomAmountButton() {
-    final bool isSelected = _customAmount != null;
-    
-    return GestureDetector(
-      onTap: () {
-        // Show custom amount input dialog
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Enter custom amount'),
-            content: TextField(
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                hintText: 'Enter amount in DZD',
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _customAmount = double.tryParse(value);
-                });
-              },
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  setState(() {
-                    _selectedAmount = _customAmount ?? _selectedAmount;
-                  });
-                },
-                child: const Text('Confirm'),
-              ),
-            ],
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[300]!,
-            width: 1,
-          ),
-        ),
-        child: Text(
-          'Custom',
-          style: TextStyle(
-            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[800],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethodButton(String method) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(50),
-        border: Border.all(
-          color: Colors.grey[300]!,
-          width: 1,
-        ),
-      ),
-      child: Image.asset(
-        'assets/images/${method.toLowerCase()}_logo.png',
-        height: 24,
       ),
     );
   }

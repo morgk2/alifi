@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../pages/user_profile_page.dart';
 import '../widgets/spinning_loader.dart';
+import '../widgets/verification_badge.dart';
 
 class UserSearchPage extends StatefulWidget {
   const UserSearchPage({super.key});
@@ -128,12 +129,20 @@ class _UserSearchPageState extends State<UserSearchPage> {
                 )
               : null,
         ),
-        title: Text(
-          user.displayName ?? 'No name',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+        title: Row(
+          children: [
+            Text(
+              user.displayName ?? 'No name',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (user.isVerified) ...[
+              const SizedBox(width: 4),
+              const VerificationBadge(),
+            ],
+          ],
         ),
         subtitle: Text(
           user.username ?? user.email,
@@ -152,8 +161,8 @@ class _UserSearchPageState extends State<UserSearchPage> {
                 ),
               )
             : const Icon(
-                CupertinoIcons.chevron_right,
-                size: 16,
+                Icons.chevron_right,
+                size: 20,
                 color: Colors.grey,
               ),
         onTap: () => _viewUserProfile(context, user),
@@ -168,16 +177,12 @@ class _UserSearchPageState extends State<UserSearchPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: const Icon(
-            CupertinoIcons.back,
-            color: Colors.black,
-            size: 20,
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Home',
+          'Search',
           style: TextStyle(
             color: Colors.black,
             fontSize: 16,
@@ -190,31 +195,44 @@ class _UserSearchPageState extends State<UserSearchPage> {
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: CupertinoSearchTextField(
-              controller: _searchController,
-              placeholder: 'Search people, pets, vets...',
-              onChanged: _searchUsers,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.black,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(24),
               ),
-              placeholderStyle: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-              prefixIcon: const Icon(
-                CupertinoIcons.search,
-                color: Colors.grey,
-                size: 20,
-              ),
-              suffixIcon: const Icon(
-                CupertinoIcons.clear_circled_solid,
-                color: Colors.grey,
-                size: 20,
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 8,
+              child: TextField(
+                controller: _searchController,
+                onChanged: _searchUsers,
+                decoration: InputDecoration(
+                  hintText: 'Search people, pets, vets...',
+                  hintStyle: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 16,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: Colors.grey[400],
+                    size: 20,
+                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Icons.close,
+                            color: Colors.grey[400],
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            _searchUsers('');
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
               ),
             ),
           ),

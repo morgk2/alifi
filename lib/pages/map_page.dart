@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'dart:async' show TimeoutException;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import '../config/mapbox_config.dart';
 import '../services/places_service.dart';
 import '../services/database_service.dart';
+import '../services/auth_service.dart';
 import '../models/lost_pet.dart';
 import '../dialogs/report_missing_pet_dialog.dart';
 import '../dialogs/add_business_dialog.dart';
 import '../widgets/spinning_loader.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class MapPage extends StatefulWidget {
   final Function(bool)? onSearchFocusChange;
@@ -63,13 +67,10 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       vsync: this,
     );
 
-    _slideAnimation = Tween<double>(
-      begin: 100.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
+    _slideAnimation = CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeOutCubic,
-    ));
+    );
 
     _fadeAnimation = Tween<double>(
       begin: 0.0,
@@ -78,29 +79,140 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       parent: _animationController,
       curve: Curves.easeOut,
     ));
+
+    // Load all lost pets initially with a default location
+    _loadNearbyLostPets(
+      Position(
+        latitude: 36.7538,
+        longitude: 3.0588,
+        timestamp: DateTime.now(),
+        accuracy: 0,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: 0,
+        headingAccuracy: 0,
+        speed: 0,
+        speedAccuracy: 0,
+      ),
+    );
   }
 
   Future<void> _initializeLocation() async {
-    // Request location permission
-    final status = await Permission.location.request();
-    if (status != PermissionStatus.granted) {
-      return;
-    }
-
-    // Check if location services are enabled
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return;
-    }
-
+    setState(() => _isLoading = true);
     try {
+      // First check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        // Show dialog to enable location services or enter manually
+        if (!mounted) return;
+        final String? action = await showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Location Services Disabled'),
+            content: const Text('Please enable location services or enter your location manually.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'manual'),
+                child: const Text('Enter Manually'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'settings'),
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+        
+        if (action == 'settings') {
+          await Geolocator.openLocationSettings();
+        } else if (action == 'manual') {
+          if (!mounted) return;
+          _showManualLocationInput();
+        }
+        setState(() => _isLoading = false);
+      return;
+    }
+
+      // Then check and request location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location permission is required to use this feature'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          setState(() => _isLoading = false);
+      return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        // Show dialog to open app settings
+        if (!mounted) return;
+        final bool? openSettings = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Location Permission Required'),
+            content: const Text(
+              'Location permission is required for this feature. '
+              'Please enable it in your app settings.'
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ),
+        );
+        
+        if (openSettings == true) {
+          await Geolocator.openAppSettings();
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Get current position with timeout and accuracy settings
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-      );
+        timeLimit: const Duration(seconds: 5),
+      ).catchError((error) async {
+        // If high accuracy times out, try with lower accuracy
+        if (error is TimeoutException) {
+          return await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.medium,
+            timeLimit: const Duration(seconds: 5),
+          );
+        }
+        throw error;
+      }).catchError((error) async {
+        // If medium accuracy times out, try with lowest accuracy
+        if (error is TimeoutException) {
+          return await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.low,
+            timeLimit: const Duration(seconds: 5),
+          );
+        }
+        throw error;
+      });
       
+      if (!mounted) return;
       setState(() {
         _currentPosition = position;
         _locationEnabled = true;
+        _isLoading = false;
       });
 
       // Move map to current location
@@ -113,25 +225,193 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       _loadNearbyLostPets(position);
 
       // Start listening to location updates
-      Geolocator.getPositionStream().listen((Position position) {
+      Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10, // Update every 10 meters
+        ),
+      ).listen(
+        (Position position) {
         if (mounted) {
           setState(() {
             _currentPosition = position;
           });
           _loadNearbyLostPets(position);
         }
-      });
+        },
+        onError: (error) {
+          print('Location stream error: $error');
+          // Try to reinitialize location if there's an error
+          if (mounted) {
+            _initializeLocation();
+          }
+        },
+      );
     } catch (e) {
       print('Error getting location: $e');
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Expanded(
+                child: Text('Error getting location: ${e.toString()}'),
+              ),
+              TextButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  _showManualLocationInput();
+                },
+                child: const Text(
+                  'Enter Manually',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+              TextButton(
+                onPressed: _initializeLocation,
+                child: const Text(
+                  'Retry',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 10),
+        ),
+      );
+      
+      setState(() {
+        _isLoading = false;
+        _locationEnabled = false;
+      });
+    }
+  }
+
+  Future<void> _showManualLocationInput() async {
+    final TextEditingController addressController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSearching = false;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Enter Your Location'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: addressController,
+                  decoration: const InputDecoration(
+                    labelText: 'Address',
+                    hintText: 'Enter your street address, city, or area',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a location';
+                    }
+                    return null;
+                  },
+                ),
+                if (isSearching)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 16),
+                    child: CircularProgressIndicator(),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: isSearching
+                ? null
+                : () async {
+                    if (formKey.currentState?.validate() ?? false) {
+                      setState(() => isSearching = true);
+                      try {
+                        final results = await _placesService.searchNearbyBroad(
+                          query: addressController.text,
+                          location: const latlong.LatLng(0, 0), // Default to center
+                          radiusKm: 50,
+                          limit: 1,
+                        );
+                        if (results.isNotEmpty) {
+                          Navigator.pop(context, {
+                            'location': results.first.location,
+                            'address': results.first.address,
+                          });
+                        } else {
+                          throw Exception('Location not found');
+                        }
+                      } catch (e) {
+                        setState(() => isSearching = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error finding location: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+              child: const Text('Search'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null) {
+      final location = result['location'] as latlong.LatLng;
+      final address = result['address'] as String;
+      
+      setState(() {
+        _currentPosition = Position(
+          latitude: location.latitude,
+          longitude: location.longitude,
+          timestamp: DateTime.now(),
+          accuracy: 0,
+          altitude: 0,
+          altitudeAccuracy: 0,
+          heading: 0,
+          headingAccuracy: 0,
+          speed: 0,
+          speedAccuracy: 0,
+        );
+        _locationEnabled = true;
+      });
+
+      // Move map to entered location
+      _mapController.move(location, 15.0);
+
+      // Load nearby lost pets for the entered location
+      _loadNearbyLostPets(_currentPosition!);
+
+      // Show confirmation
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Location set to: $address'),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
   void _loadNearbyLostPets(Position position) {
-    final userLocation = latlong.LatLng(position.latitude, position.longitude);
-    _databaseService.getNearbyLostPets(
-      userLocation: userLocation,
-      radiusInKm: 10,
-    ).listen((pets) {
+    print('Loading lost pets near: ${position.latitude}, ${position.longitude}'); // Debug log
+    _databaseService.getAllLostPets().listen((pets) {
+      print('Found ${pets.length} lost pets'); // Debug log
       if (mounted) {
         setState(() => _nearbyLostPets = pets);
       }
@@ -291,11 +571,23 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                     InkWell(
                       onTap: () {
                         _toggleMenu(context, buttonPosition);
+                        final authService = context.read<AuthService>();
+                        if (authService.currentUser == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please sign in to report a missing pet'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
                         showDialog(
                           context: context,
                           useRootNavigator: true,
                           barrierColor: Colors.black54,
-                          builder: (context) => const ReportMissingPetDialog(),
+                          builder: (context) => ReportMissingPetDialog(
+                            userId: authService.currentUser!.id,
+                          ),
                         );
                       },
                       child: Padding(
@@ -545,16 +837,28 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                   'id': MapboxConfig.mapboxStyleId,
                 },
               ),
-              // Lost pet circles
+              // Lost pet circles for range indication
               CircleLayer(
-                circles: _nearbyLostPets.map((pet) => CircleMarker(
+                circles: [
+                  // Outer circles (500m radius)
+                  ..._nearbyLostPets.map((pet) => CircleMarker(
                   point: pet.location,
                   radius: 500, // 500 meters radius
-                  color: Colors.red.withOpacity(0.2),
-                  borderColor: Colors.red,
+                    color: Colors.red.withOpacity(0.1),
+                    borderColor: Colors.red.withOpacity(0.3),
                   borderStrokeWidth: 2,
                   useRadiusInMeter: true,
-                )).toList(),
+                  )),
+                  // Inner circles (100m radius)
+                  ..._nearbyLostPets.map((pet) => CircleMarker(
+                    point: pet.location,
+                    radius: 100, // 100 meters radius
+                    color: Colors.red.withOpacity(0.2),
+                    borderColor: Colors.red.withOpacity(0.4),
+                    borderStrokeWidth: 1.5,
+                    useRadiusInMeter: true,
+                  )),
+                ],
               ),
               // Current location marker
               if (_currentPosition != null)
@@ -562,9 +866,13 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                   markers: [
                     Marker(
                       point: latlong.LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                      width: 50,
+                      height: 50,
+                      child: Column(
+                        children: [
+                          Container(
                       width: 20,
                       height: 20,
-                      child: Container(
                         decoration: BoxDecoration(
                           color: Colors.blue,
                           shape: BoxShape.circle,
@@ -572,29 +880,117 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                             color: Colors.white,
                             width: 2,
                           ),
-                        ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Text(
+                              'You',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               // Lost pet markers
               MarkerLayer(
+                rotate: true, // Enable marker rotation
                 markers: _nearbyLostPets.map((pet) => Marker(
                   point: pet.location,
-                  width: 40,
-                  height: 40,
+                  width: 60,
+                  height: 80,
+                  rotate: true, // Enable per-marker rotation
+                  alignment: Alignment.center,
                   child: GestureDetector(
                     onTap: () => _showLostPetDetails(pet),
+                    child: Stack(
+                      children: [
+                        // Fixed-size paw icon
+                        Positioned(
+                          left: 5,
+                          right: 5,
                     child: Container(
-                      decoration: const BoxDecoration(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
                         color: Colors.red,
                         shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 3,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Center(
+                              child: Icon(
                         Icons.pets,
                         color: Colors.white,
-                        size: 24,
-                      ),
+                                size: 30,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Name label
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              pet.pet.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 )).toList(),
@@ -605,7 +1001,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           // Search UI
           Column(
             children: [
-              // Search bar
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -694,9 +1089,79 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                   ),
                 ),
               ),
-              // The new animated search panel
               _buildAnimatedSearchPanel(),
             ],
+          ),
+
+          // Location Button
+          Positioned(
+            right: 16,
+            bottom: 104, // Increased from 88 to 104 to move it higher
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final screenWidth = MediaQuery.of(context).size.width;
+                const maxNavWidth = 320.0;
+                const minNavWidth = 220.0;
+                double sidePadding = 16.0;
+                double buttonSize = 64.0;
+                double iconSize = 24.0;
+
+                // Responsive adjustments for very slim screens
+                if (screenWidth < minNavWidth + 2 * sidePadding + buttonSize + 8) {
+                  sidePadding = 6.0;
+                  buttonSize = 44.0;
+                  iconSize = 16.0;
+                }
+
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                    child: Container(
+                      width: buttonSize,
+                      height: buttonSize,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.45),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            if (_currentPosition != null) {
+                              _mapController.move(
+                                latlong.LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                                15.0,
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Location not available'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                          customBorder: const CircleBorder(),
+                          child: Center(
+                            child: AnimatedRotation(
+                              duration: const Duration(milliseconds: 300),
+                              turns: _locationEnabled ? 0 : 0.5,
+                              child: Icon(
+                                Icons.near_me,
+                                color: _locationEnabled ? Colors.blue : Colors.grey,
+                                size: iconSize,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -712,9 +1177,29 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.pets,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -722,28 +1207,94 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        pet.pet.species,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Last Seen Location',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Last seen: ${pet.address}',
+              pet.address,
               style: const TextStyle(
                 fontSize: 16,
                 color: Colors.grey,
               ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Coordinates: ${pet.location.latitude.toStringAsFixed(6)}, ${pet.location.longitude.toStringAsFixed(6)}',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            if (pet.additionalInfo != null) ...[
             const SizedBox(height: 16),
-            if (pet.contactNumbers.isNotEmpty)
-              ElevatedButton.icon(
-                onPressed: () {
-                  // Handle phone call
-                },
-                icon: const Icon(Icons.phone),
-                label: const Text('Contact Owner'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
+              Text(
+                pet.additionalInfo!,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
                 ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            const Text(
+              'Contact Numbers',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: pet.contactNumbers.map((number) => Chip(
+                avatar: const Icon(Icons.phone, size: 18),
+                label: Text(number),
+                backgroundColor: Colors.grey[100],
+              )).toList(),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                onPressed: () {
+                      _mapController.move(pet.location, 16);
+                      Navigator.pop(context);
+                },
+                    icon: const Icon(Icons.location_on),
+                    label: const Text('Show on Map'),
+                style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                ),
+                ),
+              ],
               ),
           ],
         ),

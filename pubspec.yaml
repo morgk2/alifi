@@ -39,6 +39,7 @@ dependencies:
   timeago: ^3.6.1  # Added for formatting relative time
   cached_network_image: ^3.4.1
   flutter_image_compress: ^2.4.0
+  geocoding: ^4.0.0
 
 dev_dependencies:
   flutter_test:
@@ -94,6 +95,18 @@ flutter:
     - assets/images/3d_rabbit_bw.png
     - assets/images/3d_bird_bw.png
     - assets/images/leaderboard_3d.png
+    - assets/images/food.png
+    - assets/images/toys.png
+    - assets/images/health.png
+    - assets/images/beds.png
+    - assets/images/hygiene.png
+    - assets/images/ai_pet.png
+    - assets/images/leaderboard.png
+    - assets/images/cib_logo.png
+    - assets/images/sb_logo.png
+    - assets/images/paypal_logo.png
+    - assets/images/stripe_logo.png
+    - assets/images/visa_mastercard.png
     - assets/fonts/Inter-Italic-VariableFont_opsz,wght.ttf
     - assets/fonts/Inter-VariableFont_opsz,wght.ttf
     - assets/fonts/InterDisplay-Regular.ttf

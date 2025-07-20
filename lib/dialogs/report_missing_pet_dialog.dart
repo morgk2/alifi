@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:alifi/models/pet.dart';
+import 'package:alifi/services/database_service.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart' as latlong;
+import 'package:geocoding/geocoding.dart';
+import 'location_picker_dialog.dart';
 
 class ReportMissingPetDialog extends StatefulWidget {
   final Pet? pet;
-  const ReportMissingPetDialog({super.key, this.pet});
+  final String userId;
+  const ReportMissingPetDialog({super.key, this.pet, required this.userId});
 
   @override
   State<ReportMissingPetDialog> createState() => _ReportMissingPetDialogState();
@@ -14,11 +20,18 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _rewardController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _contactNumberController = TextEditingController();
+  final DatabaseService _databaseService = DatabaseService();
   DateTime _lastSeen = DateTime.now();
   TimeOfDay _lastSeenTime = TimeOfDay.now();
   String? _selectedImage;
   late AnimationController _animationController;
   late Animation<double> _animation;
+  bool _isLoading = false;
+  latlong.LatLng? _currentLocation;
+  String? _currentAddress;
+  List<String> _contactNumbers = [];
 
   // Add pet type state
   String _selectedType = 'dog';
@@ -34,11 +47,14 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
 
   bool get _isValid {
     if (widget.pet != null) {
-      return _descriptionController.text.trim().isNotEmpty;
+      return _descriptionController.text.trim().isNotEmpty &&
+             _currentLocation != null &&
+             _contactNumbers.isNotEmpty;
     }
-    return _selectedImage != null &&
-      _nameController.text.trim().isNotEmpty &&
-      _descriptionController.text.trim().isNotEmpty;
+    return _nameController.text.trim().isNotEmpty &&
+      _descriptionController.text.trim().isNotEmpty &&
+      _currentLocation != null &&
+      _contactNumbers.isNotEmpty;
   }
 
   @override
@@ -56,9 +72,8 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
     if (widget.pet != null) {
       _descriptionController.text = widget.pet!.description ?? '';
       _nameController.text = widget.pet!.name;
-      // Optionally set _selectedType, _selectedImage, etc. if needed
-      // Optionally set _lastSeen if pet has a last seen field
     }
+    _getCurrentLocation();
   }
 
   @override
@@ -66,6 +81,8 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
     _nameController.dispose();
     _descriptionController.dispose();
     _rewardController.dispose();
+    _locationController.dispose();
+    _contactNumberController.dispose();
     _animationController.dispose();
     _pageController.dispose();
     super.dispose();
@@ -102,6 +119,75 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
     setState(() {
       _selectedImage = 'assets/images/placeholder_pet.jpg';
     });
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() => _isLoading = true);
+    try {
+      // Request location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Location permission denied');
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Location permission permanently denied');
+      }
+
+      // Get current position
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high
+      );
+      
+      // Get address from coordinates
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        _currentAddress = '${place.street}, ${place.locality}, ${place.country}';
+        _locationController.text = _currentAddress!;
+      }
+
+      setState(() {
+        _currentLocation = latlong.LatLng(position.latitude, position.longitude);
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error getting location: $e');
+      setState(() => _isLoading = false);
+      _showError('Could not get current location. Please try again.');
+    }
+  }
+
+  void _addContactNumber() {
+    final number = _contactNumberController.text.trim();
+    if (number.isNotEmpty) {
+      setState(() {
+        _contactNumbers.add(number);
+        _contactNumberController.clear();
+      });
+    }
+  }
+
+  void _removeContactNumber(String number) {
+    setState(() {
+      _contactNumbers.remove(number);
+    });
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   void _nextStep() {
@@ -285,7 +371,40 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
     );
 
     if (confirmed == true) {
+      setState(() => _isLoading = true);
+      try {
+        // Get the last seen datetime by combining date and time
+        final lastSeenDateTime = DateTime(
+          _lastSeen.year,
+          _lastSeen.month,
+          _lastSeen.day,
+          _lastSeenTime.hour,
+          _lastSeenTime.minute,
+        );
+
+        // Parse reward amount
+        double reward = 0;
+        try {
+          reward = double.parse(_rewardController.text.trim());
+        } catch (e) {
+          print('Invalid reward amount: ${_rewardController.text}');
+        }
+
+        // Report the lost pet
+        await _databaseService.reportLostPet(
+          name: widget.pet?.name ?? _nameController.text.trim(),
+          species: widget.pet?.species ?? _selectedType,
+          userId: widget.userId,
+          location: _currentLocation!,
+          address: _currentAddress ?? _locationController.text.trim(),
+          description: _descriptionController.text.trim(),
+          contactNumbers: _contactNumbers,
+          reward: reward,
+          lastSeenDate: lastSeenDateTime,
+        );
+
       // Close the report dialog with animation
+        if (!mounted) return;
       await _animationController.reverse();
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -293,6 +412,14 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
       // Show notification banner
       if (!mounted) return;
       _showNotificationBanner(context);
+      } catch (e) {
+        print('Error reporting lost pet: $e');
+        _showError('Failed to report lost pet. Please try again.');
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
     }
   }
 
@@ -389,181 +516,240 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
     if (widget.pet == null) {
       switch (index) {
         case 0:
-          // Step 1: Pet Type Selector
+                            // Step 1: Pet Type Selector
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                double availableWidth = constraints.maxWidth;
-                double circleSize = 120;
-                double iconSize = 64;
-                if (availableWidth < 350) {
-                  circleSize = 96;
-                  iconSize = 48;
-                }
-                bool showCircle = availableWidth >= 250;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Select Pet Type',
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                    child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                double availableWidth = constraints.maxWidth;
+                                        double circleSize = 120;
+                                        double iconSize = 64;
+                                if (availableWidth < 350) {
+                                          circleSize = 96;
+                                          iconSize = 48;
+                                }
+                                bool showCircle = availableWidth >= 250;
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    const Text(
+                                      'Select Pet Type',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: _petTypes.map((petType) {
-                        final isSelected = _selectedType == petType['type'];
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedType = petType['type']),
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 16),
-                            child: showCircle
-                                ? AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    width: circleSize,
-                                    height: circleSize,
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? Colors.red[100] : Colors.grey[200],
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: isSelected ? Colors.red : Colors.grey[400]!,
-                                        width: isSelected ? 4 : 1,
-                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: Image.asset(
-                                        petType['asset'],
-                                        width: iconSize,
-                                        height: iconSize,
-                                        color: isSelected ? Colors.red : Colors.grey[700],
-                                        colorBlendMode: BlendMode.srcIn,
-                                      ),
+                                            const SizedBox(height: 32),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: _petTypes.map((petType) {
+                                        final isSelected = _selectedType == petType['type'];
+                                        return GestureDetector(
+                                          onTap: () => setState(() => _selectedType = petType['type']),
+                                          child: Container(
+                                                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                                            child: showCircle
+                                                ? AnimatedContainer(
+                                                    duration: const Duration(milliseconds: 200),
+                                                    width: circleSize,
+                                                    height: circleSize,
+                                                    decoration: BoxDecoration(
+                                                      color: isSelected ? Colors.red[100] : Colors.grey[200],
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
+                                                        color: isSelected ? Colors.red : Colors.grey[400]!,
+                                                                width: isSelected ? 4 : 1,
+                                                      ),
+                                                    ),
+                                                    child: Padding(
+                                                              padding: const EdgeInsets.all(16.0),
+                                                      child: Image.asset(
+                                                        petType['asset'],
+                                                        width: iconSize,
+                                                        height: iconSize,
+                                                        color: isSelected ? Colors.red : Colors.grey[700],
+                                                        colorBlendMode: BlendMode.srcIn,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : Image.asset(
+                                                    petType['asset'],
+                                                    width: iconSize,
+                                                    height: iconSize,
+                                                    color: isSelected ? Colors.red : Colors.grey[700],
+                                                    colorBlendMode: BlendMode.srcIn,
+                                                  ),
+                                          ),
+                                        );
+                                      }).toList(),
                                     ),
-                                  )
-                                : Image.asset(
-                                    petType['asset'],
-                                    width: iconSize,
-                                    height: iconSize,
-                                    color: isSelected ? Colors.red : Colors.grey[700],
-                                    colorBlendMode: BlendMode.srcIn,
-                                  ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                );
-              },
-            ),
+                                  ],
+                                );
+                              },
+                                    ),
           );
         case 1:
-          // Step 2: Image and Name
+          // Step 2: Name and Description
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: GestureDetector(
-                    onTap: () => _pickImage(),
-                    child: Container(
-                      height: 120,
-                      width: 120,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                    child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                    const Text(
+                      'Pet Name',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                const SizedBox(height: 16),
+                    Container(
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: Colors.grey[300]!,
-                          width: 2,
+                          width: 1,
                         ),
                       ),
-                      child: _selectedImage != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
-                              child: Image.asset(
-                                _selectedImage!,
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                          : const Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.add_a_photo,
-                                  size: 32,
-                                  color: Colors.grey,
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Required',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
+                      child: TextField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          hintText: 'Enter your pet\'s name (Required)',
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          border: InputBorder.none,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                const Text(
-                  'Pet Name',
+                const SizedBox(height: 24),
+                    const Text(
+                      'Description',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.grey[300]!,
-                      width: 1,
                     ),
-                  ),
-                  child: TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter your pet\'s name (Required)',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      border: InputBorder.none,
+                                        const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.grey[300]!,
+                          width: 1,
+                        ),
+                      ),
+                      child: TextField(
+                        controller: _descriptionController,
+                    maxLines: 6,
+                        decoration: const InputDecoration(
+                                      hintText: 'Describe your pet - size, color, distinctive features... (Required)',
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          border: InputBorder.none,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            ),
+                              ],
+                                    ),
           );
         case 2:
-          // Step 3: Description
+          // Step 3: Last seen and Location
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Description',
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                    child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                    const Text(
+                      'Last seen',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+                                        const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _selectDate(context),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Colors.grey[300]!,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                '${_lastSeen.month}/${_lastSeen.day}/${_lastSeen.year}',
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                        ),
+                    const SizedBox(width: 16),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _selectTime(context),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Colors.grey[300]!,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                _lastSeenTime.format(context),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                                        ),
+                const SizedBox(height: 24),
+                                        const Text(
+                                          'Location',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.grey[300]!,
-                      width: 1,
+                GestureDetector(
+                  onTap: () => _pickLocation(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.grey[300]!,
+                        width: 1,
+                      ),
                     ),
-                  ),
-                  child: TextField(
-                    controller: _descriptionController,
-                    maxLines: 6,
-                    decoration: const InputDecoration(
-                      hintText: 'Describe your pet - size, color, distinctive features... (Required)',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      border: InputBorder.none,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _currentAddress ?? 'Select location on map',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                  color: _currentAddress != null ? Colors.black : Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.map,
+                              color: Colors.grey[600],
+                            ),
+                          ],
+                        ),
+                        if (_currentLocation != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Coordinates: ${_currentLocation!.latitude.toStringAsFixed(6)}, ${_currentLocation!.longitude.toStringAsFixed(6)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
@@ -571,281 +757,345 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
             ),
           );
         case 3:
-          // Step 4: Last seen
+          // Step 4: Contact Numbers and Reward
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Last seen',
+                  'Contact Numbers (Required)',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 16),
+                                        ),
+                                        const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
-                      child: GestureDetector(
-                        onTap: () => _selectDate(context),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            '${_lastSeen.month}/${_lastSeen.day}/${_lastSeen.year}',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ),
+                      child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
+                                              width: 1,
+                                            ),
+                                          ),
+                        child: TextField(
+                          controller: _contactNumberController,
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(
+                            hintText: 'Enter contact number',
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                              border: InputBorder.none,
+                                            ),
+                                          ),
                       ),
                     ),
                     const SizedBox(width: 16),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _selectTime(context),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            _lastSeenTime.format(context),
-                            style: const TextStyle(fontSize: 16),
-                          ),
+                    ElevatedButton(
+                      onPressed: _addContactNumber,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Location',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
+                      child: const Text('Add'),
+                                        ),
+                                      ],
+                                    ),
                 const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.grey[300]!,
-                      width: 1,
-                    ),
+                if (_contactNumbers.isNotEmpty) ...[
+                  const Text(
+                    'Added Numbers:',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
-                  child: const TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Enter the location where your pet was last seen',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      border: InputBorder.none,
-                    ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _contactNumbers.map((number) {
+                      return Chip(
+                        label: Text(number),
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                        onDeleted: () => _removeContactNumber(number),
+                        backgroundColor: Colors.red[100],
+                      );
+                    }).toList(),
                   ),
-                ),
-              ],
-            ),
-          );
-        case 4:
-          // Step 5: Reward (optional)
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Reward (optional)',
+                  const SizedBox(height: 24),
+                ],
+                    const Text(
+                      'Reward (optional)',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.grey[300]!,
-                      width: 1,
                     ),
-                  ),
-                  child: TextField(
-                    controller: _rewardController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter reward amount in DZD (Optional)',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                                        const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.grey[300]!,
+                          width: 1,
+                        ),
+                      ),
+                      child: TextField(
+                        controller: _rewardController,
+                                    keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                                      hintText: 'Enter reward amount in DZD (Optional)',
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          border: InputBorder.none,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                                    ),
           );
       }
     } else {
       // widget.pet != null (edit mode)
       switch (index) {
         case 0:
-          // Step 1: Description
+                                  // Step 1: Description
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Description',
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        const Text(
+                                          'Description',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.grey[300]!,
-                      width: 1,
-                    ),
-                  ),
-                  child: TextField(
-                    controller: _descriptionController,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: TextField(
+                                            controller: _descriptionController,
                     maxLines: 6,
-                    decoration: const InputDecoration(
-                      hintText: 'Describe your pet - size, color, distinctive features... (Required)',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                                            decoration: const InputDecoration(
+                                              hintText: 'Describe your pet - size, color, distinctive features... (Required)',
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                              border: InputBorder.none,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
           );
         case 1:
-          // Step 2: Last seen
+                                  // Step 2: Last seen
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Last seen',
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        const Text(
+                                          'Last seen',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _selectDate(context),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            '${_lastSeen.month}/${_lastSeen.day}/${_lastSeen.year}',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ),
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: GestureDetector(
+                                                onTap: () => _selectDate(context),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(16),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[100],
+                                                    borderRadius: BorderRadius.circular(16),
+                                                    border: Border.all(
+                                                      color: Colors.grey[300]!,
+                                                      width: 1,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    '${_lastSeen.month}/${_lastSeen.day}/${_lastSeen.year}',
+                                                    style: const TextStyle(fontSize: 16),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
                     const SizedBox(width: 16),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _selectTime(context),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            _lastSeenTime.format(context),
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                                            Expanded(
+                                              child: GestureDetector(
+                                                onTap: () => _selectTime(context),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(16),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[100],
+                                                    borderRadius: BorderRadius.circular(16),
+                                                    border: Border.all(
+                                                      color: Colors.grey[300]!,
+                                                      width: 1,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    _lastSeenTime.format(context),
+                                                    style: const TextStyle(fontSize: 16),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                 const SizedBox(height: 24),
-                const Text(
-                  'Location',
+                                        const Text(
+                                          'Location',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.grey[300]!,
-                      width: 1,
-                    ),
-                  ),
-                  child: const TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Enter the location where your pet was last seen',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: const TextField(
+                                            decoration: InputDecoration(
+                                              hintText: 'Enter the location where your pet was last seen',
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                              border: InputBorder.none,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
           );
         case 2:
-          // Step 3: Reward (optional)
+                                  // Step 3: Reward (optional)
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Reward (optional)',
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        const Text(
+                                          'Reward (optional)',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.grey[300]!,
-                      width: 1,
-                    ),
-                  ),
-                  child: TextField(
-                    controller: _rewardController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter reward amount in DZD (Optional)',
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: TextField(
+                                            controller: _rewardController,
+                                            keyboardType: TextInputType.number,
+                                            decoration: const InputDecoration(
+                                              hintText: 'Enter reward amount in DZD (Optional)',
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                              border: InputBorder.none,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
           );
       }
     }
     // fallback
     return const SizedBox.shrink();
+  }
+
+  Future<void> _pickLocation(BuildContext context) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => LocationPickerDialog(
+        initialLocation: _currentLocation,
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _currentLocation = result['location'] as latlong.LatLng;
+        _currentAddress = result['address'] as String;
+      });
+    }
+  }
+
+  Future<void> _reportLostPet() async {
+    if (!_isValid) {
+      _showValidationError();
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Combine date and time
+      final lastSeenDateTime = DateTime(
+        _lastSeen.year,
+        _lastSeen.month,
+        _lastSeen.day,
+        _lastSeenTime.hour,
+        _lastSeenTime.minute,
+      );
+
+      // Parse reward amount
+      double reward = 0;
+      try {
+        reward = double.parse(_rewardController.text.trim());
+      } catch (e) {
+        print('Invalid reward amount: ${_rewardController.text}');
+      }
+
+      // Report the lost pet with all required fields
+      final lostPetId = await _databaseService.reportLostPet(
+        name: widget.pet?.name ?? _nameController.text.trim(),
+        species: widget.pet?.species ?? _selectedType,
+        userId: widget.userId,
+        location: _currentLocation!,
+        address: _currentAddress ?? _locationController.text.trim(),
+        description: _descriptionController.text.trim(),
+        contactNumbers: _contactNumbers,
+        reward: reward,
+        lastSeenDate: lastSeenDateTime,
+      );
+
+      if (!mounted) return;
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pet reported as lost successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.of(context).pop();
+    } catch (e) {
+      print('Error submitting lost pet report: $e');
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error reporting lost pet: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -876,36 +1126,114 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'Report a missing pet',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 480, // Increased size
-                        child: PageView.builder(
-                          controller: _pageController,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: _totalSteps,
-                          onPageChanged: (index) => setState(() => _currentStep = index),
-                          itemBuilder: (context, index) {
-                            return RepaintBoundary(
-                              child: _stepWidgetForIndex(index),
-                            );
-                          },
+                    Row(
+                      children: [
+                        IconButton(
+                            onPressed: () {
+                              _animationController.reverse().then((_) {
+                                Navigator.of(context).pop();
+                              });
+                            },
+                          icon: const Icon(Icons.close),
+                            ),
+                        const Expanded(
+                          child: Text(
+                            'Report a missing pet',
+                              style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
+                        const SizedBox(width: 40), // Balance the close button
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Progress indicator
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: List.generate(_totalSteps, (index) {
+                          return Expanded(
+                            child: Container(
+                              height: 4,
+                              margin: const EdgeInsets.symmetric(horizontal: 2),
+                              decoration: BoxDecoration(
+                                color: index <= _currentStep ? Colors.red : Colors.grey[300],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          );
+                        }),
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _pageController,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _totalSteps,
+                        onPageChanged: (index) => setState(() => _currentStep = index),
+                        itemBuilder: (context, index) {
+                          return RepaintBoundary(
+                            child: _stepWidgetForIndex(index),
+                          );
+                        },
+                          ),
+                        ),
+                    const SizedBox(height: 16),
+                    // Navigation buttons
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          if (_currentStep > 0)
+                        Expanded(
+                          child: TextButton(
+                                onPressed: _prevStep,
+                            style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: const Text('Back'),
+                              ),
+                            ),
+                          if (_currentStep > 0)
+                            const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _currentStep == _totalSteps - 1 
+                                ? _reportLostPet 
+                                : _nextStep,
+                              style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                              child: Text(
+                                _currentStep == _totalSteps - 1 ? 'Report Pet' : 'Next',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                    ),
                   ],
                   ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 ),
               ),
             ),

@@ -132,15 +132,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
               return TextButton(
                 onPressed: isSaving ? null : _saveChanges,
                 child: isSaving
-                    ? SpinningLoader(size: 32, color: Colors.orange)
-                    : const Text(
-                        'Save',
-                        style: TextStyle(
-                          color: Color(0xFFFF9E42),
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                ? SpinningLoader(size: 32, color: Colors.orange)
+                : const Text(
+                    'Save',
+                    style: TextStyle(
+                      color: Color(0xFFFF9E42),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
               );
             },
           ),
@@ -328,23 +328,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 builder: (context, isSaving, child) {
                   if (isSaving) {
                     return Positioned.fill(
-                      child: Container(
-                        color: Colors.white.withOpacity(0.7),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(height: 80),
-                            SpinningLoader(size: 64, color: Colors.orange),
-                            const SizedBox(height: 16),
-                            const Text('Saving...', style: TextStyle(fontSize: 16)),
-                          ],
-                        ),
-                      ),
+                  child: Container(
+                    color: Colors.white.withOpacity(0.7),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 80),
+                        SpinningLoader(size: 64, color: Colors.orange),
+                        const SizedBox(height: 16),
+                        const Text('Saving...', style: TextStyle(fontSize: 16)),
+                      ],
+                    ),
+                  ),
                     );
                   }
                   return const SizedBox.shrink();
                 },
-              ),
+                ),
             ],
           );
         },

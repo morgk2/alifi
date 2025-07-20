@@ -21,6 +21,7 @@ import 'package:http/http.dart' as http;
 import 'widgets/spinning_loader.dart';
 import 'services/database_service.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:google_sign_in/google_sign_in.dart';
 
 Future<void> main() async {
   try {
@@ -172,8 +173,99 @@ class MainApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _showDebugButton = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkDebugMode();
+  }
+
+  void _checkDebugMode() {
+    assert(() {
+      setState(() => _showDebugButton = true);
+      return true;
+    }());
+  }
+
+  Future<void> _showAuthDebugInfo() async {
+    final googleSignIn = GoogleSignIn();
+    final firebaseAuth = FirebaseAuth.instance;
+
+    try {
+      // Check current sign-in state
+      final isSignedIn = await googleSignIn.isSignedIn();
+      final currentGoogleUser = await googleSignIn.signInSilently();
+      final firebaseUser = firebaseAuth.currentUser;
+
+      String debugInfo = '''
+Google Sign-In Status:
+- Is Signed In: $isSignedIn
+- Current Google User: ${currentGoogleUser?.email ?? 'null'}
+- Google ID Token: ${currentGoogleUser != null ? 'Present' : 'null'}
+
+Firebase Status:
+- Current User: ${firebaseUser?.email ?? 'null'}
+- User ID: ${firebaseUser?.uid ?? 'null'}
+- Is Email Verified: ${firebaseUser?.emailVerified ?? 'null'}
+- Provider Data: ${firebaseUser?.providerData.map((p) => p.providerId).join(', ') ?? 'null'}
+''';
+
+      // Show debug info
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Auth Debug Info'),
+          content: SingleChildScrollView(
+            child: SelectableText(debugInfo),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                // Sign out of everything
+                await googleSignIn.signOut();
+                await firebaseAuth.signOut();
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Signed out of all services')),
+                );
+              },
+              child: const Text('Force Sign Out'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: Text('Failed to get debug info: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,21 +274,24 @@ class AuthWrapper extends StatelessWidget {
     print('AuthWrapper: isInitialized=${authService.isInitialized}, isLoadingUser=${authService.isLoadingUser}, isAuthenticated=${authService.isAuthenticated}');
     print('AuthWrapper: currentUser=${authService.currentUser?.email ?? 'null'}, isGuestMode=${authService.isGuestMode}');
 
+    Widget mainContent;
     // Show splash screen while initializing or loading user
     if (!authService.isInitialized || authService.isLoadingUser) {
       print('AuthWrapper: Showing splash screen');
-      return const SplashScreen();
+      mainContent = const SplashScreen();
     }
-
     // If authenticated, show main app
-    if (authService.isAuthenticated) {
+    else if (authService.isAuthenticated) {
       print('AuthWrapper: User is authenticated, showing main app');
-      return const PageContainer();
+      mainContent = const PageContainer();
+    }
+    // If not authenticated, show login page
+    else {
+    print('AuthWrapper: User is not authenticated, showing login page');
+      mainContent = const LoginPage();
     }
 
-    // If not authenticated, show login page
-    print('AuthWrapper: User is not authenticated, showing login page');
-    return const LoginPage();
+    return mainContent;
   }
 }
 
@@ -373,7 +468,9 @@ class _LoginPageState extends State<LoginPage>
     final logoWidth = size.width * 0.6; // 60% of screen width for login page
 
     return Scaffold(
-      body: SafeArea(
+      body: Stack(
+        children: [
+          SafeArea(
         child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -426,16 +523,6 @@ class _LoginPageState extends State<LoginPage>
                       onPressed: () => _handleGoogleSignIn(context),
                     ),
                     const SizedBox(height: 12),
-                    // Debug button for testing
-                    if (kDebugMode)
-                      _SocialButton(
-                        text: 'Debug: Check Auth State',
-                        icon: AppIcons.googleIcon,
-                        color: Colors.orange,
-                        textColor: Colors.white,
-                        onPressed: () => _debugAuthState(context),
-                      ),
-                    if (kDebugMode) const SizedBox(height: 12),
                     _SocialButton(
                       text: 'Continue with Apple',
                       icon: AppIcons.appleIcon,
@@ -509,6 +596,19 @@ class _LoginPageState extends State<LoginPage>
             ),
           ),
         ),
+          ),
+          if (kDebugMode)
+            Positioned(
+              bottom: 100,
+              right: 16,
+              child: FloatingActionButton(
+                heroTag: 'debugButton',
+                onPressed: () => _debugAuthState(context),
+                backgroundColor: Colors.grey[800],
+                child: const Icon(Icons.bug_report, color: Colors.white),
+              ),
+            ),
+        ],
       ),
     );
   }
