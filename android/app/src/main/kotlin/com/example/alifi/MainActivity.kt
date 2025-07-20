@@ -1,4 +1,4 @@
-package com.alifi.app
+package com.example.alifi
 
 import io.flutter.embedding.android.FlutterActivity
 

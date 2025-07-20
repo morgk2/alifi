@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.alifi.app"
+    namespace "com.example.alifi"
     compileSdkVersion flutter.compileSdkVersion
 
     compileOptions {
@@ -41,7 +41,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.alifi.app"
+        applicationId "com.example.alifi"
         minSdkVersion 23
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
