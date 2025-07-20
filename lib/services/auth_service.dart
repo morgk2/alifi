@@ -179,9 +179,20 @@ class AuthService extends ChangeNotifier {
         print('Mobile platform detected, using mobile sign-in flow');
         
         try {
-          // Try interactive sign-in directly
+          // First, ensure we're signed out
+          await _googleSignIn.signOut();
+          await _auth.signOut();
+          print('Signed out of previous sessions');
+
+          // Try interactive sign-in
           print('Starting interactive Google Sign-In...');
-          googleUser = await _googleSignIn.signIn();
+          googleUser = await _googleSignIn.signIn().timeout(
+            const Duration(minutes: 1),
+            onTimeout: () {
+              print('Google Sign-In timed out');
+              throw TimeoutException('Google Sign-In timed out');
+            },
+          );
           
           if (googleUser == null) {
             print('Interactive Google Sign-In cancelled by user');
@@ -189,8 +200,18 @@ class AuthService extends ChangeNotifier {
           }
           
           print('Interactive Google Sign-In successful: ${googleUser.email}');
+          print('Server auth code: ${await googleUser.serverAuthCode}');
+          print('ID token: ${(await googleUser.authentication).idToken != null}');
+          print('Access token: ${(await googleUser.authentication).accessToken != null}');
         } catch (e) {
           print('Error during interactive Google Sign-In: $e');
+          if (e.toString().contains('network_error')) {
+            throw Exception('Please check your internet connection');
+          } else if (e.toString().contains('sign_in_failed')) {
+            throw Exception('Google Sign-In failed. Please check Google Play Services');
+          } else if (e.toString().contains('sign_in_canceled')) {
+            return null;
+          }
           rethrow;
         }
       }
@@ -204,11 +225,18 @@ class AuthService extends ChangeNotifier {
         print('Getting Google authentication...');
         final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
         print('Got Google authentication tokens');
+        print('ID Token present: ${googleAuth.idToken != null}');
+        print('Access Token present: ${googleAuth.accessToken != null}');
+
+        if (googleAuth.accessToken == null || googleAuth.idToken == null) {
+          print('Error: Missing authentication tokens');
+          throw Exception('Failed to obtain authentication tokens');
+        }
 
         print('Creating Firebase credential...');
         final credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
+          accessToken: googleAuth.accessToken!,
+          idToken: googleAuth.idToken!,
         );
 
         print('Signing in to Firebase...');
