@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:latlong2/latlong.dart';
 
 class User {
   final String id;
@@ -9,17 +10,26 @@ class User {
   final DateTime createdAt;
   final DateTime lastLoginAt;
   final Map<String, bool> linkedAccounts;
+  final bool isAdmin;
+  final String accountType;
+  final bool isVerified;
+  final String? basicInfo;
+  final List<String>? patients;
+  final double rating;
+  final int totalOrders;
+  final List<String>? pets;
   final List<String> followers;
   final List<String> following;
   final int followersCount;
   final int followingCount;
-  final List<String> pets;
-  final int level;
-  final int petsRescued;
-  final bool isAdmin;
-  final String accountType;
-  final bool isVerified;
   final List<String> searchTokens;
+  final List<String>? products;
+  final LatLng? location;  // Added location property
+
+  String? get firstName => displayName?.split(' ').first;
+  String? get lastName => displayName != null && displayName!.split(' ').length > 1 
+    ? displayName!.split(' ').sublist(1).join(' ') 
+    : null;
 
   User({
     required this.id,
@@ -30,54 +40,67 @@ class User {
     required this.createdAt,
     required this.lastLoginAt,
     required this.linkedAccounts,
-    this.followers = const [],
-    this.following = const [],
-    this.followersCount = 0,
-    this.followingCount = 0,
-    this.pets = const [],
-    this.level = 1,
-    this.petsRescued = 0,
     this.isAdmin = false,
     this.accountType = 'normal',
     this.isVerified = false,
-    this.searchTokens = const [],
-  });
+    this.basicInfo,
+    this.patients,
+    this.rating = 0.0,
+    this.totalOrders = 0,
+    this.pets,
+    List<String>? followers,
+    List<String>? following,
+    this.followersCount = 0,
+    this.followingCount = 0,
+    List<String>? searchTokens,
+    this.products,
+    this.location,  // Added location parameter
+  }) : 
+    this.followers = followers ?? [],
+    this.following = following ?? [],
+    this.searchTokens = searchTokens ?? [];
 
   Map<String, dynamic> toFirestore() {
     return {
-      'id': id,
       'email': email,
       'displayName': displayName,
       'username': username,
-      'username_lower': username?.toLowerCase(),
-      'displayName_lower': displayName?.toLowerCase(),
       'photoURL': photoURL,
       'createdAt': Timestamp.fromDate(createdAt),
       'lastLoginAt': Timestamp.fromDate(lastLoginAt),
       'linkedAccounts': linkedAccounts,
+      'isAdmin': isAdmin,
+      'accountType': accountType,
+      'isVerified': isVerified,
+      'basicInfo': basicInfo,
+      'patients': patients,
+      'rating': rating,
+      'totalOrders': totalOrders,
+      'pets': pets,
       'followers': followers,
       'following': following,
       'followersCount': followersCount,
       'followingCount': followingCount,
-      'pets': pets,
-      'level': level,
-      'petsRescued': petsRescued,
-      'isAdmin': isAdmin,
-      'accountType': accountType,
-      'isVerified': isVerified,
-      'email_lower': email.toLowerCase(),
       'searchTokens': searchTokens,
+      'products': products,
+      'location': location != null ? {
+        'latitude': location!.latitude,
+        'longitude': location!.longitude,
+      } : null,  // Added location to Firestore data
     };
   }
 
   factory User.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     
-    // Handle timestamps that might be null (during document creation)
-    DateTime getTimestamp(dynamic value) {
-      if (value == null) return DateTime.now();
-      if (value is Timestamp) return value.toDate();
-      return DateTime.now();
+    // Parse location data
+    LatLng? location;
+    if (data['location'] != null) {
+      final locationData = data['location'] as Map<String, dynamic>;
+      location = LatLng(
+        locationData['latitude'] as double,
+        locationData['longitude'] as double,
+      );
     }
 
     return User(
@@ -86,20 +109,24 @@ class User {
       displayName: data['displayName'],
       username: data['username'],
       photoURL: data['photoURL'],
-      createdAt: getTimestamp(data['createdAt']),
-      lastLoginAt: getTimestamp(data['lastLoginAt']),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastLoginAt: (data['lastLoginAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       linkedAccounts: Map<String, bool>.from(data['linkedAccounts'] ?? {}),
-      followers: List<String>.from(data['followers'] ?? []),
-      following: List<String>.from(data['following'] ?? []),
-      followersCount: data['followersCount'] ?? 0,
-      followingCount: data['followingCount'] ?? 0,
-      pets: List<String>.from(data['pets'] ?? []),
-      level: data['level'] ?? 1,
-      petsRescued: data['petsRescued'] ?? 0,
       isAdmin: data['isAdmin'] ?? false,
       accountType: data['accountType'] ?? 'normal',
       isVerified: data['isVerified'] ?? false,
-      searchTokens: List<String>.from(data['searchTokens'] ?? []),
+      basicInfo: data['basicInfo'],
+      patients: data['patients'] != null ? List<String>.from(data['patients']) : null,
+      rating: (data['rating'] ?? 0.0).toDouble(),
+      totalOrders: data['totalOrders'] ?? 0,
+      pets: data['pets'] != null ? List<String>.from(data['pets']) : null,
+      followers: data['followers'] != null ? List<String>.from(data['followers']) : null,
+      following: data['following'] != null ? List<String>.from(data['following']) : null,
+      followersCount: data['followersCount'] ?? 0,
+      followingCount: data['followingCount'] ?? 0,
+      searchTokens: data['searchTokens'] != null ? List<String>.from(data['searchTokens']) : null,
+      products: data['products'] != null ? List<String>.from(data['products']) : null,
+      location: location,  // Added location to factory constructor
     );
   }
 
@@ -112,17 +139,21 @@ class User {
     DateTime? createdAt,
     DateTime? lastLoginAt,
     Map<String, bool>? linkedAccounts,
+    bool? isAdmin,
+    String? accountType,
+    bool? isVerified,
+    String? basicInfo,
+    List<String>? patients,
+    double? rating,
+    int? totalOrders,
+    List<String>? pets,
     List<String>? followers,
     List<String>? following,
     int? followersCount,
     int? followingCount,
-    List<String>? pets,
-    int? level,
-    int? petsRescued,
-    bool? isAdmin,
-    String? accountType,
-    bool? isVerified,
     List<String>? searchTokens,
+    List<String>? products,
+    LatLng? location,  // Added location to copyWith
   }) {
     return User(
       id: id ?? this.id,
@@ -133,17 +164,21 @@ class User {
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
       linkedAccounts: linkedAccounts ?? this.linkedAccounts,
+      isAdmin: isAdmin ?? this.isAdmin,
+      accountType: accountType ?? this.accountType,
+      isVerified: isVerified ?? this.isVerified,
+      basicInfo: basicInfo ?? this.basicInfo,
+      patients: patients ?? this.patients,
+      rating: rating ?? this.rating,
+      totalOrders: totalOrders ?? this.totalOrders,
+      pets: pets ?? this.pets,
       followers: followers ?? this.followers,
       following: following ?? this.following,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
-      pets: pets ?? this.pets,
-      level: level ?? this.level,
-      petsRescued: petsRescued ?? this.petsRescued,
-      isAdmin: isAdmin ?? this.isAdmin,
-      accountType: accountType ?? this.accountType,
-      isVerified: isVerified ?? this.isVerified,
       searchTokens: searchTokens ?? this.searchTokens,
+      products: products ?? this.products,
+      location: location ?? this.location,  // Added location to copyWith
     );
   }
 } 

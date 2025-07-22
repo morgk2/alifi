@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/placeholder_image.dart';
 import '../services/auth_service.dart';
+import '../models/user.dart';
 import 'edit_profile_page.dart';
-import '../services/database_service.dart'; // Added import for DatabaseService
-// Added import for UserSearchPage
+import '../services/database_service.dart';
 import '../widgets/spinning_loader.dart';
-import '../models/pet.dart'; // Added import for Pet model
+import '../models/pet.dart';
+import '../models/store_product.dart';
 import '../widgets/verification_badge.dart';
+import 'store/manage_store_products_page.dart';
+import 'admin/admin_dashboard_page.dart';
 
 // Models for database-driven content
 class Achievement {
@@ -85,13 +88,59 @@ class ProfilePage extends StatelessWidget {
     }
   }
 
+  Widget _buildPatientsList(List<String> patients) {
+    return FutureBuilder<List<Pet>>(
+      future: DatabaseService().getPets(patients),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: SpinningLoader());
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Text('No patients found');
+        }
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: snapshot.data!.length,
+          itemBuilder: (context, index) {
+            final pet = snapshot.data![index];
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundImage: pet.photoURL != null
+                    ? NetworkImage(pet.photoURL!)
+                    : null,
+                child: pet.photoURL == null
+                    ? const Icon(Icons.pets)
+                    : null,
+              ),
+              title: Text(pet.name),
+              subtitle: Text(pet.breed),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPetsCount(User? user) {
+    final petsCount = user?.pets?.length ?? 0;
+    return Text(
+      petsCount.toString(),
+      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      textAlign: TextAlign.center,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthService>(
       builder: (context, authService, _) {
         final user = authService.currentUser;
         final isAuthenticated = authService.isAuthenticated;
-        final isCurrentUser = true; // This page is only for the current user in this app
+        final isCurrentUser = true;
+        final isVet = user?.accountType == 'vet';
+        final isStore = user?.accountType == 'store';
+        final isAdmin = user?.isAdmin ?? false;
 
         return Scaffold(
           backgroundColor: Colors.grey[100],
@@ -99,6 +148,18 @@ class ProfilePage extends StatelessWidget {
             backgroundColor: Colors.transparent,
             elevation: 0,
             actions: [
+              if (isAuthenticated && isAdmin)
+                IconButton(
+                  icon: const Icon(Icons.admin_panel_settings, color: Colors.black),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdminDashboardPage(),
+                      ),
+                    );
+                  },
+                ),
               if (isAuthenticated)
                 IconButton(
                   icon: const Icon(Icons.edit, color: Colors.black),
@@ -167,10 +228,6 @@ class ProfilePage extends StatelessWidget {
                           ],
                         ],
                       ),
-                      if (user?.isVerified ?? false) ...[
-                        const SizedBox(height: 4),
-                        const VerificationBadge(size: 20),
-                      ],
                         const SizedBox(height: 16),
                         // Stats row
                         Column(
@@ -179,14 +236,77 @@ class ProfilePage extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
+                                if (isVet) ...[
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        (user?.patients?.length ?? 0).toString(),
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                  _ProfileStatDivider(),
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        (user?.followersCount ?? 0).toString(),
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                  _ProfileStatDivider(),
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        (user?.rating ?? 0.0).toStringAsFixed(1),
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ] else if (isStore) ...[
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        (user?.totalOrders ?? 0).toString(),
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                  _ProfileStatDivider(),
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        (user?.followersCount ?? 0).toString(),
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                  _ProfileStatDivider(),
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        (user?.rating ?? 0.0).toStringAsFixed(1),
+                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ] else ...[
                                 Expanded(
                                   child: Align(
                                     alignment: Alignment.center,
-                                    child: Text(
-                                      (user?.petsRescued ?? 0).toString(),
-                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                                      textAlign: TextAlign.center,
-                                    ),
+                                      child: _buildPetsCount(user),
                                   ),
                                 ),
                                 _ProfileStatDivider(),
@@ -205,12 +325,13 @@ class ProfilePage extends StatelessWidget {
                                   child: Align(
                                     alignment: Alignment.center,
                                     child: Text(
-                                      (user?.level ?? 1).toString(),
+                                        (user?.rating ?? 0.0).toStringAsFixed(1),
                                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
                                 ),
+                                ],
                               ],
                             ),
                         const SizedBox(height: 8),
@@ -218,193 +339,319 @@ class ProfilePage extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
+                                if (isVet) ...[
+                                  const Expanded(
+                                    child: Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Text(
+                                        'Patients',
+                                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                  _ProfileStatDivider(),
+                                  const Expanded(
+                                    child: Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Text(
+                                        'Followers',
+                                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                  _ProfileStatDivider(),
+                                  const Expanded(
+                                    child: Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Text(
+                                        'Rating',
+                                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ] else if (isStore) ...[
+                                  const Expanded(
+                                    child: Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Text(
+                                        'Total\nOrders',
+                                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                  _ProfileStatDivider(),
+                                  const Expanded(
+                                    child: Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Text(
+                                        'Followers',
+                                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                  _ProfileStatDivider(),
+                                  const Expanded(
+                                    child: Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Text(
+                                        'Rating',
+                                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ] else ...[
+                                  const Expanded(
                                   child: Align(
                                     alignment: Alignment.topCenter,
                                     child: Text(
-                                      'Pets\nRescued',
-                                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                      'Pets',
+                                        style: TextStyle(fontSize: 13, color: Colors.grey),
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
                                 ),
                                 _ProfileStatDivider(),
-                                Expanded(
+                                  const Expanded(
                                   child: Align(
                                     alignment: Alignment.topCenter,
                                     child: Text(
                                       'Followers',
-                                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                        style: TextStyle(fontSize: 13, color: Colors.grey),
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
                                 ),
                                 _ProfileStatDivider(),
-                                Expanded(
+                                  const Expanded(
                                   child: Align(
                                     alignment: Alignment.topCenter,
                                     child: Text(
-                                      'Level',
-                                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                      'Rating',
+                                        style: TextStyle(fontSize: 13, color: Colors.grey),
                                       textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 16),
-                        if (isCurrentUser)
-                          OutlinedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const EditProfilePage(),
-                                ),
-                              );
-                            },
-                            style: OutlinedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              side: const BorderSide(color: Color(0xFFFFB300)),
-                              foregroundColor: const Color(0xFFFFB300),
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                            ),
-                            child: const Text('Edit profile', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                       ],
                     ),
                   ),
-                  // Achievements
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(top: 24),
-                    padding: const EdgeInsets.symmetric(horizontal: 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Row(
-                            children: const [
-                              Icon(Icons.emoji_events, size: 24, color: Colors.black),
-                              SizedBox(width: 8),
-                              Text('Achievements', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                            ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      FutureBuilder<List<Achievement>>(
-                        future: _fetchAchievements(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: SpinningLoader(color: Colors.orange));
-                          }
-                            final achievements = snapshot.data ?? [];
-                            return SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                                      child: Row(
-                                children: achievements.map((achievement) => _AchievementBadge(achievement: achievement)).toList(),
-                              ),
-                            );
-                          },
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                  // Pets Owned (replace Last activities)
-                  FutureBuilder<List<Pet>>(
-                    future: DatabaseService().getUserPets(user!.id).first,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: SpinningLoader(color: Colors.orange));
-                          }
-                      final pets = snapshot.data ?? [];
-                      return Container(
+                  const SizedBox(height: 16),
+                  if (isVet && user != null) ...[
+                    // Patients section for vets
+                    Container(
                         width: double.infinity,
-                        margin: const EdgeInsets.only(top: 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
-                              child: Row(
-                                children: const [
-                                  Icon(Icons.pets, size: 22, color: Colors.black),
-                                  SizedBox(width: 8),
-                                  Text('Owned pets', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            pets.isEmpty
-                                ? const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 24),
-                                    child: Text('No pets found.', style: TextStyle(color: Colors.grey)),
-                                  )
-                                : SizedBox(
-                                    height: 120,
-                                    child: ListView.builder(
-                                      scrollDirection: Axis.horizontal,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                                      itemCount: pets.length,
-                                      itemBuilder: (context, index) {
-                                        final pet = pets[index];
-                                        return Container(
-                                          width: 100,
-                                          margin: const EdgeInsets.only(right: 16),
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                            borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
                                           BoxShadow(
-                                                color: Colors.black.withOpacity(0.06),
-                                                blurRadius: 8,
-                                            offset: const Offset(0, 2),
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
                                               ),
                                             ],
                                           ),
                                             child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                              pet.imageUrls.isNotEmpty
-                                                  ? CircleAvatar(
-                                                      radius: 32,
-                                                      backgroundImage: NetworkImage(pet.imageUrls.first),
-                                                    )
-                                                  : const CircleAvatar(
-                                                      radius: 32,
-                                                      backgroundColor: Colors.grey,
-                                                      child: Icon(Icons.pets, color: Colors.white),
-                                                    ),
-                                              const SizedBox(height: 8),
-                                                Text(
-                                                pet.name,
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                                Text(
-                                                pet.breed,
-                                                style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                                textAlign: TextAlign.center,
+                          const Text(
+                            'Patients',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (user.patients != null && user.patients!.isNotEmpty)
+                            _buildPatientsList(user.patients!),
+                        ],
+                      ),
+                    ),
+                  ] else if (isStore) ...[
+                    // Basic Info section for stores
+                  Container(
+                    width: double.infinity,
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                          const Text(
+                            'Basic Info',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                          Text(
+                            user?.basicInfo ?? 'No basic info provided',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.black87,
+                            ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                    const SizedBox(height: 16),
+                    // Products section for stores
+                    Container(
+                        width: double.infinity,
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
                                               ),
                                             ],
                                           ),
-                          );
-                        },
-                      ),
+                                            child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                          const Text(
+                                'Products',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const ManageStoreProductsPage(),
+                                    ),
+                                  );
+                                },
+                                child: const Text('Manage'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          StreamBuilder<List<StoreProduct>>(
+                            stream: DatabaseService().getStoreProducts(
+                              storeId: user?.id,
+                              limit: 5,
+                            ),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return const Center(child: SpinningLoader());
+                                }
+                                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                                return const Text(
+                                  'No products yet',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey,
                                   ),
-                            const SizedBox(height: 32),
-                    ],
-                  ),
+                                );
+                                }
+                                return ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: snapshot.data!.length,
+                                  itemBuilder: (context, index) {
+                                  final product = snapshot.data![index];
+                                    return ListTile(
+                                    leading: product.imageUrls.isNotEmpty
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(4),
+                                            child: Image.network(
+                                              product.imageUrls.first,
+                                              width: 50,
+                                              height: 50,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          )
+                                        : const Icon(Icons.image_not_supported),
+                                    title: Text(product.name),
+                                    subtitle: Text('\$${product.price.toStringAsFixed(2)}'),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.star,
+                                          size: 16,
+                                          color: Colors.orange[700],
+                                        ),
+                                        Text(' ${product.rating.toStringAsFixed(1)}'),
+                                        const SizedBox(width: 8),
+                                        const Icon(
+                                          Icons.shopping_cart,
+                                          size: 16,
+                                        ),
+                                        Text(' ${product.totalOrders}'),
+                                      ],
+                                    ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    // Original achievements section for non-vet users
+                    FutureBuilder<List<Achievement>>(
+                      future: _fetchAchievements(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: SpinningLoader());
+                        }
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return const Text('No achievements yet');
+                        }
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: snapshot.data!.length,
+                          itemBuilder: (context, index) {
+                            final achievement = snapshot.data![index];
+                            return ListTile(
+                              leading: Icon(achievement.icon),
+                              title: Text(achievement.title),
+                              subtitle: Text(achievement.description),
+                            );
+                          },
                       );
                     },
                 ),
+                  ],
               ],
               ),
             ),

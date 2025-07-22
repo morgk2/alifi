@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 Future<void> addProductToFirestore() async {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore db = FirebaseFirestore.instance;
 
   try {
-    await _db.collection('aliexpresslistings').add({
+    await db.collection('aliexpresslistings').add({
       'title': 'Pet Food Spoon Cup Measuring Scoop Sealing Clip',
       'description': 'Pet food measuring cup with built-in sealing clip. Great for keeping food fresh and measuring exact portions. Made of food-grade plastic.',
       'price': 4.76,

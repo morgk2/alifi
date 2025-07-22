@@ -10,8 +10,10 @@ class NotificationPage extends StatelessWidget {
         title: const Text(
           'Notifications',
           style: TextStyle(
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.w900, // Black weight
+            fontSize: 20,
             color: Colors.black,
-            fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: Colors.white,

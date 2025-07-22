@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../models/pet.dart';
+import '../models/store_product.dart';
 import '../services/database_service.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../widgets/spinning_loader.dart';
 import '../widgets/verification_badge.dart';
+import 'store/manage_store_products_page.dart';
 
 class UserProfilePage extends StatefulWidget {
   final User user;
@@ -25,26 +27,39 @@ class _UserProfilePageState extends State<UserProfilePage> {
   bool _isLoading = true;
   bool _isFollowing = false;
   bool _isLoadingFollow = false;
+  late Stream<User?> _userStream;
 
   @override
   void initState() {
     super.initState();
     _loadUserPets();
     _checkFollowStatus();
+    _userStream = _databaseService.getUserStream(widget.user.id);
   }
 
   Future<void> _loadUserPets() async {
     try {
-      // Convert the stream to a Future to get initial data
-      final pets = await _databaseService
+      if (!mounted) return;
+      
+      // Subscribe to the pets stream
+      _databaseService
           .getUserPets(widget.user.id)
-          .first;
+          .listen((pets) {
       if (mounted) {
         setState(() {
           _userPets = pets;
           _isLoading = false;
         });
       }
+          },
+          onError: (e) {
+            if (mounted) {
+              setState(() => _isLoading = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error loading pets: $e')),
+              );
+            }
+          });
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -59,18 +74,28 @@ class _UserProfilePageState extends State<UserProfilePage> {
     final currentUser = context.read<AuthService>().currentUser;
     if (currentUser == null) return;
 
+    try {
     final isFollowing = await _databaseService.isFollowing(
       currentUser.id,
       widget.user.id,
     );
     if (mounted) {
       setState(() => _isFollowing = isFollowing);
+      }
+    } catch (e) {
+      print('Error checking follow status: $e');
+      // Don't show error to user as this is not critical
     }
   }
 
   Future<void> _toggleFollow() async {
     final currentUser = context.read<AuthService>().currentUser;
-    if (currentUser == null) return;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to follow users')),
+      );
+      return;
+    }
 
     setState(() => _isLoadingFollow = true);
     try {
@@ -89,7 +114,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       if (mounted) {
         setState(() => _isLoadingFollow = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Error: ${e.toString()}')),
         );
       }
     }
@@ -112,11 +137,97 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+  Widget _buildStoreProducts(User user) {
+    return StreamBuilder<List<StoreProduct>>(
+      stream: _databaseService.getStoreProducts(
+        storeId: user.id,
+        limit: 5,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: SpinningLoader());
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Text(
+            'No products yet',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          );
+        }
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: snapshot.data!.length,
+          itemBuilder: (context, index) {
+            final product = snapshot.data![index];
+            return ListTile(
+              leading: product.imageUrls.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Image.network(
+                        product.imageUrls.first,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : const Icon(Icons.image_not_supported),
+              title: Text(product.name),
+              subtitle: Text('\$${product.price.toStringAsFixed(2)}'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.star,
+                    size: 16,
+                    color: Colors.orange[700],
+                  ),
+                  Text(' ${product.rating.toStringAsFixed(1)}'),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.shopping_cart,
+                    size: 16,
+                  ),
+                  Text(' ${product.totalOrders}'),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: _userStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(),
+            body: Center(
+              child: Text('Error: ${snapshot.error}'),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(
+              child: SpinningLoader(color: Colors.orange),
+            ),
+          );
+        }
+
+        final user = snapshot.data!;
     final currentUser = context.read<AuthService>().currentUser;
-    final isCurrentUser = currentUser?.id == widget.user.id;
-    final user = widget.user;
+        final isCurrentUser = currentUser?.id == user.id;
+        final isVet = user.accountType == 'vet';
+        final isStore = user.accountType == 'store';
+        final buttonColor = isVet ? Colors.blue : (isStore ? Colors.green : Colors.orange);
 
     return Scaffold(
       appBar: AppBar(
@@ -189,11 +300,78 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
+                              if (isVet) ...[
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      (user.patients?.length ?? 0).toString(),
+                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      (user.followersCount ?? 0).toString(),
+                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      (user.rating ?? 0.0).toStringAsFixed(1),
+                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                              ] else if (isStore) ...[
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      (user.totalOrders ?? 0).toString(),
+                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      (user.followersCount ?? 0).toString(),
+                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      (user.rating ?? 0.0).toStringAsFixed(1),
+                                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                              ] else ...[
                           Expanded(
                             child: Align(
                               alignment: Alignment.center,
                               child: Text(
-                                (user.petsRescued).toString(),
+                                      (user.pets?.length ?? 0).toString(),
                                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                                 textAlign: TextAlign.center,
                               ),
@@ -204,7 +382,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             child: Align(
                               alignment: Alignment.center,
                               child: Text(
-                                (user.followersCount).toString(),
+                                      (user.followers.length).toString(),
                                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                                 textAlign: TextAlign.center,
                               ),
@@ -215,12 +393,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             child: Align(
                               alignment: Alignment.center,
                               child: Text(
-                                (user.level).toString(),
+                                      (user.rating ?? 0.0).toStringAsFixed(1),
                                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                                 textAlign: TextAlign.center,
                               ),
                             ),
                           ),
+                              ],
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -228,62 +407,136 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
+                              if (isVet) ...[
+                                const Expanded(
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Text(
+                                      'Patients',
+                                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                const Expanded(
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Text(
+                                      'Followers',
+                                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                const Expanded(
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Text(
+                                      'Rating',
+                                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                              ] else if (isStore) ...[
+                                const Expanded(
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Text(
+                                      'Total\nOrders',
+                                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                const Expanded(
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Text(
+                                      'Followers',
+                                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                                _ProfileStatDivider(),
+                                const Expanded(
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: Text(
+                                      'Rating',
+                                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                              ] else ...[
+                                const Expanded(
                             child: Align(
                               alignment: Alignment.topCenter,
                               child: Text(
-                                'Pets\nRescued',
-                                style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                      'Pets',
+                                      style: TextStyle(fontSize: 13, color: Colors.grey),
                                 textAlign: TextAlign.center,
                               ),
                             ),
                           ),
                           _ProfileStatDivider(),
-                          Expanded(
+                                const Expanded(
                             child: Align(
                               alignment: Alignment.topCenter,
                               child: Text(
                                 'Followers',
-                                style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                      style: TextStyle(fontSize: 13, color: Colors.grey),
                                 textAlign: TextAlign.center,
                               ),
                             ),
                           ),
                           _ProfileStatDivider(),
-                          Expanded(
+                                const Expanded(
                             child: Align(
                               alignment: Alignment.topCenter,
                               child: Text(
-                                'Level',
-                                style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                      'Rating',
+                                      style: TextStyle(fontSize: 13, color: Colors.grey),
                                 textAlign: TextAlign.center,
                               ),
                             ),
                           ),
+                              ],
                         ],
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  if (!isCurrentUser && currentUser != null)
+                      if (!isCurrentUser)
                     OutlinedButton(
                         onPressed: _isLoadingFollow ? null : _toggleFollow,
                       style: OutlinedButton.styleFrom(
+                            backgroundColor: _isFollowing ? Colors.white : buttonColor,
+                            foregroundColor: _isFollowing ? buttonColor : Colors.white,
+                            side: BorderSide(
+                              color: _isFollowing ? buttonColor : Colors.transparent,
+                              width: 2,
+                            ),
                           shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
+                              borderRadius: BorderRadius.circular(25),
                           ),
-                        side: BorderSide(color: _isFollowing ? Colors.grey : const Color(0xFFFFB300)),
-                        foregroundColor: _isFollowing ? Colors.grey : const Color(0xFFFFB300),
                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                        backgroundColor: _isFollowing ? Colors.grey[100] : Colors.white,
+                            elevation: 0,
                         ),
                         child: _isLoadingFollow
-                            ? const SizedBox(
+                              ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFB300)),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      _isFollowing ? buttonColor : Colors.white,
+                                    ),
                                 ),
                               )
                             : Text(
@@ -294,133 +547,234 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 ],
               ),
             ),
-            // Achievements
+                if (isVet && user.patients != null) ...[
+                  // Basic Info section for vets
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(top: 24),
-              padding: const EdgeInsets.symmetric(horizontal: 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      children: const [
-                        Icon(Icons.emoji_events, size: 24, color: Colors.black),
-                        SizedBox(width: 8),
-                        Text('Achievements', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  FutureBuilder<List<Achievement>>(
-                    future: _fetchAchievements(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: SpinningLoader(color: Colors.orange));
-                      }
-                      final achievements = snapshot.data ?? [];
-                      return SizedBox(
-                        height: 150,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: achievements.length,
-                          itemBuilder: (context, index) {
-                            return _AchievementBadge(achievement: achievements[index]);
-                          },
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
                         ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-            // Owned pets
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(top: 32),
-              padding: const EdgeInsets.symmetric(horizontal: 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      children: const [
-                        Icon(Icons.pets, size: 22, color: Colors.black),
-                        SizedBox(width: 8),
-                        Text('Owned pets', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Basic Info',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          user.basicInfo ?? 'No basic info provided',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  _isLoading
-                      ? const Center(child: SpinningLoader(color: Colors.orange))
-                      : _userPets.isEmpty
-                          ? const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 24),
-                              child: Text('No pets found.', style: TextStyle(color: Colors.grey)),
-                            )
-                          : SizedBox(
-                              height: 120,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                itemCount: _userPets.length,
-                                itemBuilder: (context, index) {
-                                  final pet = _userPets[index];
-                                  return Container(
-                                    width: 100,
-                                    margin: const EdgeInsets.only(right: 16),
+                  // Patients section for vets
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.06),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
                                         ),
                                       ],
                                     ),
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        pet.imageUrls.isNotEmpty
-                                            ? CircleAvatar(
-                                                radius: 32,
-                                                backgroundImage: NetworkImage(pet.imageUrls.first),
-                                              )
-                                            : const CircleAvatar(
-                                                radius: 32,
-                                                backgroundColor: Colors.grey,
-                                                child: Icon(Icons.pets, color: Colors.white),
-                                              ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          pet.name,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        Text(
-                                          pet.breed,
-                                          style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
+                        const Text(
+                          'Patients',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (user.patients!.isNotEmpty)
+                          FutureBuilder<List<Pet>>(
+                            future: DatabaseService().getPets(user.patients!),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(child: SpinningLoader());
+                              }
+                              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                                return const Text('No patients found');
+                              }
+                              return ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: snapshot.data!.length,
+                                itemBuilder: (context, index) {
+                                  final pet = snapshot.data![index];
+                                  return ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundImage: pet.photoURL != null
+                                          ? NetworkImage(pet.photoURL!)
+                                          : null,
+                                      child: pet.photoURL == null
+                                          ? const Icon(Icons.pets)
+                                          : null,
+                                    ),
+                                    title: Text(pet.name),
+                                    subtitle: Text(pet.breed),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ] else if (isStore) ...[
+                  // Basic Info section for stores
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Basic Info',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          user.basicInfo ?? 'No basic info provided',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Products section for stores
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Products',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (isCurrentUser)
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const ManageStoreProductsPage(),
                                     ),
                                   );
                                 },
+                                child: const Text('Manage'),
                               ),
-                            ),
-                  const SizedBox(height: 32),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildStoreProducts(user),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  // Original pets section for non-vet users
+                  StreamBuilder<List<Pet>>(
+                    stream: _databaseService.getUserPets(user.id),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: SpinningLoader());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('No pets found'),
+                        );
+                      }
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: snapshot.data!.length,
+                        itemBuilder: (context, index) => _buildPetCard(snapshot.data![index]),
+                      );
+                    },
+                  ),
                 ],
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+          floatingActionButton: isCurrentUser && isStore
+              ? FloatingActionButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ManageStoreProductsPage(),
+                      ),
+                    );
+                  },
+                  backgroundColor: Colors.green,
+                  child: const Icon(Icons.add),
+                )
+              : null,
+        );
+      },
     );
   }
 

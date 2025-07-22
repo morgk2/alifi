@@ -40,6 +40,8 @@ dependencies:
   cached_network_image: ^3.4.1
   flutter_image_compress: ^2.4.0
   geocoding: ^4.0.0
+  supabase_flutter: ^2.3.4  # Added for Supabase integration
+  mime: ^1.0.5  # Added for file type detection
 
 dev_dependencies:
   flutter_test:
@@ -113,7 +115,6 @@ flutter:
     - assets/fonts/InterDisplay-Regular.ttf
     - assets/fonts/Montserrat-Black.ttf
     - assets/fonts/Montserrat-ExtraBold.ttf
-    - assets/images/payment/
   fonts:
     - family: Inter
       fonts:

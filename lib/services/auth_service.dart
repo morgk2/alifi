@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user.dart' as models;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,10 +14,15 @@ class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId: kIsWeb ? '261633708467-uba68ge1mau5e89pf9ip7u55hb93l0p0.apps.googleusercontent.com' : null,
-    scopes: ['email', 'profile'],
+    scopes: [
+      'email',
+      'profile',
+      if (kIsWeb) 'https://www.googleapis.com/auth/userinfo.email',
+    ],
   );
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final LocalStorageService _localStorage = LocalStorageService();
+  final SupabaseClient _supabase = Supabase.instance.client;
   models.User? _currentUser;
   SharedPreferences? _prefs;
   bool _initialized = false;
@@ -28,6 +34,19 @@ class AuthService extends ChangeNotifier {
   bool get isAuthenticated => _currentUser != null || _isGuestMode;
   bool get isInitialized => _initialized;
   bool get isGuestMode => _isGuestMode;
+
+  Future<void> _initializeSupabaseAuth() async {
+    try {
+      final firebaseUser = _auth.currentUser;
+      if (firebaseUser != null) {
+        // Sign in anonymously to Supabase
+        await _supabase.auth.signInAnonymously();
+        print('Successfully authenticated with Supabase anonymously');
+      }
+    } catch (e) {
+      print('Error initializing Supabase auth: $e');
+    }
+  }
 
   Future<void> init() async {
     if (_initialized) return;
@@ -65,6 +84,8 @@ class AuthService extends ChangeNotifier {
           _currentUser = null;
           _isLoadingUser = false;
           await _prefs?.remove('user_id');
+          // Sign out from Supabase as well
+          await _supabase.auth.signOut();
           // Don't notify if in guest mode
           if (!_isGuestMode) {
             print('AuthService: Notifying listeners (user signed out)');
@@ -75,6 +96,10 @@ class AuthService extends ChangeNotifier {
           _isLoadingUser = true;
           print('AuthService: Notifying listeners (loading user)');
           notifyListeners();
+
+          // Initialize Supabase auth
+          await _initializeSupabaseAuth();
+
           // Try to load from Firestore, but always set _currentUser at minimum
           try {
             print('AuthService: Loading user data from Firestore...');
@@ -169,8 +194,86 @@ class AuthService extends ChangeNotifier {
       if (kIsWeb) {
         print('Web platform detected, using web sign-in flow');
         try {
+          // Force a new sign-in flow for web
+          await _googleSignIn.signOut();
           googleUser = await _googleSignIn.signIn();
           print('Web Google Sign-In completed: ${googleUser?.email}');
+
+          if (googleUser == null) {
+            print('Web sign-in cancelled by user');
+            return null;
+          }
+
+          // Get authentication details
+          final googleAuth = await googleUser.authentication;
+          print('Got Google authentication tokens');
+          print('ID Token present: ${googleAuth.idToken != null}');
+          print('Access Token present: ${googleAuth.accessToken != null}');
+
+          // Create credential
+          final credential = GoogleAuthProvider.credential(
+            accessToken: googleAuth.accessToken,
+            idToken: googleAuth.idToken,
+          );
+
+          // Sign in to Firebase
+          final userCredential = await _auth.signInWithCredential(credential);
+          final firebaseUser = userCredential.user;
+
+          if (firebaseUser == null) {
+            print('Firebase sign-in failed: null user');
+            return null;
+          }
+
+          print('Firebase sign-in successful: ${firebaseUser.email}');
+
+          // Check if user already exists and preserve their data
+          final dbService = DatabaseService();
+          final existingUser = await dbService.getUser(firebaseUser.uid);
+
+          if (existingUser != null) {
+            // Update only the authentication-related fields, preserve all other data
+            final updatedUser = existingUser.copyWith(
+              email: firebaseUser.email ?? existingUser.email,
+              displayName: firebaseUser.displayName ?? existingUser.displayName,
+              photoURL: firebaseUser.photoURL ?? existingUser.photoURL,
+              lastLoginAt: DateTime.now(),
+              linkedAccounts: {...existingUser.linkedAccounts, 'google': true},
+              // Preserve all other fields
+              isAdmin: existingUser.isAdmin,
+              accountType: existingUser.accountType,
+              username: existingUser.username,
+              isVerified: existingUser.isVerified,
+              basicInfo: existingUser.basicInfo,
+              patients: existingUser.patients,
+              rating: existingUser.rating,
+              totalOrders: existingUser.totalOrders,
+              pets: existingUser.pets,
+              followers: existingUser.followers,
+              following: existingUser.following,
+              followersCount: existingUser.followersCount,
+              followingCount: existingUser.followingCount,
+              searchTokens: existingUser.searchTokens,
+              products: existingUser.products,
+            );
+            await dbService.updateUser(updatedUser);
+            print('Updated existing user data in Firestore, preserving all custom fields');
+            return updatedUser;
+          } else {
+            // Create new user if doesn't exist
+            final newUser = models.User(
+              id: firebaseUser.uid,
+              email: firebaseUser.email ?? '',
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+              createdAt: DateTime.now(),
+              lastLoginAt: DateTime.now(),
+              linkedAccounts: {'google': true},
+            );
+            await dbService.createUser(newUser);
+            print('Created new user in Firestore');
+            return newUser;
+          }
         } catch (e) {
           print('Error during web Google sign in: $e');
           rethrow;
@@ -203,27 +306,8 @@ class AuthService extends ChangeNotifier {
           print('Server auth code: ${await googleUser.serverAuthCode}');
           print('ID token: ${(await googleUser.authentication).idToken != null}');
           print('Access token: ${(await googleUser.authentication).accessToken != null}');
-        } catch (e) {
-          print('Error during interactive Google Sign-In: $e');
-          if (e.toString().contains('network_error')) {
-            throw Exception('Please check your internet connection');
-          } else if (e.toString().contains('sign_in_failed')) {
-            throw Exception('Google Sign-In failed. Please check Google Play Services');
-          } else if (e.toString().contains('sign_in_canceled')) {
-            return null;
-          }
-          rethrow;
-        }
-      }
 
-      if (googleUser == null) {
-        print('Google Sign-In returned null user');
-        return null;
-      }
-
-      try {
-        print('Getting Google authentication...');
-        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+          final googleAuth = await googleUser.authentication;
         print('Got Google authentication tokens');
         print('ID Token present: ${googleAuth.idToken != null}');
         print('Access Token present: ${googleAuth.accessToken != null}');
@@ -233,13 +317,11 @@ class AuthService extends ChangeNotifier {
           throw Exception('Failed to obtain authentication tokens');
         }
 
-        print('Creating Firebase credential...');
         final credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken!,
           idToken: googleAuth.idToken!,
         );
 
-        print('Signing in to Firebase...');
         final userCredential = await _auth.signInWithCredential(credential);
         final firebaseUser = userCredential.user;
 
@@ -250,8 +332,41 @@ class AuthService extends ChangeNotifier {
 
         print('Firebase sign-in successful: ${firebaseUser.email}');
 
-        // Create or update user document
-        final userData = models.User(
+          // Check if user already exists and preserve their data
+          final dbService = DatabaseService();
+          final existingUser = await dbService.getUser(firebaseUser.uid);
+
+          if (existingUser != null) {
+            // Update only the authentication-related fields, preserve all other data
+            final updatedUser = existingUser.copyWith(
+              email: firebaseUser.email ?? existingUser.email,
+              displayName: firebaseUser.displayName ?? existingUser.displayName,
+              photoURL: firebaseUser.photoURL ?? existingUser.photoURL,
+              lastLoginAt: DateTime.now(),
+              linkedAccounts: {...existingUser.linkedAccounts, 'google': true},
+              // Preserve all other fields
+              isAdmin: existingUser.isAdmin,
+              accountType: existingUser.accountType,
+              username: existingUser.username,
+              isVerified: existingUser.isVerified,
+              basicInfo: existingUser.basicInfo,
+              patients: existingUser.patients,
+              rating: existingUser.rating,
+              totalOrders: existingUser.totalOrders,
+              pets: existingUser.pets,
+              followers: existingUser.followers,
+              following: existingUser.following,
+              followersCount: existingUser.followersCount,
+              followingCount: existingUser.followingCount,
+              searchTokens: existingUser.searchTokens,
+              products: existingUser.products,
+            );
+            await dbService.updateUser(updatedUser);
+            print('Updated existing user data in Firestore, preserving all custom fields');
+            return updatedUser;
+          } else {
+            // Create new user if doesn't exist
+            final newUser = models.User(
           id: firebaseUser.uid,
           email: firebaseUser.email ?? '',
           displayName: firebaseUser.displayName,
@@ -260,14 +375,21 @@ class AuthService extends ChangeNotifier {
           lastLoginAt: DateTime.now(),
           linkedAccounts: {'google': true},
         );
-
-        await DatabaseService().createUser(userData);
-        print('User data saved to Firestore');
-
-        return userData;
+            await dbService.createUser(newUser);
+            print('Created new user in Firestore');
+            return newUser;
+          }
       } catch (e) {
-        print('Error during Firebase sign-in: $e');
+          print('Error during mobile Google Sign-In: $e');
+          if (e.toString().contains('network_error')) {
+            throw Exception('Please check your internet connection');
+          } else if (e.toString().contains('sign_in_failed')) {
+            throw Exception('Google Sign-In failed. Please check Google Play Services');
+          } else if (e.toString().contains('sign_in_canceled')) {
+            return null;
+          }
         rethrow;
+        }
       }
     } catch (e) {
       print('Error in signInWithGoogle: $e');

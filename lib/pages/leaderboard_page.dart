@@ -103,7 +103,7 @@ class LeaderboardPage extends StatelessWidget {
             ],
           ),
           Text(
-            'Level ${user.level}',
+            'Rating ${user.rating.toStringAsFixed(1)}',
             style: const TextStyle(
               fontSize: 14,
               color: Colors.orange,
@@ -111,7 +111,7 @@ class LeaderboardPage extends StatelessWidget {
             ),
           ),
           Text(
-            '${user.petsRescued} rescued',
+            '${user.totalOrders} orders',
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey[600],
@@ -176,7 +176,7 @@ class LeaderboardPage extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'Pets rescued: ${user.petsRescued}',
+                        'Orders: ${user.totalOrders}',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -184,7 +184,7 @@ class LeaderboardPage extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Level ${user.level}',
+                        'Rating ${user.rating.toStringAsFixed(1)}',
                         style: const TextStyle(
                           fontSize: 14,
                           color: Colors.orange,

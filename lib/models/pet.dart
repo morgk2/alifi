@@ -21,6 +21,8 @@ class Pet {
   final String? microchipId;
   final String? description;
 
+  String? get photoURL => imageUrls.isNotEmpty ? imageUrls.first : null;
+
   Pet({
     required this.id,
     required this.name,

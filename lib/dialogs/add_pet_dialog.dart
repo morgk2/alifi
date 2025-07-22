@@ -1,11 +1,16 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../models/pet.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
+import '../widgets/spinning_loader.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
+import 'package:path/path.dart' as path;
 
 class AddPetDialog extends StatefulWidget {
   final Pet? pet;
@@ -28,6 +33,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
   final ValueNotifier<String?> _errorMessageNotifier = ValueNotifier<String?>(null);
   final ValueNotifier<double> _weightNotifier = ValueNotifier<double>(0.0);
   final ValueNotifier<bool> _isKgNotifier = ValueNotifier<bool>(true);
+  final ValueNotifier<String> _loadingMessageNotifier = ValueNotifier<String>('');
   
   int _currentStep = 0;
   
@@ -204,6 +210,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
     _errorMessageNotifier.dispose();
     _weightNotifier.dispose();
     _isKgNotifier.dispose();
+    _loadingMessageNotifier.dispose();
     
     super.dispose();
   }
@@ -235,13 +242,49 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
   }
 
   Future<void> _pickImage() async {
+    try {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+      );
     
     if (image != null) {
+        // Get original file size
+        final originalBytes = await image.readAsBytes();
+        final originalSize = originalBytes.length;
+        
+        // Compress the image
+        final File originalFile = File(image.path);
+        final String dir = path.dirname(image.path);
+        final String newPath = path.join(dir, 'compressed_${path.basename(image.path)}');
+        
+        final compressedFile = await FlutterImageCompress.compressAndGetFile(
+          originalFile.path,
+          newPath,
+          quality: 60,  // Reduced from 85 to 60 for better compression
+          minWidth: 800,  // Reduced from 1024 to 800
+          minHeight: 800,  // Reduced from 1024 to 800
+          rotate: 0,
+        );
+        
+        if (compressedFile != null) {
         setState(() {
-        _selectedImage = File(image.path);
-      });
+            _selectedImage = File(compressedFile.path);
+          });
+          
+          final compressedSize = File(compressedFile.path).lengthSync();
+          final compressionRatio = (1 - (compressedSize / originalSize)) * 100;
+          
+          print('Image compressed successfully:');
+          print('- Original size: ${(originalSize / 1024).toStringAsFixed(2)} KB');
+          print('- Compressed size: ${(compressedSize / 1024).toStringAsFixed(2)} KB');
+          print('- Compression ratio: ${compressionRatio.toStringAsFixed(1)}%');
+        }
+      }
+    } catch (e, stackTrace) {
+      print('Error picking image: $e');
+      print('Stack trace: $stackTrace');
+      _errorMessageNotifier.value = 'Error selecting image: $e';
     }
   }
 
@@ -261,27 +304,60 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
   }
 
   Future<void> _savePet() async {
-    if (_isSavingNotifier.value) return;
+    if (_isSavingNotifier.value) {
+      print('Already saving, ignoring duplicate save attempt');
+      return;
+    }
+
+    print('Starting pet save process...');
+    print('Validating fields:');
+    print('- Pet type: $_selectedPetType');
+    print('- Name: ${_nameController.text}');
+    print('- Date: $_selectedDate');
+    print('- Weight: ${_weightNotifier.value}');
+    print('- Image: ${_selectedImage != null ? 'Selected' : 'Not selected'}');
+
     if (_selectedPetType == null || 
         _nameController.text.isEmpty || 
         _selectedDate == null || 
         _weightNotifier.value == 0 || 
         _selectedImage == null) {
       _errorMessageNotifier.value = 'Please fill in all fields';
+      print('Validation failed: ${_errorMessageNotifier.value}');
       return;
     }
 
     _isSavingNotifier.value = true;
+    _loadingMessageNotifier.value = 'Starting save process...';
+    print('Starting save process...');
+
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
+      final storageService = Provider.of<StorageService>(context, listen: false);
+      
       if (authService.currentUser == null) {
         throw Exception('No user logged in');
+      }
+
+      _loadingMessageNotifier.value = 'Uploading photo...';
+      print('Uploading image to Supabase...');
+      // Upload image to Supabase first
+      String imageUrl = '';
+      try {
+        imageUrl = await storageService.uploadPetPhoto(_selectedImage!);
+        print('Successfully uploaded image to Supabase: $imageUrl');
+      } catch (e, stackTrace) {
+        print('Error uploading image to Supabase: $e');
+        print('Stack trace: $stackTrace');
+        throw Exception('Failed to upload image: $e');
       }
 
       // Calculate age in years
       final now = DateTime.now();
       final age = now.difference(_selectedDate!).inDays ~/ 365;
 
+      _loadingMessageNotifier.value = 'Creating pet profile...';
+      print('Creating pet object...');
       final pet = Pet(
         id: '',  // Will be set by Firestore
         name: _nameController.text,
@@ -290,7 +366,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         color: '0x${_selectedColor.value.toRadixString(16)}',
         age: age,
         gender: _selectedGender,
-        imageUrls: [], // Will be updated after upload
+        imageUrls: [imageUrl], // Use the Supabase URL
         ownerId: authService.currentUser!.id,
         createdAt: DateTime.now(),
         lastUpdatedAt: DateTime.now(),
@@ -301,22 +377,31 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         isActive: true,
       );
 
-      // Save pet to Firestore with local image paths
+      _loadingMessageNotifier.value = 'Saving to database...';
+      print('Saving pet to Firestore...');
+      // Save pet to Firestore
       final petId = await DatabaseService().createPet(
         pet,
         isGuest: authService.isGuestMode,
       );
+      print('Successfully saved pet with ID: $petId');
 
       if (mounted) {
+        print('Closing dialog...');
         Navigator.of(context).pop(true);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error in _savePet: $e');
+      print('Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
           _errorMessage = 'Error adding pet: $e';
+          _errorMessageNotifier.value = 'Error adding pet: $e';
         });
       }
     } finally {
+      print('Save process completed');
+      _loadingMessageNotifier.value = '';
       if (mounted) _isSavingNotifier.value = false;
     }
   }
@@ -1162,6 +1247,44 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
     );
   }
 
+  Widget _buildLoadingOverlay() {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _isSavingNotifier,
+      builder: (context, isSaving, child) {
+        if (isSaving) {
+          return Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.2),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SpinningLoader(size: 60),
+                    const SizedBox(height: 16),
+                    ValueListenableBuilder<String>(
+                      valueListenable: _loadingMessageNotifier,
+                      builder: (context, message, child) {
+                        return Text(
+                          message,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -1343,24 +1466,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
           ],
         ),
           ),
-          ValueListenableBuilder<bool>(
-            valueListenable: _isSavingNotifier,
-            builder: (context, isSaving, child) {
-              if (isSaving) {
-                return Positioned.fill(
-              child: Container(
-                color: Colors.black.withOpacity(0.2),
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-                  ),
-                ),
-              ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-            ),
+          _buildLoadingOverlay(),
         ],
       ),
     );

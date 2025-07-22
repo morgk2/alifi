@@ -3,7 +3,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latlong;
 import '../config/mapbox_config.dart';
 import '../services/places_service.dart';
-import 'dart:ui';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class LocationPickerDialog extends StatefulWidget {
   final latlong.LatLng? initialLocation;
@@ -26,7 +27,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
   latlong.LatLng? _selectedLocation;
   String? _selectedAddress;
   bool _isSearching = false;
-  List<PlaceSearchResult> _searchResults = [];
+  List<PlacesPrediction> _searchResults = [];
 
   @override
   void initState() {
@@ -47,12 +48,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
 
     setState(() => _isSearching = true);
     try {
-      final results = await _placesService.searchNearbyBroad(
-        query: query,
-        location: _selectedLocation ?? const latlong.LatLng(0, 0),
-        radiusKm: 50,
-        limit: 5,
-      );
+      final results = await _placesService.getPlacePredictions(query);
       setState(() {
         _searchResults = results;
         _isSearching = false;
@@ -69,15 +65,73 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
     }
   }
 
-  void _selectSearchResult(PlaceSearchResult result) {
+  Future<Map<String, dynamic>?> _getPlaceDetails(String placeId) async {
+    try {
+      final url = Uri.parse(
+        'https://maps.gomaps.pro/maps/api/place/details/json'
+        '?place_id=$placeId'
+        '&key=AlzaSy8GCoFh_rNeeXKWnVnqeCauTmWq3i85B6H'
+      );
+      
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['result'] != null) {
+          return data['result'];
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error getting place details: $e');
+      return null;
+    }
+  }
+
+  Future<void> _selectSearchResult(PlacesPrediction prediction) async {
+    setState(() => _isSearching = true);
+    try {
+      final details = await _getPlaceDetails(prediction.placeId);
+      if (details != null && details['geometry'] != null) {
+        final location = latlong.LatLng(
+          details['geometry']['location']['lat'],
+          details['geometry']['location']['lng'],
+        );
     setState(() {
-      _selectedLocation = result.location;
-      _selectedAddress = result.address;
+          _selectedLocation = location;
+          _selectedAddress = prediction.description;
       _searchResults = [];
       _searchController.clear();
       _searchFocusNode.unfocus();
+          _isSearching = false;
     });
-    _mapController.move(result.location, 15);
+        _mapController.move(location, 15);
+      } else {
+        setState(() => _isSearching = false);
+      }
+    } catch (e) {
+      print('Error selecting location: $e');
+      setState(() => _isSearching = false);
+    }
+  }
+
+  Future<void> _reverseGeocode(latlong.LatLng point) async {
+    try {
+      final url = Uri.parse(
+        'https://maps.gomaps.pro/maps/api/geocode/json'
+        '?latlng=${point.latitude},${point.longitude}'
+        '&key=AlzaSy8GCoFh_rNeeXKWnVnqeCauTmWq3i85B6H'
+      );
+      
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['results'] != null && data['results'].isNotEmpty) {
+          setState(() => _selectedAddress = data['results'][0]['formatted_address']);
+        }
+      }
+    } catch (e) {
+      print('Error reverse geocoding: $e');
+    }
   }
 
   @override
@@ -147,16 +201,16 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                   shrinkWrap: true,
                   itemCount: _searchResults.length,
                   itemBuilder: (context, index) {
-                    final result = _searchResults[index];
+                    final prediction = _searchResults[index];
                     return ListTile(
                       leading: const Icon(Icons.location_on),
-                      title: Text(result.name),
+                      title: Text(prediction.mainText),
                       subtitle: Text(
-                        result.address,
+                        prediction.secondaryText,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      onTap: () => _selectSearchResult(result),
+                      onTap: () => _selectSearchResult(prediction),
                     );
                   },
                 ),
@@ -173,16 +227,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                         initialZoom: 15,
                         onTap: (_, point) {
                           setState(() => _selectedLocation = point);
-                          _placesService.searchNearbyBroad(
-                            query: '',
-                            location: point,
-                            radiusKm: 1,
-                            limit: 1,
-                          ).then((results) {
-                            if (results.isNotEmpty) {
-                              setState(() => _selectedAddress = results.first.address);
-                            }
-                          });
+                          _reverseGeocode(point);
                         },
                       ),
                       children: [

@@ -19,6 +19,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _usernameController;
   late TextEditingController _displayNameController;
+  late TextEditingController _basicInfoController;
   
   // Replace setState variable with ValueNotifier for better performance
   final ValueNotifier<bool> _isSavingNotifier = ValueNotifier<bool>(false);
@@ -29,12 +30,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final user = context.read<AuthService>().currentUser;
     _usernameController = TextEditingController(text: user?.username ?? '@username');
     _displayNameController = TextEditingController(text: user?.displayName ?? 'Display Name');
+    _basicInfoController = TextEditingController(text: user?.basicInfo ?? '');
   }
 
   @override
   void dispose() {
     _usernameController.dispose();
     _displayNameController.dispose();
+    _basicInfoController.dispose();
     
     // Dispose ValueNotifier
     _isSavingNotifier.dispose();
@@ -82,6 +85,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final updatedUser = user.copyWith(
       username: newUsername,
       displayName: _displayNameController.text.trim(),
+      basicInfo: user.accountType == 'vet' ? _basicInfoController.text.trim() : user.basicInfo,
     );
 
     _isSavingNotifier.value = true;
@@ -132,7 +136,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               return TextButton(
                 onPressed: isSaving ? null : _saveChanges,
                 child: isSaving
-                ? SpinningLoader(size: 32, color: Colors.orange)
+                ? const SpinningLoader(size: 32, color: Colors.orange)
                 : const Text(
                     'Save',
                     style: TextStyle(
@@ -149,6 +153,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       body: Consumer<AuthService>(
         builder: (context, authService, _) {
           final user = authService.currentUser;
+          final isVet = user?.accountType == 'vet';
 
           return Stack(
             children: [
@@ -256,18 +261,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Display name cannot be empty';
                                 }
-                                if (value.trim().length < 3) {
-                                  return 'Display name must be at least 3 characters';
-                                }
-                                if (value.trim().length > 30) {
-                                  return 'Display name must be at most 30 characters';
-                                }
-                                if (!RegExp(r"^[a-zA-Z0-9 _\-.'!]+$").hasMatch(value.trim())) {
-                                  return 'Display name contains invalid characters';
-                                }
                                 return null;
                               },
                             ),
+                            if (isVet) ...[
+                              const SizedBox(height: 20),
+                              const Text(
+                                'Basic Info',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _basicInfoController,
+                                decoration: const InputDecoration(
+                                  hintText: 'Enter your professional information, qualifications, etc.',
+                                  border: OutlineInputBorder(),
+                                ),
+                                maxLines: 5,
+                                maxLength: 500,
+                                textCapitalization: TextCapitalization.sentences,
+                              ),
+                            ],
                             const SizedBox(height: 32),
                             const Text(
                               'Linked Accounts',
@@ -330,13 +347,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     return Positioned.fill(
                   child: Container(
                     color: Colors.white.withOpacity(0.7),
-                    child: Column(
+                    child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const SizedBox(height: 80),
+                        SizedBox(height: 80),
                         SpinningLoader(size: 64, color: Colors.orange),
-                        const SizedBox(height: 16),
-                        const Text('Saving...', style: TextStyle(fontSize: 16)),
+                        SizedBox(height: 16),
+                        Text('Saving...', style: TextStyle(fontSize: 16)),
                       ],
                     ),
                   ),

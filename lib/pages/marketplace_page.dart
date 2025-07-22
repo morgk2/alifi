@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import '../models/aliexpress_product.dart';
+import '../models/marketplace_product.dart';
 import '../services/database_service.dart';
 import '../widgets/spinning_loader.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'product_details_page.dart';
+import '../models/aliexpress_product.dart';
+import '../models/store_product.dart';
 
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
@@ -25,7 +27,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
     {'icon': 'assets/images/hygiene.png', 'name': 'Hygiene'},
   ];
 
-  Widget _buildProductCard(AliexpressProduct product, {bool isLarge = false}) {
+  Widget _buildProductCard(MarketplaceProduct product, {bool isLarge = false}) {
     final discountPercentage = product.originalPrice > 0
         ? ((1 - (product.price / product.originalPrice)) * 100).round()
         : 0;
@@ -35,7 +37,11 @@ class _MarketplacePageState extends State<MarketplacePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-            builder: (context) => ProductDetailsPage(product: product),
+            builder: (context) => ProductDetailsPage(
+              product: product.type == 'aliexpress'
+                  ? product.toAliexpress()
+                  : product.toStore(),
+            ),
           ),
         );
       },
@@ -45,13 +51,19 @@ class _MarketplacePageState extends State<MarketplacePage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isLarge ? Colors.grey[200]! : Colors.orange[100]!),
+          border: Border.all(
+            color: product.type == 'store'
+                ? Colors.green[200]!
+                : (isLarge ? Colors.grey[200]! : Colors.orange[100]!),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Stack(
+          children: [
             ClipRRect(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               child: CachedNetworkImage(
                 imageUrl: product.imageUrls.first,
                 height: isLarge ? 140 : 200,
@@ -65,6 +77,28 @@ class _MarketplacePageState extends State<MarketplacePage> {
                   child: Icon(Icons.error, color: Colors.grey[400]),
                 ),
               ),
+                ),
+                if (product.type == 'store')
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Store',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             Padding(
               padding: const EdgeInsets.all(12),
@@ -85,10 +119,10 @@ class _MarketplacePageState extends State<MarketplacePage> {
                     children: [
                       Text(
                         '\$${product.price.toStringAsFixed(2)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.orange,
+                          color: product.type == 'store' ? Colors.green : Colors.orange,
                         ),
                       ),
                       if (discountPercentage > 0) ...[
@@ -119,7 +153,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '${product.orders} orders',
+                          '${product.totalOrders} orders',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 12,
@@ -176,7 +210,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
             toolbarHeight: 60,
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              title: Text(
+              title: const Text(
                     'Marketplace',
                     style: TextStyle(
                   color: Colors.black,
@@ -284,11 +318,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 const SizedBox(height: 16),
                 SizedBox(
                   height: 280,
-                  child: StreamBuilder<List<AliexpressProduct>>(
-                    stream: _databaseService.getAliexpressListings(
-                      category: _selectedCategory == 'All' ? null : _selectedCategory,
-                      limit: 5,
-                    ),
+                  child: StreamBuilder<List<MarketplaceProduct>>(
+                    stream: _databaseService.getNewMarketplaceProducts(limit: 10),
                     builder: (context, snapshot) {
                       if (snapshot.hasError) {
                         return Center(child: Text('Error: ${snapshot.error}'));
@@ -337,8 +368,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
                 const SizedBox(height: 16),
                 SizedBox(
                   height: 280,
-                  child: StreamBuilder<List<AliexpressProduct>>(
-                    stream: _databaseService.getRecommendedListings(limit: 5),
+                  child: StreamBuilder<List<MarketplaceProduct>>(
+                    stream: _databaseService.getRecommendedMarketplaceProducts(limit: 10),
                     builder: (context, snapshot) {
                       if (snapshot.hasError) {
                         return Center(child: Text('Error: ${snapshot.error}'));
@@ -366,7 +397,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                // Top Sellers section
+                // All Products section
                     Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
@@ -374,7 +405,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
                       const Icon(Icons.trending_up, color: Colors.black),
                           const SizedBox(width: 8),
                           const Text(
-                            'Top sellers',
+                        'All Products',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -387,10 +418,10 @@ class _MarketplacePageState extends State<MarketplacePage> {
                     const SizedBox(height: 16),
                 Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: StreamBuilder<List<AliexpressProduct>>(
-                    stream: _databaseService.getAliexpressListings(
+                  child: StreamBuilder<List<MarketplaceProduct>>(
+                    stream: _databaseService.getMarketplaceProducts(
                       category: _selectedCategory == 'All' ? null : _selectedCategory,
-                      limit: 10,
+                      limit: 20,
                     ),
                     builder: (context, snapshot) {
                       if (snapshot.hasError) {

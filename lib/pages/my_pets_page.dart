@@ -609,7 +609,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                                                     children: [
                                                       const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 48),
                                                       const SizedBox(height: 16),
-                                                      Text('Delete Pet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
+                                                      const Text('Delete Pet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
                                                       const SizedBox(height: 8),
                                                       Text('Are you sure you want to delete ${pet.name}?', textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
                                                       const SizedBox(height: 24),
@@ -824,7 +824,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                       SizedBox(width: 8),
                 Text(
                         'My pets',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Montserrat',
                           fontSize: 24,
                           fontWeight: FontWeight.w900,

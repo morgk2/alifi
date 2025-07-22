@@ -659,11 +659,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   _buildHeaderButton(
                     icon: AppIcons.bellIcon,
                     onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => const GeminiChatBox(),
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationPage(),
+                        ),
                       );
                     },
                   ),

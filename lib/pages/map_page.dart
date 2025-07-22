@@ -1,100 +1,312 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'dart:ui';
-import 'dart:async' show TimeoutException;
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart' as latlong;
+import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:provider/provider.dart';
-import '../config/mapbox_config.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/places_service.dart';
-import '../services/database_service.dart';
-import '../services/auth_service.dart';
 import '../models/lost_pet.dart';
+import '../services/database_service.dart';
+import '../config/mapbox_config.dart';
+import '../widgets/spinning_loader.dart';
+import 'package:uuid/uuid.dart';
+import 'package:http/http.dart' as http;
+import 'dart:ui' as ui;
+import 'dart:ui';
+import '../services/local_storage_service.dart';
 import '../dialogs/report_missing_pet_dialog.dart';
 import '../dialogs/add_business_dialog.dart';
-import '../widgets/spinning_loader.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../services/auth_service.dart';
+import '../models/user.dart';
+import '../pages/user_profile_page.dart';
+import 'package:intl/intl.dart';
+
+
+class _PhotoCarousel extends StatefulWidget {
+  final List<dynamic> photos;
+  final String apiKey;
+
+  const _PhotoCarousel({
+    required this.photos,
+    required this.apiKey,
+  });
+
+  @override
+  State<_PhotoCarousel> createState() => _PhotoCarouselState();
+}
+
+class _PhotoCarouselState extends State<_PhotoCarousel> {
+  int _currentPage = 0;
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        SizedBox(
+          height: 200,
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemCount: widget.photos.length,
+            itemBuilder: (context, index) {
+              final photo = widget.photos[index];
+              final photoUrl = 'https://maps.googleapis.com/maps/api/place/photo'
+                  '?maxwidth=800'
+                  '&photo_reference=${photo['photo_reference']}'
+                  '&key=${widget.apiKey}';
+
+              return Container(
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  child: Image.network(
+                    photoUrl,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: SpinningLoader(
+                          size: 32,
+                          color: Colors.orange.withOpacity(0.8),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Center(
+                          child: Icon(
+                            Icons.error_outline,
+                            color: Colors.grey,
+                            size: 32,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // Photo counter
+        if (widget.photos.length > 1)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                '${_currentPage + 1}/${widget.photos.length}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        // Navigation arrows
+        if (widget.photos.length > 1) ...[
+          // Previous button
+          if (_currentPage > 0)
+            Positioned(
+              left: 8,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          // Next button
+          if (_currentPage < widget.photos.length - 1)
+            Positioned(
+              right: 8,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
 
 class MapPage extends StatefulWidget {
-  final Function(bool)? onSearchFocusChange;
-  
-  const MapPage({
-    super.key,
-    this.onSearchFocusChange,
-  });
+  const MapPage({super.key});
 
   @override
   State<MapPage> createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
+class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
+  final _placesService = PlacesService();
   final MapController _mapController = MapController();
-  final PlacesService _placesService = PlacesService();
-  final DatabaseService _databaseService = DatabaseService();
-  bool _locationEnabled = false;
-  Position? _currentPosition;
-  List<PlaceSearchResult> _searchResults = [];
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  
+  List<PlacesPrediction> _searchResults = [];
   List<LostPet> _nearbyLostPets = [];
   bool _isLoading = false;
-  
-  late AnimationController _animationController;
-  late Animation<double> _slideAnimation;
-  late Animation<double> _fadeAnimation;
-
-  OverlayEntry? _overlayEntry;
-  bool _isMenuOpen = false;
-  bool _isSearchFocused = false;
-  final FocusNode _searchFocusNode = FocusNode();
-  final TextEditingController _searchController = TextEditingController();
-
-  // Recent searches storage
-  final List<String> _recentSearches = [
-    'Veterinary Clinic',
-    'Pet Shop',
-    'Animal Hospital',
+  bool _locationEnabled = false;
+  Position? _currentPosition;
+  Timer? _debounceTimer;
+  final String _sessionToken = const Uuid().v4();
+  late AnimationController _searchPanelController;
+  Marker? _selectedPlaceMarker;
+  LatLng? _selectedLocation;
+  String? _selectedAddress;
+  List<LatLng>? _routePoints;
+  final List<Color> _gradientColors = [
+    Colors.orange.shade300,
+    Colors.deepOrange.shade500,
   ];
+  bool _isDetailsVisible = false;
+  bool _isDetailsMinimized = false;
+  late AnimationController _minimizeController;
+  late Animation<double> _heightAnimation;
+  Map<String, dynamic>? _selectedPlaceDetails;
+  String? _selectedPlacePrediction;
+  String? _selectedPlaceDistance;
+  List<Marker> _vetMarkers = [];
+  List<Marker> _storeMarkers = [];
+  List<Marker> _userMarkers = [];
+  bool _isLoadingVets = false;
+  bool _isLoadingStores = false;
+  double _currentZoom = 15.0;
+  static const double _zoomThreshold = 11.0; // Threshold for simplified markers
+  final GlobalKey _plusButtonKey = GlobalKey();
+
+  final _storeMarkersController = StreamController<List<Marker>>.broadcast();
+  final _storeResults = <Map<String, dynamic>>[];
+  final _processedStorePlaceIds = <String>{};
 
   @override
   void initState() {
     super.initState();
-    _searchFocusNode.addListener(_onSearchFocusChange);
-    _searchController.addListener(_onSearchTextChange);
-    _initializeLocation();
-
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+    _searchPanelController = AnimationController(
       vsync: this,
+      duration: const Duration(milliseconds: 300),
     );
-
-    _slideAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
+    _minimizeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
     );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
+    _heightAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
     ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
+      parent: _minimizeController,
+      curve: Curves.easeInOut,
     ));
+    _initializeLocation();
+    _loadNearbyLostPets();
+    _loadVetLocations();
+    _loadStoreLocations();
+    _loadUserLocations();
+    _mapController.mapEventStream.listen((event) {
+      if (event is MapEventMove) {
+        final currentZoom = event.camera.zoom;
+        if ((_currentZoom < _zoomThreshold && currentZoom >= _zoomThreshold) ||
+            (_currentZoom >= _zoomThreshold && currentZoom < _zoomThreshold)) {
+          setState(() {
+            _currentZoom = currentZoom;
+          });
+        }
+      }
+    });
+    _setupMarkerControllers();
+  }
 
-    // Load all lost pets initially with a default location
-    _loadNearbyLostPets(
-      Position(
-        latitude: 36.7538,
-        longitude: 3.0588,
-        timestamp: DateTime.now(),
-        accuracy: 0,
-        altitude: 0,
-        altitudeAccuracy: 0,
-        heading: 0,
-        headingAccuracy: 0,
-        speed: 0,
-        speedAccuracy: 0,
-      ),
-    );
+  void _setupMarkerControllers() {
+    _storeMarkersController.stream.listen((markers) {
+      if (mounted) {
+        setState(() {
+          _storeMarkers = markers;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _searchPanelController.dispose();
+    _minimizeController.dispose();
+    _storeMarkersController.close();
+    super.dispose();
   }
 
   Future<void> _initializeLocation() async {
@@ -178,7 +390,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
         );
         
         if (openSettings == true) {
-          await Geolocator.openAppSettings();
+          await openAppSettings();
         }
         setState(() => _isLoading = false);
         return;
@@ -217,12 +429,9 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
 
       // Move map to current location
       _mapController.move(
-        latlong.LatLng(position.latitude, position.longitude),
+        LatLng(position.latitude, position.longitude),
         15.0,
       );
-
-      // Load nearby lost pets
-      _loadNearbyLostPets(position);
 
       // Start listening to location updates
       Geolocator.getPositionStream(
@@ -236,7 +445,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
           setState(() {
             _currentPosition = position;
           });
-          _loadNearbyLostPets(position);
         }
         },
         onError: (error) {
@@ -289,6 +497,89 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     }
   }
 
+  Future<void> _handleSearch(String query) async {
+    // Cancel previous timer
+    _debounceTimer?.cancel();
+
+    // If query is empty, clear results
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Set loading state
+    setState(() => _isLoading = true);
+
+    // Debounce the search
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      try {
+        // Add keywords to help find vets and pet stores
+        final keywords = [
+          query,
+          '$query vet',
+          '$query veterinaire',
+          '$query pet store',
+          '$query animalerie',
+          '$query pet shop',
+          '$query animal clinic',
+        ];
+
+        final allResults = <PlacesPrediction>[];
+        
+        // Search with each keyword
+        for (final keyword in keywords) {
+          final results = await _placesService.getPlacePredictions(keyword);
+          allResults.addAll(results);
+        }
+
+        // Remove duplicates based on placeId
+        final uniqueResults = allResults.fold<Map<String, PlacesPrediction>>(
+          {},
+          (map, prediction) {
+            if (!map.containsKey(prediction.placeId)) {
+              map[prediction.placeId] = prediction;
+            }
+            return map;
+          },
+        ).values.toList();
+
+        if (mounted) {
+          setState(() {
+            _searchResults = uniqueResults;
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        print('Search error: $e');
+        if (mounted) {
+          setState(() {
+            _searchResults = [];
+            _isLoading = false;
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> _loadNearbyLostPets() async {
+    try {
+      final databaseService = context.read<DatabaseService>();
+      // Listen to the stream and update state when new data arrives
+      databaseService.getAllLostPets().listen((pets) {
+        if (mounted) {
+          setState(() {
+            _nearbyLostPets = pets;
+          });
+        }
+      });
+    } catch (e) {
+      print('Error loading nearby lost pets: $e');
+    }
+  }
+
   Future<void> _showManualLocationInput() async {
     final TextEditingController addressController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -322,7 +613,10 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                 if (isSearching)
                   const Padding(
                     padding: EdgeInsets.only(top: 16),
-                    child: CircularProgressIndicator(),
+                    child: SpinningLoader(
+                      size: 32,
+                      color: Colors.orange,
+                    ),
                   ),
               ],
             ),
@@ -339,19 +633,19 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                     if (formKey.currentState?.validate() ?? false) {
                       setState(() => isSearching = true);
                       try {
-                        final results = await _placesService.searchNearbyBroad(
-                          query: addressController.text,
-                          location: const latlong.LatLng(0, 0), // Default to center
-                          radiusKm: 50,
-                          limit: 1,
-                        );
-                        if (results.isNotEmpty) {
+                        final predictions = await _placesService.getPlacePredictions(addressController.text);
+                        if (predictions.isNotEmpty) {
+                          final details = await _getPlaceDetails(predictions.first.placeId);
+                          if (details != null && details['geometry'] != null) {
+                            final location = LatLng(
+                              details['geometry']['location']['lat'],
+                              details['geometry']['location']['lng'],
+                            );
                           Navigator.pop(context, {
-                            'location': results.first.location,
-                            'address': results.first.address,
+                              'location': location,
+                              'address': predictions.first.description,
                           });
-                        } else {
-                          throw Exception('Location not found');
+                          }
                         }
                       } catch (e) {
                         setState(() => isSearching = false);
@@ -372,7 +666,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     );
 
     if (result != null) {
-      final location = result['location'] as latlong.LatLng;
+      final location = result['location'] as LatLng;
       final address = result['address'] as String;
       
       setState(() {
@@ -394,9 +688,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
       // Move map to entered location
       _mapController.move(location, 15.0);
 
-      // Load nearby lost pets for the entered location
-      _loadNearbyLostPets(_currentPosition!);
-
       // Show confirmation
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -408,473 +699,317 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
     }
   }
 
-  void _loadNearbyLostPets(Position position) {
-    print('Loading lost pets near: ${position.latitude}, ${position.longitude}'); // Debug log
-    _databaseService.getAllLostPets().listen((pets) {
-      print('Found ${pets.length} lost pets'); // Debug log
-      if (mounted) {
-        setState(() => _nearbyLostPets = pets);
-      }
-    });
-  }
-
-  void _onSearchFocusChange() {
-    setState(() {
-      _isSearchFocused = _searchFocusNode.hasFocus;
-    });
-    if (_isSearchFocused) {
-      _animationController.forward();
-      widget.onSearchFocusChange?.call(false); // Hide nav bar
-    } else {
-      _animationController.reverse();
-      widget.onSearchFocusChange?.call(true); // Show nav bar
-    }
-  }
-
-  void _onSearchTextChange() {
-    if (_searchController.text.isNotEmpty) {
-      // Debounce the search to avoid too many API calls
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (_searchController.text.isNotEmpty) {
-          _searchPlaces(_searchController.text);
-        }
-      });
-    } else {
-      setState(() {
-        _searchResults = [];
-      });
-    }
-  }
-
-  Future<void> _searchPlaces(String query) async {
-    if (_currentPosition == null || query.isEmpty) {
-      print('Cannot search: position= [38;5;246m$_currentPosition [0m, query=$query'); // Debug log
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<Map<String, dynamic>?> _getPlaceDetails(String placeId) async {
     try {
-      print('Searching from position: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}'); // Debug log
-      // Remove the forced 'veterinary' keyword so all business types can be found
-      final results = await _placesService.searchNearbyBroad(
-        query: query,
-        location: latlong.LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-        radiusKm: 20, // Increased search radius
-        limit: 15, // Increased limit
+      print('Fetching details for place_id: $placeId');
+      final url = Uri.parse(
+        'https://maps.gomaps.pro/maps/api/place/details/json'
+        '?place_id=$placeId'
+        '&key=AlzaSy8GCoFh_rNeeXKWnVnqeCauTmWq3i85B6H'
       );
+      
+      print('Making request to URL: $url');
+      final response = await http.get(url);
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
-      if (mounted) {
-        setState(() {
-          _searchResults = results;
-          _isLoading = false;
-        });
-
-        // Optionally, center the map to the first result
-        if (results.isNotEmpty) {
-          _mapController.move(results.first.location, 15.0);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          return data;
+        } else {
+          print('API returned non-OK status: ${data['status']}');
         }
       }
+      return null;
     } catch (e) {
-      print('Error in map page search: $e'); // Debug log
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      print('Error getting place details: $e');
+      return null;
     }
   }
 
-  void _selectPlace(PlaceSearchResult place) {
-    _searchFocusNode.unfocus();
-    _mapController.move(place.location, 15);
-  }
-
-  void _clearSearch() async {
-    _searchController.clear();
-    await _animationController.reverse();
-    setState(() {
-      _isSearchFocused = false;
-    });
-    _searchFocusNode.unfocus();
-    widget.onSearchFocusChange?.call(true); // Show nav bar
-  }
-
-  @override
-  void dispose() {
-    _searchFocusNode.removeListener(_onSearchFocusChange);
-    _searchController.removeListener(_onSearchTextChange);
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-    _searchFocusNode.dispose();
-    _searchController.dispose();
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  void _toggleMenu(BuildContext context, Offset buttonPosition) {
-    if (_isMenuOpen) {
-      _overlayEntry?.remove();
-      _overlayEntry = null;
-    } else {
-      _overlayEntry = _createOverlayEntry(context, buttonPosition);
-      Overlay.of(context).insert(_overlayEntry!);
-    }
-    setState(() {
-      _isMenuOpen = !_isMenuOpen;
-    });
-  }
-
-  OverlayEntry _createOverlayEntry(BuildContext context, Offset buttonPosition) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    const menuWidth = 180.0;
-    const rightPadding = 16.0;
-
-    return OverlayEntry(
-      builder: (context) => Stack(
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
         children: [
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () => _toggleMenu(context, buttonPosition),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Container(
-                  color: Colors.black.withOpacity(0.1),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: buttonPosition.dy + 60,
-            right: rightPadding,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: menuWidth,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      offset: const Offset(0, 4),
-                      blurRadius: 8,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        _toggleMenu(context, buttonPosition);
-                        final authService = context.read<AuthService>();
-                        if (authService.currentUser == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please sign in to report a missing pet'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
-                        showDialog(
-                          context: context,
-                          useRootNavigator: true,
-                          barrierColor: Colors.black54,
-                          builder: (context) => ReportMissingPetDialog(
-                            userId: authService.currentUser!.id,
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.pets,
-                              color: Colors.red[700],
-                              size: 24,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Report a missing pet',
-                                style: TextStyle(
-                                  color: Colors.red[700],
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                  height: 48, // Match height with plus button
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.45),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
-                    const Divider(height: 1),
-                    InkWell(
-                      onTap: () {
-                        _toggleMenu(context, buttonPosition);
-                        showDialog(
-                          context: context,
-                          useRootNavigator: true,
-                          barrierColor: Colors.black54,
-                          builder: (context) => const AddBusinessDialog(),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.store_rounded,
-                              color: Colors.blue[700],
-                              size: 24,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Add your business',
-                                style: TextStyle(
-                                  color: Colors.blue[700],
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onChanged: _handleSearch,
+                    decoration: InputDecoration(
+                      hintText: 'Search places...',
+                      hintStyle: TextStyle(
+                        color: Colors.black.withOpacity(0.6),
+                        fontSize: 16,
                       ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Colors.black.withOpacity(0.6),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(
+                              Icons.close,
+                              color: Colors.black.withOpacity(0.6),
+                            ),
+                            onPressed: () {
+                              _searchController.clear();
+                              _handleSearch('');
+                            },
+                          )
+                        : _isLoading
+                          ? Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: SpinningLoader(
+                                size: 24,
+                                color: Colors.orange.shade300,
+                              ),
+                            )
+                          : null,
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnimatedSearchPanel() {
-    final bool showPanel = _isSearchFocused || _searchController.text.isNotEmpty;
-    return showPanel
-        ? Positioned.fill(
-            top: 90, // Height of the search bar area
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 250),
-              opacity: showPanel ? 1.0 : 0.0,
-              child: IgnorePointer(
-                ignoring: !showPanel,
-                child: Container(
-                  color: Colors.white.withOpacity(0.97),
-                  child: SafeArea(
-                    top: false,
-                    child: _searchController.text.isEmpty
-                        ? _buildRecentSearchesChips()
-                        : _buildAnimatedSearchResults(),
                   ),
                 ),
               ),
             ),
-          )
-        : const SizedBox.shrink();
-  }
-
-  Widget _buildAnimatedSearchResults() {
-    if (_isLoading) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 32),
-          const SpinningLoader(color: Colors.orange),
-          const SizedBox(height: 16),
-          const Text('Searching...', style: TextStyle(color: Colors.grey)),
-        ],
-      );
-    }
-    if (_searchResults.isEmpty) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 32),
-          Icon(Icons.search_off, size: 48, color: Colors.grey[300]),
-          const SizedBox(height: 12),
-          const Text('No results found', style: TextStyle(color: Colors.grey)),
-        ],
-      );
-    }
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _searchResults.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final place = _searchResults[index];
-        IconData icon = Icons.location_on;
-        Color iconColor = Colors.blue;
-        if (place.placeType != null) {
-          if (place.placeType!.toLowerCase().contains('vet')) {
-            icon = Icons.local_hospital;
-            iconColor = Colors.redAccent;
-          } else if (place.placeType!.toLowerCase().contains('shop')) {
-            icon = Icons.store;
-            iconColor = Colors.orange;
-          }
-        }
-        return AnimatedContainer(
-          duration: Duration(milliseconds: 200 + index * 30),
-          curve: Curves.easeOut,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
           ),
-          child: ListTile(
-            leading: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
+          const SizedBox(width: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(
+                key: _plusButtonKey,
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.orange.withOpacity(0.8), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => _showAddMenu(context),
+                    child: Icon(
+                      Icons.add,
+                      color: Colors.orange.shade50,
+                      size: 24,
+                    ),
+                  ),
+                ),
               ),
-              child: Icon(icon, color: iconColor, size: 28),
             ),
-            title: Text(
-              place.name,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-            ),
-            subtitle: Text(
-              place.address,
-              style: const TextStyle(fontSize: 13, color: Colors.grey),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: place.distance != null
-                ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      place.distance!,
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  )
-                : null,
-            onTap: () => _selectPlace(place),
-            splashColor: Colors.blue.withOpacity(0.08),
-            hoverColor: Colors.blue.withOpacity(0.04),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildRecentSearchesChips() {
-    if (_recentSearches.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: _recentSearches.map((search) {
-          return ActionChip(
-            label: Text(search),
-            avatar: const Icon(Icons.history, size: 18, color: Colors.grey),
-            backgroundColor: Colors.grey[100],
-            onPressed: () {
-              _searchController.text = search;
-              _searchPlaces(search);
-            },
-          );
-        }).toList(),
+        ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Map
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _currentPosition != null
-                  ? latlong.LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-                  : const latlong.LatLng(36.7538, 3.0588), // Default to Algiers
-              initialZoom: 15,
-              maxZoom: 18,
-              minZoom: 3,
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: MapboxConfig.mapboxStyleUrl,
-                additionalOptions: const {
-                  'accessToken': MapboxConfig.mapboxAccessToken,
-                  'id': MapboxConfig.mapboxStyleId,
-                },
-              ),
-              // Lost pet circles for range indication
-              CircleLayer(
-                circles: [
-                  // Outer circles (500m radius)
-                  ..._nearbyLostPets.map((pet) => CircleMarker(
-                  point: pet.location,
-                  radius: 500, // 500 meters radius
-                    color: Colors.red.withOpacity(0.1),
-                    borderColor: Colors.red.withOpacity(0.3),
-                  borderStrokeWidth: 2,
-                  useRadiusInMeter: true,
-                  )),
-                  // Inner circles (100m radius)
-                  ..._nearbyLostPets.map((pet) => CircleMarker(
-                    point: pet.location,
-                    radius: 100, // 100 meters radius
-                    color: Colors.red.withOpacity(0.2),
-                    borderColor: Colors.red.withOpacity(0.4),
-                    borderStrokeWidth: 1.5,
-                    useRadiusInMeter: true,
-                  )),
+  Widget _buildSearchResults() {
+    final authService = context.read<AuthService>();
+    final isAdmin = authService.currentUser?.isAdmin ?? false;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      height: _searchResults.isEmpty ? 0 : 300,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: _searchResults.isEmpty ? 0.0 : 1.0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.45),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
                 ],
               ),
-              // Current location marker
-              if (_currentPosition != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: latlong.LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-                      width: 50,
-                      height: 50,
+              child: _isLoading
+                ? const Center(
+                    child: SpinningLoader(
+                      size: 32,
+                      color: Colors.orange,
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: _searchResults.length,
+                    itemBuilder: (context, index) {
+                      final prediction = _searchResults[index];
+                      final isVet = prediction.description.toLowerCase().contains('vet') ||
+                                  prediction.description.toLowerCase().contains('veterinaire') ||
+                                  prediction.description.toLowerCase().contains('clinic');
+                      final isStore = prediction.description.toLowerCase().contains('pet') ||
+                                    prediction.description.toLowerCase().contains('animal') ||
+                                    prediction.description.toLowerCase().contains('animalerie');
+                      
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.3),
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.white.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _selectSearchResult(prediction),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: isVet 
+                                        ? Colors.blue.withOpacity(0.1)
+                                        : isStore
+                                          ? Colors.green.withOpacity(0.1)
+                                          : Colors.black.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      isVet 
+                                        ? Icons.medical_services
+                                        : isStore
+                                          ? Icons.pets
+                                          : Icons.location_on,
+                                      color: isVet 
+                                        ? Colors.blue
+                                        : isStore
+                                          ? Colors.green
+                                          : Colors.orange.shade700,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          prediction.mainText,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          prediction.secondaryText,
+                                          style: TextStyle(
+                                            color: Colors.black.withOpacity(0.6),
+                                            fontSize: 14,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (isAdmin) ...[
+                                    IconButton(
+                                      icon: const Icon(Icons.local_hospital),
+                                      color: Colors.blue,
+                                      onPressed: () => _addBusinessToMap(prediction, true),
+                                      tooltip: 'Add as Vet',
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.pets),
+                                      color: Colors.green,
+                                      onPressed: () => _addBusinessToMap(prediction, false),
+                                      tooltip: 'Add as Store',
+                                    ),
+                                  ],
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    Icons.arrow_forward_ios,
+                                    color: Colors.black.withOpacity(0.3),
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Add this method to safely update markers
+  void _updateSelectedMarker(LatLng location, String label) {
+    try {
+      setState(() {
+        _selectedPlaceMarker = Marker(
+          point: location,
+            width: 40,
+            height: 40,
                       child: Column(
                         children: [
                           Container(
                       width: 20,
                       height: 20,
                         decoration: BoxDecoration(
-                          color: Colors.blue,
+                    color: Colors.red,
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: Colors.white,
@@ -889,60 +1024,1529 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ],
+                    ),
+        );
+      });
+    } catch (e) {
+      print('Error updating marker: $e');
+    }
+  }
+
+  // Add these methods to the _MapPageState class
+
+  // Update the _selectSearchResult method to show the details
+  Future<void> _selectSearchResult(PlacesPrediction prediction) async {
+    if (!mounted) return;
+    
+    setState(() => _isLoading = true);
+    try {
+      final details = await _getPlaceDetails(prediction.placeId);
+
+      if (!mounted) return;
+
+      if (details != null && details['result'] != null) {
+        final result = details['result'];
+
+        if (result['geometry'] != null && result['geometry']['location'] != null) {
+          final location = result['geometry']['location'];
+          final lat = location['lat'];
+          final lng = location['lng'];
+
+          final selectedLocation = LatLng(lat, lng);
+
+          // Update state
+          setState(() {
+            _selectedLocation = selectedLocation;
+            _selectedAddress = prediction.description;
+            _searchResults = [];
+            _searchController.clear();
+            _searchFocusNode.unfocus();
+            _isLoading = false;
+          });
+
+          // Move map to selected location
+          try {
+            _mapController.move(selectedLocation, 15.0);
+          } catch (e) {
+            print('Error moving map: $e');
+          }
+
+          // Update marker
+          _updateSelectedMarker(selectedLocation, prediction.mainText);
+
+          // Update route line
+                            if (_currentPosition != null) {
+            _updateRoutePolyline(selectedLocation);
+          }
+
+          // Show place details
+          _showPlaceDetails(details, prediction.description);
+                            } else {
+          _handleError('Location coordinates not found in response');
+        }
+      } else {
+        _handleError('Could not find location details');
+      }
+    } catch (e) {
+      _handleError('Error selecting location: ${e.toString()}');
+    }
+  }
+
+  void _handleError(String message) {
+    print('Error: $message');
+    if (!mounted) return;
+    
+    setState(() => _isLoading = false);
+    
+                              ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+
+  void _updateRoutePolyline(LatLng destination) {
+    if (_currentPosition == null) return;
+    
+    final userLocation = LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
+    setState(() {
+      _routePoints = [
+        userLocation,
+        destination,
+      ];
+    });
+  }
+
+  void _clearRoute() {
+    setState(() {
+      _routePoints = null;
+    });
+  }
+
+  // Add this method to the _MapPageState class
+  void _showPlaceDetails(Map<String, dynamic> placeDetails, String prediction) {
+    if (!mounted) return;
+
+    final result = placeDetails['result'];
+    final location = result['geometry']['location'];
+    final lat = location['lat'] as double;
+    final lng = location['lng'] as double;
+    final hasPhotos = result['photos'] != null && result['photos'].isNotEmpty;
+    
+    // Calculate distance if user location is available
+    String? distance;
+    if (_currentPosition != null) {
+      final userLat = _currentPosition!.latitude;
+      final userLng = _currentPosition!.longitude;
+      final distanceInMeters = Geolocator.distanceBetween(userLat, userLng, lat, lng);
+      if (distanceInMeters < 1000) {
+        distance = '${distanceInMeters.round()}m';
+      } else {
+        distance = '${(distanceInMeters / 1000).toStringAsFixed(1)}km';
+      }
+    }
+
+    setState(() {
+      _isDetailsVisible = true;
+      _selectedPlaceDetails = placeDetails;
+      _selectedPlacePrediction = prediction;
+      _selectedPlaceDistance = distance;
+      _isDetailsMinimized = false;
+    });
+
+    if (_isDetailsMinimized) {
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      isScrollControlled: true,
+      transitionAnimationController: AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 400),
+        reverseDuration: const Duration(milliseconds: 300),
+      ),
+      builder: (context) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final maxWidth = screenWidth > 425 ? 425.0 : screenWidth;
+        final horizontalPadding = screenWidth > 357 ? (screenWidth - 357) / 2 : 8.0;
+        
+        return AnimatedBuilder(
+          animation: ModalRoute.of(context)!.animation!,
+          builder: (context, child) {
+            final value = ModalRoute.of(context)!.animation!.value;
+            return Transform.translate(
+              offset: Offset(0, (1 - value) * 100),
+              child: Opacity(
+                opacity: value,
+                child: child,
+              ),
+            );
+          },
+          child: GestureDetector(
+            onTap: () {}, // Prevent taps from dismissing the dialog
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: horizontalPadding,
+                right: horizontalPadding,
+                bottom: MediaQuery.of(context).padding.bottom + 110,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    constraints: BoxConstraints(
+                      maxWidth: maxWidth,
+                      maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
                             decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(12),
+                      color: Colors.white.withOpacity(0.45),
+          borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+                        // Only show photo section if photos are available
+                        if (hasPhotos) ...[
+            Stack(
+              children: [
+                              SizedBox(
+                                height: 140,
+                                child: _PhotoCarousel(
+                    photos: result['photos'],
+                    apiKey: 'AlzaSy8GCoFh_rNeeXKWnVnqeCauTmWq3i85B6H',
+                            ),
+                          ),
+                        Positioned(
+                  top: 8,
+                  right: 8,
+                  child: IconButton(
+                    onPressed: () {
+                                    setState(() => _isDetailsMinimized = true);
+                      Navigator.pop(context);
+                    },
+                    icon: Container(
+                      padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.8),
+                        shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+                                    ),
+                                    child: Icon(Icons.remove, color: Colors.black.withOpacity(0.6)),
+                                  ),
+                                ),
                                 ),
                               ],
                             ),
-                            child: const Text(
-                              'You',
-                              style: TextStyle(
+                        ] else ...[
+                          // Just show the minimize button without photo section
+                          Align(
+                            alignment: Alignment.topRight,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 8, right: 8),
+                              child: IconButton(
+                                onPressed: () {
+                                  setState(() => _isDetailsMinimized = true);
+                                  Navigator.pop(context);
+                                },
+                                icon: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.8),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+                                  ),
+                                  child: Icon(Icons.remove, color: Colors.black.withOpacity(0.6)),
+                            ),
+                          ),
+                        ),
+                          ),
+                        ],
+                        Flexible(
+                          child: SingleChildScrollView(
+                            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Business Name and Rating
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                                          result['name'] ?? prediction,
+                          style: const TextStyle(
+                                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (result['rating'] != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                                            color: Colors.orange.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                  child: Row(
+                    children: [
+                              const Icon(
+                                Icons.star,
                                 color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                result['rating'].toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                  ),
+                                ],
+                              ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                                  // Business Type and Distance
+                                  Row(
+                                    children: [
+                  if (result['types'] != null && result['types'].isNotEmpty)
+                    Text(
+                                          result['types'][0].toString().replaceAll('_', ' ').toUpperCase(),
+                      style: TextStyle(
+                                            color: Colors.black.withOpacity(0.6),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      if (distance != null) ...[
+                                        if (result['types'] != null && result['types'].isNotEmpty)
+                                          Text(
+                                            ' • ',
+                          style: TextStyle(
+                                              color: Colors.black.withOpacity(0.6),
+                                              fontSize: 12,
+                        ),
+                      ),
+                                        Text(
+                            distance,
+                            style: TextStyle(
+                                            color: Colors.black.withOpacity(0.6),
+                                            fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                                  // Opening Hours and Phone
+                                  if (result['opening_hours'] != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: result['opening_hours']['open_now'] 
+                                          ? Colors.green.withOpacity(0.1)
+                                          : Colors.red.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                      result['opening_hours']['open_now'] ? 'Open Now' : 'Closed',
+                      style: TextStyle(
+                        color: result['opening_hours']['open_now'] ? Colors.green : Colors.red,
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 13,
+                      ),
+                    ),
+                                    ),
+                                  if (result['formatted_phone_number'] != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      result['formatted_phone_number'],
+                      style: TextStyle(
+                                        color: Colors.black.withOpacity(0.6),
+                                        fontSize: 13,
+                      ),
+                    ),
+                                  ],
+                  const SizedBox(height: 16),
+                  // Navigation Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        final url = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng';
+                        launchUrl(Uri.parse(url));
+                      },
+                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blue.withOpacity(0.9),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.directions),
+                      label: const Text(
+                        'Navigate',
+                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() {
+      if (mounted && !_isDetailsMinimized) {
+        setState(() {
+          _isDetailsVisible = false;
+          _selectedPlaceDetails = null;
+          _selectedPlacePrediction = null;
+          _selectedPlaceDistance = null;
+          _selectedPlaceMarker = null;
+          _selectedLocation = null;
+          _selectedAddress = null;
+          _clearRoute();
+        });
+      }
+    });
+  }
+
+  Widget _buildMinimizedPill(BuildContext context) {
+    if (_selectedPlaceDetails == null) return const SizedBox.shrink();
+    
+    final result = _selectedPlaceDetails!['result'];
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxWidth = screenWidth > 425 ? 425.0 : screenWidth;
+    final horizontalPadding = screenWidth > 357 ? (screenWidth - 357) / 2 : 8.0;
+
+    return Positioned(
+      left: horizontalPadding,
+      right: horizontalPadding,
+      bottom: MediaQuery.of(context).padding.bottom + 110,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _isDetailsMinimized = false;
+            _showPlaceDetails(_selectedPlaceDetails!, _selectedPlacePrediction!);
+          });
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(
+              height: 64,
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.45),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          Text(
+                            result['name'] ?? '',
+                            style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                          const Text(' • '),
+                          if (_selectedPlaceDistance != null) ...[
+                            Text(
+                              _selectedPlaceDistance!,
+                              style: TextStyle(
+                                color: Colors.black.withOpacity(0.6),
+                                fontSize: 14,
                       ),
+                    ),
+                            const Text(' • '),
+                ],
+                          if (result['opening_hours'] != null)
+                            Text(
+                              result['opening_hours']['open_now'] ? 'Open' : 'Closed',
+                              style: TextStyle(
+                                color: result['opening_hours']['open_now'] 
+                                  ? Colors.green 
+                                  : Colors.red,
+                                fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedPlaceDetails = null;
+                        _selectedPlacePrediction = null;
+                        _selectedPlaceDistance = null;
+                        _isDetailsMinimized = false;
+                        _isDetailsVisible = false;
+                        _selectedPlaceMarker = null;
+                        _selectedLocation = null;
+                        _selectedAddress = null;
+                        _clearRoute();
+                      });
+                    },
+                    icon: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.8),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+                      ),
+                      child: Icon(Icons.close, color: Colors.black.withOpacity(0.6), size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper function to create a marker
+  Marker _createVetMarker(Map<String, dynamic> vet) {
+    final lat = vet['geometry']['location']['lat'] as double;
+    final lng = vet['geometry']['location']['lng'] as double;
+    
+    return Marker(
+      point: LatLng(lat, lng),
+      width: 40,
+      height: 40,
+      child: RepaintBoundary(
+        child: GestureDetector(
+          onTap: () => _showPlaceDetails({'result': vet}, vet['name']),
+          child: Column(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Colors.blue,  // Blue for vets
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-              // Lost pet markers
-              MarkerLayer(
-                rotate: true, // Enable marker rotation
-                markers: _nearbyLostPets.map((pet) => Marker(
-                  point: pet.location,
-                  width: 60,
-                  height: 80,
-                  rotate: true, // Enable per-marker rotation
-                  alignment: Alignment.center,
-                  child: GestureDetector(
-                    onTap: () => _showLostPetDetails(pet),
-                    child: Stack(
-                      children: [
-                        // Fixed-size paw icon
-                        Positioned(
-                          left: 5,
-                          right: 5,
-                    child: Container(
-                            width: 50,
-                            height: 50,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Marker _createStoreMarker(Map<String, dynamic> store) {
+    final lat = store['geometry']['location']['lat'] as double;
+    final lng = store['geometry']['location']['lng'] as double;
+    
+    return Marker(
+      point: LatLng(lat, lng),
+      width: 40,
+      height: 40,
+      child: RepaintBoundary(
+        child: GestureDetector(
+          onTap: () => _showPlaceDetails({'result': store}, store['name']),
+          child: Column(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Colors.green,  // Green for stores
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Marker _createUserMarker(User user) {
+    final lat = user.location?.latitude ?? 0.0;
+    final lng = user.location?.longitude ?? 0.0;
+    
+    return Marker(
+      point: LatLng(lat, lng),
+      width: 40,
+      height: 40,
+      child: RepaintBoundary(
+        child: GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => UserProfilePage(user: user),
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Colors.orange,  // Orange for users
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper function to add new vets to the map
+  void _addNewVets(List<Map<String, dynamic>> newVets, Set<String> processedPlaceIds) {
+    final newMarkers = <Marker>[];
+    
+    for (final vet in newVets) {
+      final placeId = vet['place_id'] as String;
+      if (!processedPlaceIds.contains(placeId)) {
+        processedPlaceIds.add(placeId);
+        newMarkers.add(_createVetMarker(vet));
+        print('Added vet: ${vet['name']}');
+        print('  Address: ${vet['vicinity']}');
+        if (vet['opening_hours'] != null) {
+          print('  Open now: ${vet['opening_hours']['open_now']}');
+        }
+      }
+    }
+
+    if (newMarkers.isNotEmpty && mounted) {
+      setState(() {
+        _vetMarkers = [..._vetMarkers, ...newMarkers];
+      });
+    }
+  }
+
+  Future<void> _loadVetLocations() async {
+    if (_isLoadingVets) return;
+
+    setState(() {
+      _isLoadingVets = true;
+      _vetMarkers = []; // Clear existing markers
+    });
+
+    final localStorageService = LocalStorageService();
+
+    // Try to load cached data first
+    final cachedVets = await localStorageService.getCachedVetLocations();
+    if (cachedVets != null) {
+      print('Loading vets from cache (${cachedVets.length} locations)');
+      _addNewVets(cachedVets, <String>{});
+      setState(() => _isLoadingVets = false);
+      
+      // If cache is old, refresh in background
+      if (!await localStorageService.isCacheValid()) {
+        print('Cache is old, refreshing in background...');
+        _refreshVetLocations();
+      }
+      return;
+    }
+
+    // No cache available, load from API
+    await _refreshVetLocations();
+  }
+
+  Future<void> _refreshVetLocations() async {
+    final localStorageService = LocalStorageService();
+    final processedPlaceIds = <String>{};
+    final allVets = <Map<String, dynamic>>[];
+
+    try {
+      // First, search around user's current location if available
+      if (_currentPosition != null) {
+        print('Searching vets near current location');
+        final nearbyVets = await _placesService.searchNearbyVets(
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+        );
+        _addNewVets(nearbyVets, processedPlaceIds);
+        allVets.addAll(nearbyVets.where((vet) => 
+          processedPlaceIds.contains(vet['place_id'])
+        ));
+      }
+
+      // Then search in nearby cities first (within 100km of user's location or default location)
+      final userLat = _currentPosition?.latitude ?? 36.7538; // Default to Algiers if no location
+      final userLng = _currentPosition?.longitude ?? 3.0588;
+      
+      // Sort cities by distance from user
+      final sortedCities = List<Map<String, dynamic>>.from(PlacesService.algeriaCities);
+      sortedCities.sort((a, b) {
+        final distA = Geolocator.distanceBetween(
+          userLat, userLng,
+          a['lat'], a['lng']
+        );
+        final distB = Geolocator.distanceBetween(
+          userLat, userLng,
+          b['lat'], b['lng']
+        );
+        return distA.compareTo(distB);
+      });
+
+      // Process cities in order of proximity
+      for (final city in sortedCities) {
+        try {
+          print('Searching vets in ${city['name']}');
+          final results = await _placesService.searchNearbyVets(
+            city['lat'],
+            city['lng'],
+          );
+          _addNewVets(results, processedPlaceIds);
+          allVets.addAll(results.where((vet) => 
+            processedPlaceIds.contains(vet['place_id'])
+          ));
+
+          // For Saharan cities, search surrounding areas
+          if (PlacesService.isSaharanRegion(city['lat'], city['lng'])) {
+            for (var latOffset = -0.5; latOffset <= 0.5; latOffset += 0.5) {
+              for (var lngOffset = -0.5; lngOffset <= 0.5; lngOffset += 0.5) {
+                if (latOffset == 0 && lngOffset == 0) continue;
+                
+                final lat = city['lat'] + latOffset;
+                final lng = city['lng'] + lngOffset;
+                
+                print('Searching additional area near ${city['name']}: $lat, $lng');
+                final additionalResults = await _placesService.searchNearbyVets(lat, lng);
+                _addNewVets(additionalResults, processedPlaceIds);
+                allVets.addAll(additionalResults.where((vet) => 
+                  processedPlaceIds.contains(vet['place_id'])
+                ));
+              }
+            }
+          }
+        } catch (e) {
+          print('Error searching vets in ${city['name']}: $e');
+        }
+      }
+
+      // Save results to cache
+      await localStorageService.saveVetLocations(allVets);
+      print('Saved ${allVets.length} vet locations to cache');
+
+      if (mounted) {
+        setState(() {
+          _isLoadingVets = false;
+        });
+        print('Completed vet search. Total vets found: ${_vetMarkers.length}');
+      }
+    } catch (e) {
+      print('Error loading vet locations: $e');
+      if (mounted) {
+        setState(() => _isLoadingVets = false);
+      }
+    }
+  }
+
+  Future<void> _loadStoreLocations() async {
+    if (_isLoadingStores) return;
+
+    setState(() {
+      _isLoadingStores = true;
+      _storeMarkers = [];
+    });
+
+    final localStorageService = LocalStorageService();
+
+    // Try to load cached data first
+    final cachedStores = await localStorageService.getCachedStoreLocations();
+    if (cachedStores != null) {
+      print('Loading stores from cache (${cachedStores.length} locations)');
+      _addNewStores(cachedStores, <String>{});
+      setState(() => _isLoadingStores = false);
+      
+      // If cache is old, refresh in background
+      if (!await localStorageService.isStoreCacheValid()) {
+        print('Cache is old, refreshing in background...');
+        _refreshStoreLocations();
+      }
+      return;
+    }
+
+    // No cache available, load from API
+    await _refreshStoreLocations();
+  }
+
+  Future<void> _refreshStoreLocations() async {
+    final localStorageService = LocalStorageService();
+    final processedPlaceIds = <String>{};
+    final allStores = <Map<String, dynamic>>[];
+
+    try {
+      // First, search around user's current location if available
+      if (_currentPosition != null) {
+        print('Searching stores near current location');
+        final nearbyStores = await _placesService.searchNearbyStores(
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+        );
+        _addNewStores(nearbyStores, processedPlaceIds);
+        allStores.addAll(nearbyStores.where((store) => 
+          processedPlaceIds.contains(store['place_id'])
+        ));
+      }
+
+      // Then search in all cities
+      final results = await _placesService.searchStoresInAllCities();
+      _addNewStores(results, processedPlaceIds);
+      allStores.addAll(results.where((store) => 
+        processedPlaceIds.contains(store['place_id'])
+      ));
+
+      // Save results to cache
+      await localStorageService.saveStoreLocations(allStores);
+      print('Saved ${allStores.length} store locations to cache');
+
+      if (mounted) {
+        setState(() {
+          _isLoadingStores = false;
+        });
+        print('Completed store search. Total stores found: ${_storeMarkers.length}');
+      }
+    } catch (e) {
+      print('Error loading store locations: $e');
+      if (mounted) {
+        setState(() => _isLoadingStores = false);
+      }
+    }
+  }
+
+  void _addNewStores(List<Map<String, dynamic>> newStores, Set<String> processedPlaceIds) {
+    final newMarkers = <Marker>[];
+    
+    for (final store in newStores) {
+      final placeId = store['place_id'] as String;
+      if (!processedPlaceIds.contains(placeId)) {
+        processedPlaceIds.add(placeId);
+        newMarkers.add(_createStoreMarker(store));
+        print('Added store: ${store['name']}');
+        print('  Address: ${store['vicinity']}');
+        if (store['opening_hours'] != null) {
+          print('  Open now: ${store['opening_hours']['open_now']}');
+        }
+      }
+    }
+
+    if (newMarkers.isNotEmpty && mounted) {
+      setState(() {
+        _storeMarkers = [..._storeMarkers, ...newMarkers];
+      });
+    }
+  }
+
+  Future<void> _loadUserLocations() async {
+    try {
+      final databaseService = context.read<DatabaseService>();
+      databaseService.getUsersWithLocation().listen((users) {
+        if (mounted) {
+          setState(() {
+            _userMarkers = users.map(_createUserMarker).toList();
+          });
+        }
+      });
+    } catch (e) {
+      print('Error loading user locations: $e');
+    }
+  }
+
+  bool _isVetLocation(String name, List<String> types) {
+    // Keywords that might appear in vet location names
+    final vetKeywords = [
+      'vet',
+      'veterinaire',
+      'veterinary',
+      'clinique',
+      'clinic',
+      'cabinet',
+      'hopital',
+      'hospital',
+      'animal',
+      'pet',
+      'عيادة',
+      'بيطري',
+      'طبيب',
+      'حيوانات',
+    ];
+
+    // Common types for vet locations
+    final vetTypes = [
+      'veterinary_care',
+      'pet_store',
+      'health',
+      'doctor',
+      'medical',
+      'clinic',
+      'hospital',
+    ];
+
+    // Check if name contains any vet-related keywords
+    final hasVetKeyword = vetKeywords.any((keyword) => 
+      name.contains(keyword) || 
+      name.contains(keyword.replaceAll('e', 'é')) // Handle accented characters
+    );
+
+    // Check if types contain any vet-related types
+    final hasVetType = vetTypes.any((type) => types.contains(type));
+
+    return hasVetKeyword || hasVetType;
+  }
+
+  void _showAddMenu(BuildContext context) {
+    if (kIsWeb) {
+      _showWebMenu(context);
+    } else if (Theme.of(context).platform == TargetPlatform.iOS) {
+      _showiOSMenu(context);
+    } else {
+      _showAndroidMenu(context);
+    }
+  }
+
+  void _showWebMenu(BuildContext context) {
+    final RenderBox button = _plusButtonKey.currentContext!.findRenderObject() as RenderBox;
+    final Offset offset = button.localToGlobal(Offset.zero);
+    final Size size = button.size;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    
+    showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy + size.height,
+        overlay.size.width - (offset.dx + size.width),
+        overlay.size.height - (offset.dy + size.height),
+      ),
+      items: [
+        PopupMenuItem(
+          child: Text(
+            'Report Missing Pet',
+            style: TextStyle(
+              color: Colors.red.shade700,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          onTap: () => _showReportMissingPetDialog(context),
+        ),
+        PopupMenuItem(
+          child: const Text(
+            'Add Your Business',
+            style: TextStyle(
+              color: Colors.black87,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          onTap: () => _showAddBusinessDialog(context),
+        ),
+      ],
+    );
+  }
+
+  void _showiOSMenu(BuildContext context) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (BuildContext context) => CupertinoActionSheet(
+        actions: <Widget>[
+          CupertinoActionSheetAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              _showReportMissingPetDialog(context);
+            },
+            child: const Text('Report Missing Pet'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _showAddBusinessDialog(context);
+            },
+            child: const Text('Add Your Business'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+      ),
+    );
+  }
+
+  void _showAndroidMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ListTile(
+            leading: Icon(Icons.pets, color: Colors.red.shade700),
+            title: Text(
+              'Report Missing Pet',
+              style: TextStyle(
+                color: Colors.red.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              _showReportMissingPetDialog(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.store, color: Colors.black87),
+            title: const Text(
+              'Add Your Business',
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              _showAddBusinessDialog(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReportMissingPetDialog(BuildContext context) {
+    final authService = context.read<AuthService>();
+    if (authService.currentUser == null) {
+      // Show login prompt if user is not authenticated
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please login to report a missing pet'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    
+    showDialog(
+      context: context,
+      builder: (context) => ReportMissingPetDialog(
+        userId: authService.currentUser!.id,
+      ),
+    );
+  }
+
+  void _showAddBusinessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const AddBusinessDialog(),
+    );
+  }
+
+  Future<void> _addBusinessToMap(PlacesPrediction prediction, bool isVet) async {
+    try {
+      setState(() => _isLoading = true);
+      
+      // Get place details
+      final details = await _getPlaceDetails(prediction.placeId);
+      if (details == null || details['result'] == null) {
+        throw 'Could not get place details';
+      }
+
+      final result = details['result'];
+      if (result['geometry'] == null || result['geometry']['location'] == null) {
+        throw 'Location coordinates not found';
+      }
+
+      final location = result['geometry']['location'];
+      final lat = location['lat'] as double;
+      final lng = location['lng'] as double;
+
+      // Check if place already exists in database
+      final dbService = DatabaseService();
+      final existingLocation = isVet 
+        ? await dbService.getVetLocation(prediction.placeId)
+        : await dbService.getStoreLocation(prediction.placeId);
+
+      if (existingLocation != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('This ${isVet ? 'vet' : 'store'} is already in the database'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Save to database
+      if (isVet) {
+        await dbService.saveVetLocation(prediction.placeId, lat, lng);
+      } else {
+        await dbService.saveStoreLocation(prediction.placeId, lat, lng);
+      }
+
+      // Add marker
+      final marker = isVet 
+        ? _createVetMarker(result)
+        : _createStoreMarker(result);
+
+      setState(() {
+        if (isVet) {
+          _vetMarkers = [..._vetMarkers, marker];
+        } else {
+          _storeMarkers = [..._storeMarkers, marker];
+        }
+        _searchResults = [];
+        _searchController.clear();
+        _searchFocusNode.unfocus();
+      });
+
+      // Show success message
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Added ${isVet ? 'vet clinic' : 'pet store'} to map'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Move map to new location
+      _mapController.move(LatLng(lat, lng), 15.0);
+
+    } catch (e) {
+      print('Error adding business: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding business: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          RepaintBoundary(
+            child: FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _currentPosition != null
+                ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                : const LatLng(36.7538, 3.0588), // Default to Algiers
+              initialZoom: 15,
+                onMapEvent: (event) {
+                  if (event is MapEventMove) {
+                    final currentZoom = event.camera.zoom;
+                    if ((_currentZoom < _zoomThreshold && currentZoom >= _zoomThreshold) ||
+                        (_currentZoom >= _zoomThreshold && currentZoom < _zoomThreshold)) {
+                      setState(() {
+                        _currentZoom = currentZoom;
+                      });
+                    }
+                  }
+                },
+            ),
+          children: [
+              TileLayer(
+                urlTemplate: MapboxConfig.mapboxStyleUrl,
+                additionalOptions: const {
+                  'accessToken': MapboxConfig.mapboxAccessToken,
+                  'id': MapboxConfig.mapboxStyleId,
+                },
+                  tileBuilder: (context, widget, tile) {
+                    return RepaintBoundary(
+                      child: widget,
+                    );
+                },
+              ),
+              // Lost pet zones
+              if (_nearbyLostPets.isNotEmpty)
+                CircleLayer(
+                  circles: _nearbyLostPets.map((pet) {
+                    final circleColor = Colors.red.withOpacity(0.2);
+                    final borderColor = Colors.red.withOpacity(0.5);
+                    
+                    return CircleMarker(
+                      point: pet.location,
+                      radius: 500.0, // 500 meters radius
+                      useRadiusInMeter: true,
+                      color: circleColor,
+                      borderColor: borderColor,
+                      borderStrokeWidth: 2,
+                    );
+                  }).toList(),
+                ),
+                // Add lost pet markers
+                if (_nearbyLostPets.isNotEmpty)
+                  MarkerLayer(
+                    markers: _nearbyLostPets.map((pet) {
+                      return Marker(
+                        point: pet.location,
+                        width: 40,
+                        height: 40,
+                        child: GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              barrierColor: Colors.black38,
+                              builder: (context) => Dialog(
+                                backgroundColor: Colors.transparent,
+                                child: Container(
+                                  constraints: BoxConstraints(
+                                    maxWidth: 400,
+                                    maxHeight: MediaQuery.of(context).size.height * 0.8,
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(24), // Increased corner radius
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.45),
+                                          borderRadius: BorderRadius.circular(24), // Increased corner radius
+                                          border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.1),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          children: [
+                                            if (pet.pet.imageUrls.isNotEmpty) ...[
+                                              SizedBox(
+                                                height: 200,
+                                                child: PageView.builder(
+                                                  itemCount: pet.pet.imageUrls.length,
+                                                  itemBuilder: (context, index) {
+                                                    return Stack(
+                                                      children: [
+                                                        Container(
+                                                          decoration: BoxDecoration(
+                                                            image: DecorationImage(
+                                                              image: NetworkImage(pet.pet.imageUrls[index]),
+                                                              fit: BoxFit.cover,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        // Photo count indicator
+                                                        if (pet.pet.imageUrls.length > 1)
+                                                          Positioned(
+                                                            right: 16,
+                                                            bottom: 16,
+                                                            child: Container(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                              decoration: BoxDecoration(
+                                                                color: Colors.black.withOpacity(0.7),
+                                                                borderRadius: BorderRadius.circular(16),
+                                                              ),
+                                                              child: Text(
+                                                                '${index + 1}/${pet.pet.imageUrls.length}',
+                                                                style: const TextStyle(
+                                                                  color: Colors.white,
+                                                                  fontSize: 12,
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                            Flexible(
+                                              child: SingleChildScrollView(
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(16),
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      // Pet Name and Status
+                                                      Row(
+                                                        children: [
+                                                          Expanded(
+                                                            child: Text(
+                                                              pet.pet.name,
+                                                              style: const TextStyle(
+                                                                fontSize: 24,
+                                                                fontWeight: FontWeight.bold,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          Container(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.red.withOpacity(0.9),
+                                                              borderRadius: BorderRadius.circular(16),
+                                                            ),
+                                                            child: const Text(
+                                                              'LOST',
+                                                              style: TextStyle(
+                                                                color: Colors.white,
+                                                                fontWeight: FontWeight.bold,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      // Pet Type and Last Seen
+                                                      Row(
+                                                        children: [
+                                                          Text(
+                                                            pet.pet.species,
+                                                            style: TextStyle(
+                                                              color: Colors.black.withOpacity(0.6),
+                                                              fontSize: 16,
+                                                              fontWeight: FontWeight.w500,
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            ' • ',
+                                                            style: TextStyle(
+                                                              color: Colors.black.withOpacity(0.6),
+                                                              fontSize: 16,
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            'Last seen ${_formatDate(pet.lastSeenDate)}',
+                                                            style: TextStyle(
+                                                              color: Colors.black.withOpacity(0.6),
+                                                              fontSize: 16,
+                                                              fontWeight: FontWeight.w500,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      const SizedBox(height: 16),
+                                                      // Location
+                                                      Text(
+                                                        'Last Known Location:',
+                                                        style: TextStyle(
+                                                          color: Colors.black.withOpacity(0.8),
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        pet.address,
+                                                        style: TextStyle(
+                                                          color: Colors.black.withOpacity(0.6),
+                                                          fontSize: 15,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 16),
+                                                      // Description
+                                                      if (pet.additionalInfo != null && pet.additionalInfo!.isNotEmpty) ...[
+                                                        Text(
+                                                          'Description:',
+                                                          style: TextStyle(
+                                                            color: Colors.black.withOpacity(0.8),
+                                                            fontSize: 16,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 4),
+                                                        Text(
+                                                          pet.additionalInfo!,
+                                                          style: TextStyle(
+                                                            color: Colors.black.withOpacity(0.6),
+                                                            fontSize: 15,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 16),
+                                                      ],
+                                                      // Contact Numbers
+                                                      if (pet.contactNumbers.isNotEmpty) ...[
+                                                        Text(
+                                                          'Contact Numbers:',
+                                                          style: TextStyle(
+                                                            color: Colors.black.withOpacity(0.8),
+                                                            fontSize: 16,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 8),
+                                                        ...pet.contactNumbers.map((number) => 
+                                                          Padding(
+                                                            padding: const EdgeInsets.only(bottom: 8),
+                                                            child: ElevatedButton.icon(
+                                                              onPressed: () => launchUrl(Uri.parse('tel:$number')),
+                                                              style: ElevatedButton.styleFrom(
+                                                                backgroundColor: Colors.green.withOpacity(0.9),
+                                                                foregroundColor: Colors.white,
+                                                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius: BorderRadius.circular(16),
+                                                                ),
+                                                              ),
+                                                              icon: const Icon(Icons.phone),
+                                                              label: Text(
+                                                                number,
+                                                                style: const TextStyle(
+                                                                  fontSize: 15,
+                                                                  fontWeight: FontWeight.bold,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                      const SizedBox(height: 16),
+                                                      // Visit Owner Profile Button
+                                                      SizedBox(
+                                                        width: double.infinity,
+                                                        child: ElevatedButton.icon(
+                                                          onPressed: () async {
+                                                            // First close the dialog
+                                                            Navigator.pop(context);
+                                                            // Then get the owner's data
+                                                            final owner = await DatabaseService().getUser(pet.reportedByUserId);
+                                                            if (owner != null && context.mounted) {
+                                                              // Navigate to owner's profile
+                                                              Navigator.push(
+                                                                context,
+                                                                MaterialPageRoute(
+                                                                  builder: (context) => UserProfilePage(user: owner),
+                                                                ),
+                                                              );
+                                                            }
+                                                          },
+                                                          style: ElevatedButton.styleFrom(
+                                                            backgroundColor: Colors.blue.withOpacity(0.9),
+                                                            foregroundColor: Colors.white,
+                                                            padding: const EdgeInsets.symmetric(vertical: 12),
+                                                            shape: RoundedRectangleBorder(
+                                                              borderRadius: BorderRadius.circular(16),
+                                                            ),
+                                                          ),
+                                                          icon: const Icon(Icons.person),
+                                                          label: const Text(
+                                                            'Visit Owner\'s Profile',
+                                                            style: TextStyle(
+                                                              fontSize: 15,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
                             decoration: BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
+                              color: Colors.red,
+                              shape: BoxShape.circle,
                               border: Border.all(
                                 color: Colors.white,
-                                width: 3,
+                                width: 2,
                               ),
                               boxShadow: [
                                 BoxShadow(
@@ -952,353 +2556,257 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin {
                                 ),
                               ],
                             ),
-                            child: const Center(
-                              child: Icon(
-                        Icons.pets,
-                        color: Colors.white,
-                                size: 30,
-                              ),
+                            child: const Icon(
+                              Icons.pets,
+                              color: Colors.white,
+                              size: 16,
                             ),
                           ),
                         ),
-                        // Name label
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                      );
+                    }).toList(),
+                  ),
+                // Route polyline
+                if (_routePoints != null && _routePoints!.length >= 2)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _routePoints!,
+                        strokeWidth: 4.0,
+                        gradientColors: _gradientColors,
+                      ),
+                    ],
+                  ),
+                // Current location marker
+                if (_currentPosition != null && mounted)
+                  RepaintBoundary(
+                    child: MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                          width: 40,
+                          height: 40,
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: Colors.orange,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            child: Text(
-                              pet.pet.name,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
                               ),
-                              textAlign: TextAlign.center,
-                            ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                )).toList(),
-              ),
-            ],
-          ),
-
-          // Search UI
-          Column(
-            children: [
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.25),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.3),
-                                  width: 1.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: TextField(
-                                focusNode: _searchFocusNode,
-                                controller: _searchController,
-                                decoration: InputDecoration(
-                                  hintText: 'Search for veterinarians, pet shops... ',
-                                  prefixIcon: const Icon(Icons.search),
-                                  suffixIcon: _isSearchFocused
-                                      ? IconButton(
-                                          icon: const Icon(Icons.close),
-                                          onPressed: _clearSearch,
-                                        )
-                                      : null,
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ClipOval(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                          child: Container(
-                        decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.25),
-                          shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.orange.withOpacity(0.6),
-                                width: 1.5,
-                              ),
-                          boxShadow: [
-                            BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: IconButton(
-                              icon: Icon(
-                                Icons.add,
-                                color: Colors.orange[700],
-                              ),
-                          onPressed: () {
-                            final RenderBox button =
-                                context.findRenderObject() as RenderBox;
-                            final position = button.localToGlobal(Offset.zero);
-                            _toggleMenu(context, position);
-                          },
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                // Selected place marker
+                if (_selectedPlaceMarker != null && mounted)
+                  RepaintBoundary(
+                    child: MarkerLayer(
+                  markers: [_selectedPlaceMarker!],
                 ),
-              ),
-              _buildAnimatedSearchPanel(),
+                  ),
+                // Vet markers layer with RepaintBoundary
+                if (_vetMarkers.isNotEmpty)
+                  RepaintBoundary(
+                    child: MarkerLayer(
+                      markers: _vetMarkers,
+                    ),
+                  ),
+                // Store markers layer with RepaintBoundary
+                if (_storeMarkers.isNotEmpty)
+                  RepaintBoundary(
+                    child: MarkerLayer(
+                      markers: _storeMarkers,
+                    ),
+                  ),
+                // User markers layer with RepaintBoundary
+                if (_userMarkers.isNotEmpty)
+                  RepaintBoundary(
+                    child: MarkerLayer(
+                      markers: _userMarkers,
+                    ),
+                  ),
             ],
+            ),
           ),
-
-          // Location Button
           Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _buildSearchBar(),
+                  _buildSearchResults(),
+                ],
+              ),
+            ),
+          ),
+          // Location button with visibility animation
+          AnimatedPositioned(
             right: 16,
-            bottom: 104, // Increased from 88 to 104 to move it higher
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final screenWidth = MediaQuery.of(context).size.width;
-                const maxNavWidth = 320.0;
-                const minNavWidth = 220.0;
-                double sidePadding = 16.0;
-                double buttonSize = 64.0;
-                double iconSize = 24.0;
-
-                // Responsive adjustments for very slim screens
-                if (screenWidth < minNavWidth + 2 * sidePadding + buttonSize + 8) {
-                  sidePadding = 6.0;
-                  buttonSize = 44.0;
-                  iconSize = 16.0;
-                }
-
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
+            bottom: 104,
+            duration: const Duration(milliseconds: 300),
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              opacity: _isDetailsVisible ? 0.0 : 1.0,
+              child: IgnorePointer(
+                ignoring: _isDetailsVisible,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                     child: Container(
-                      width: buttonSize,
-                      height: buttonSize,
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.45),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () {
-                            if (_currentPosition != null) {
-                              _mapController.move(
-                                latlong.LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-                                15.0,
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Location not available'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
                           customBorder: const CircleBorder(),
-                          child: Center(
-                            child: AnimatedRotation(
-                              duration: const Duration(milliseconds: 300),
-                              turns: _locationEnabled ? 0 : 0.5,
-                              child: Icon(
-                                Icons.near_me,
-                                color: _locationEnabled ? Colors.blue : Colors.grey,
-                                size: iconSize,
-                              ),
-                            ),
-                          ),
-                        ),
+                          onTap: _locationEnabled ? _moveToCurrentLocation : _initializeLocation,
+                          child: _isLoading
+                            ? Center(
+                                child: SpinningLoader(
+                                  size: 24,
+                                  color: Colors.blue.shade300,
+                                ),
+                              )
+                            : Icon(
+                _locationEnabled ? Icons.my_location : Icons.location_searching,
+                color: Colors.blue,
+                                size: 24,
                       ),
                     ),
+                ),
+                    ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ),
+          // Remove the separate loading indicator since it's now integrated into the button
+          if (_isLoadingVets)
+            Positioned(
+              right: 16,
+              bottom: 164, // Above the location button
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SpinningLoader(
+                      size: 16,
+                      color: Colors.green.shade300,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Loading vets (${_vetMarkers.length} found)...',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_isLoadingStores)
+            Positioned(
+              right: 16,
+              bottom: 164, // Above the location button
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SpinningLoader(
+                      size: 16,
+                      color: Colors.green.shade300,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Loading stores (${_storeMarkers.length} found)...',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  void _showLostPetDetails(LostPet pet) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.pets,
-                    color: Colors.white,
-                    size: 30,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              pet.pet.name,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        pet.pet.species,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Last Seen Location',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              pet.address,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Coordinates: ${pet.location.latitude.toStringAsFixed(6)}, ${pet.location.longitude.toStringAsFixed(6)}',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-            if (pet.additionalInfo != null) ...[
-            const SizedBox(height: 16),
-              Text(
-                pet.additionalInfo!,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-            const Text(
-              'Contact Numbers',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: pet.contactNumbers.map((number) => Chip(
-                avatar: const Icon(Icons.phone, size: 18),
-                label: Text(number),
-                backgroundColor: Colors.grey[100],
-              )).toList(),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                onPressed: () {
-                      _mapController.move(pet.location, 16);
-                      Navigator.pop(context);
-                },
-                    icon: const Icon(Icons.location_on),
-                    label: const Text('Show on Map'),
-                style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                ),
-                ),
-              ],
-              ),
-          ],
-        ),
-      ),
-    );
+  void _moveToCurrentLocation() {
+                            if (_currentPosition != null) {
+                              _mapController.move(
+        LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                                15.0,
+                              );
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      if (difference.inHours == 0) {
+        return '${difference.inMinutes} minutes ago';
+      }
+      return '${difference.inHours} hours ago';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return DateFormat('MMM d, y').format(date);
+    }
   }
 }

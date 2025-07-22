@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../pages/user_profile_page.dart';
 import '../widgets/spinning_loader.dart';
 import '../widgets/verification_badge.dart';
+import 'dart:ui';
 
 class UserSearchPage extends StatefulWidget {
   const UserSearchPage({super.key});
@@ -100,6 +101,8 @@ class _UserSearchPageState extends State<UserSearchPage> {
   Widget _buildUserTile(User user) {
     final currentUser = context.read<AuthService>().currentUser;
     final isCurrentUser = currentUser?.id == user.id;
+    final isVet = user.accountType == 'vet';
+    final isStore = user.accountType == 'store';
 
     return Container(
       decoration: const BoxDecoration(
@@ -142,14 +145,98 @@ class _UserSearchPageState extends State<UserSearchPage> {
               const SizedBox(width: 4),
               const VerificationBadge(),
             ],
+            if (isVet) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.blue[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Vet',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ] else if (isStore) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Store',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
-        subtitle: Text(
-          user.username ?? user.email,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              user.username ?? user.email,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            if ((isVet || isStore) && user.basicInfo != null && user.basicInfo!.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                user.basicInfo!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (isStore) ...[
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.star,
+                      size: 14,
+                      color: Colors.orange[700],
+                    ),
+                    Text(
+                      ' ${user.rating.toStringAsFixed(1)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.shopping_cart,
+                      size: 14,
+                      color: Colors.grey,
+                    ),
+                    Text(
+                      ' ${user.totalOrders}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ],
         ),
         trailing: isCurrentUser
             ? const Text(
@@ -195,42 +282,56 @@ class _UserSearchPageState extends State<UserSearchPage> {
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: TextField(
-                controller: _searchController,
-                onChanged: _searchUsers,
-                decoration: InputDecoration(
-                  hintText: 'Search people, pets, vets...',
-                  hintStyle: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 16,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.45),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: Colors.grey[400],
-                    size: 20,
-                  ),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(
-                            Icons.close,
-                            color: Colors.grey[400],
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            _searchController.clear();
-                            _searchUsers('');
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _searchUsers,
+                    decoration: InputDecoration(
+                      hintText: 'Search people, pets, vets...',
+                      hintStyle: TextStyle(
+                        color: Colors.black.withOpacity(0.6),
+                        fontSize: 16,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Colors.black.withOpacity(0.6),
+                        size: 20,
+                      ),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.close,
+                                color: Colors.black.withOpacity(0.6),
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                _searchUsers('');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
                   ),
                 ),
               ),

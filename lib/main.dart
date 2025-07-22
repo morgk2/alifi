@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'icons.dart';
 import 'dialogs/terms_of_service_dialog.dart';
 import 'dialogs/privacy_policy_dialog.dart';
@@ -14,6 +15,8 @@ import 'dialogs/report_problem_dialog.dart';
 import 'pages/page_container.dart';
 import 'services/auth_service.dart';
 import 'services/device_performance.dart';
+import 'services/storage_service.dart';
+import 'config/supabase_config.dart';
 import 'firebase_options.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:convert';
@@ -22,6 +25,7 @@ import 'widgets/spinning_loader.dart';
 import 'services/database_service.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:google_sign_in/google_sign_in.dart';
+import 'services/places_service.dart';
 
 Future<void> main() async {
   try {
@@ -31,6 +35,18 @@ Future<void> main() async {
     // Initialize device performance detection
     await DevicePerformance().initialize();
     print('Device performance detection initialized');
+    
+    // Initialize Supabase
+    await Supabase.initialize(
+      url: SupabaseConfig.projectUrl,
+      anonKey: SupabaseConfig.anonKey,
+    );
+    print('Supabase initialized successfully');
+
+    // Test Supabase storage connection
+    final storageService = StorageService(Supabase.instance.client);
+    final isConnected = await storageService.testConnection();
+    print('Supabase storage connection test: ${isConnected ? 'SUCCESS' : 'FAILED'}');
     
     // Optimize for smoother rendering
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -58,6 +74,14 @@ Future<void> main() async {
         });
         print('Firestore web persistence configured');
       }
+
+      // Run vet users migration
+      await DatabaseService().migrateVetUsers();
+      print('Vet users migration completed');
+
+      // Update all user follower/following counts
+      await DatabaseService().updateAllUserCounts();
+      print('User counts migration completed');
     } catch (e) {
       print('Error initializing Firebase: $e');
       // Continue anyway as the app should work in guest mode
@@ -75,6 +99,10 @@ Future<void> main() async {
         print('Error configuring Firestore settings: $e');
       }
     }
+
+    // Initialize Places Service cache
+    await PlacesService.initialize();
+    print('Places Service cache initialized');
 
     runApp(const MainApp());
     print('App started successfully');
@@ -120,6 +148,9 @@ class MainApp extends StatelessWidget {
         ),
         Provider(
           create: (_) => DatabaseService(),
+        ),
+        Provider(
+          create: (_) => StorageService(Supabase.instance.client),
         ),
       ],
       child: MaterialApp(

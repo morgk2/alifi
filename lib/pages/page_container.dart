@@ -45,29 +45,23 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
           });
         },
       ),
-      MapPage(
-        onSearchFocusChange: (isVisible) {
-          if (_isVisible != isVisible) {
-            _toggleVisibility();
-          }
-        },
-      ),
+      const MapPage(),
       const MyPetsPage(),
       const MarketplacePage(),
-      const UserSearchPage(), // Add search as a regular page
+      const UserSearchPage(),
     ];
 
     _hideController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 300),
     );
 
     _slideAnimation = Tween<Offset>(
       begin: Offset.zero,
-      end: const Offset(0, 1),
+      end: const Offset(0, 2), // Move further down for smoother animation
     ).animate(CurvedAnimation(
       parent: _hideController,
-      curve: Curves.easeInOut,
+      curve: Curves.easeOutCubic,
     ));
 
     _fadeAnimation = Tween<double>(
@@ -75,7 +69,7 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
       end: 0.0,
     ).animate(CurvedAnimation(
       parent: _hideController,
-      curve: Curves.easeInOut,
+      curve: Curves.easeOut,
     ));
   }
 
@@ -103,81 +97,23 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _toggleVisibility,
-      behavior: HitTestBehavior.translucent,
-      child: Scaffold(
-        body: Stack(
-          children: [
-            IndexedStack(
-              index: _currentIndex,
-              children: _pages,
-            ),
-            // Fade effect
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 120,
+    return Scaffold(
+      body: Stack(
+        children: [
+          _pages[_currentIndex],
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SlideTransition(
+              position: _slideAnimation,
               child: FadeTransition(
                 opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: ShaderMask(
-                    shaderCallback: (Rect bounds) {
-                      return LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.white.withOpacity(0),
-                          Colors.white.withOpacity(1),
-                        ],
-                        stops: const [0.2, 0.9],
-                      ).createShader(bounds);
-                    },
-                    blendMode: BlendMode.dstIn,
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withOpacity(0),
-                              Colors.black.withOpacity(0.25),
-                            ],
-                            stops: const [0.2, 0.9],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                child: _buildBottomNavBar(),
               ),
             ),
-            // Navigation bar
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: GestureDetector(
-                    onTap: () {
-                      if (!_isVisible && !_isAIAssistantExpanded) {
-                        _toggleVisibility();
-                      }
-                    },
-                    child: _isAIAssistantExpanded ? const SizedBox.shrink() : _buildBottomNavBar(),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -215,13 +151,37 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
 
     final bool isDarkBg = _isNavBarBackgroundDark(context);
     final Color defaultIconColor = isDarkBg ? Colors.white : Colors.black;
-    final Color activeIconColor = const Color(0xFFFF9E42);
+    const Color activeIconColor = Color(0xFFFF9E42);
 
-    final int searchPageIndex = 4;
+    const int searchPageIndex = 4;
 
     return SafeArea(
       bottom: false,
-      child: Padding(
+      child: Stack(
+        children: [
+          // Black gradient fade
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 100,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.5, 1.0],
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.1),
+                    Colors.black.withOpacity(0.3),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Navigation bar
+          Padding(
         padding: EdgeInsets.only(left: sidePadding, right: sidePadding, bottom: 24.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -363,6 +323,8 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
             ),
           ],
         ),
+          ),
+        ],
       ),
     );
   }

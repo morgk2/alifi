@@ -4,10 +4,13 @@ import 'package:latlong2/latlong.dart' as latlong;
 import '../models/user.dart';
 import '../models/pet.dart';
 import '../models/lost_pet.dart';
+import '../models/store_product.dart';
 import 'local_storage_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/aliexpress_product.dart';
+import '../models/marketplace_product.dart';
+import 'package:rxdart/rxdart.dart';
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -18,6 +21,9 @@ class DatabaseService {
   CollectionReference get _usersCollection => _db.collection('users');
   CollectionReference get _petsCollection => _db.collection('pets');
   CollectionReference get _lostPetsCollection => _db.collection('lost_pets');
+  CollectionReference get _storeProductsCollection => _db.collection('storeproducts');
+  CollectionReference get _vetLocationsCollection => _db.collection('vet_locations');
+  CollectionReference get _storeLocationsCollection => _db.collection('store_locations');
 
   // User Operations
   Future<void> createUser(User user) async {
@@ -56,6 +62,70 @@ class DatabaseService {
     userData['searchTokens'] = tokens.toList();
     
     await _usersCollection.doc(user.id).set(userData, SetOptions(merge: true));
+  }
+
+  Future<void> migrateVetUsers() async {
+    // Get all vet users
+    final snapshot = await _usersCollection
+        .where('accountType', isEqualTo: 'vet')
+        .get();
+
+    // Update each vet user with default values for new fields if they don't exist
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final updates = <String, dynamic>{};
+
+      // Add basicInfo if it doesn't exist
+      if (!data.containsKey('basicInfo')) {
+        updates['basicInfo'] = '';
+      }
+
+      // Add patients if it doesn't exist
+      if (!data.containsKey('patients')) {
+        updates['patients'] = [];
+      }
+
+      // Add rating if it doesn't exist
+      if (!data.containsKey('rating')) {
+        updates['rating'] = 0.0;
+      }
+
+      // Only update if there are new fields to add
+      if (updates.isNotEmpty) {
+        await doc.reference.set(updates, SetOptions(merge: true));
+      }
+    }
+  }
+
+  Future<void> updateAllUserCounts() async {
+    print('Starting user counts migration...');
+    // Get all users
+    final snapshot = await _usersCollection.get();
+    
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      
+      // Get the actual arrays
+      final followers = List<String>.from(data['followers'] ?? []);
+      final following = List<String>.from(data['following'] ?? []);
+      
+      // Get the current counts
+      final currentFollowersCount = data['followersCount'] ?? 0;
+      final currentFollowingCount = data['followingCount'] ?? 0;
+      
+      // Check if counts need updating
+      if (currentFollowersCount != followers.length || currentFollowingCount != following.length) {
+        print('Updating counts for user ${doc.id}:');
+        print('- Followers: $currentFollowersCount -> ${followers.length}');
+        print('- Following: $currentFollowingCount -> ${following.length}');
+        
+        await doc.reference.update({
+          'followersCount': followers.length,
+          'followingCount': following.length,
+        });
+      }
+    }
+    print('User counts migration completed');
   }
 
   Future<void> updateUserVerificationStatus(String userId, bool isVerified) async {
@@ -271,26 +341,124 @@ class DatabaseService {
 
   // User Follow/Unfollow Operations
   Future<void> followUser(String currentUserId, String targetUserId) async {
-    await _usersCollection.doc(currentUserId).update({
-      'following': FieldValue.arrayUnion([targetUserId])
-    });
-    await _usersCollection.doc(targetUserId).update({
-      'followers': FieldValue.arrayUnion([currentUserId])
+    final batch = _db.batch();
+    
+    await _db.runTransaction((transaction) async {
+      // Get both user documents
+      final currentUserDoc = await transaction.get(_usersCollection.doc(currentUserId));
+      final targetUserDoc = await transaction.get(_usersCollection.doc(targetUserId));
+      
+      if (!currentUserDoc.exists || !targetUserDoc.exists) {
+        throw Exception('One or both users do not exist');
+      }
+
+      // Get current arrays
+      final currentUserData = currentUserDoc.data() as Map<String, dynamic>;
+      final targetUserData = targetUserDoc.data() as Map<String, dynamic>;
+      
+      final following = List<String>.from(currentUserData['following'] ?? []);
+      final followers = List<String>.from(targetUserData['followers'] ?? []);
+      
+      // Add to arrays if not already present
+      if (!following.contains(targetUserId)) {
+        following.add(targetUserId);
+      }
+      if (!followers.contains(currentUserId)) {
+        followers.add(currentUserId);
+      }
+      
+      // Update both documents atomically
+      transaction.update(_usersCollection.doc(currentUserId), {
+        'following': following,
+        'followingCount': following.length,
+      });
+      
+      transaction.update(_usersCollection.doc(targetUserId), {
+        'followers': followers,
+        'followersCount': followers.length,
+      });
     });
   }
 
   Future<void> unfollowUser(String currentUserId, String targetUserId) async {
-    await _usersCollection.doc(currentUserId).update({
-      'following': FieldValue.arrayRemove([targetUserId])
-    });
-    await _usersCollection.doc(targetUserId).update({
-      'followers': FieldValue.arrayRemove([currentUserId])
+    await _db.runTransaction((transaction) async {
+      // Get both user documents
+      final currentUserDoc = await transaction.get(_usersCollection.doc(currentUserId));
+      final targetUserDoc = await transaction.get(_usersCollection.doc(targetUserId));
+      
+      if (!currentUserDoc.exists || !targetUserDoc.exists) {
+        throw Exception('One or both users do not exist');
+      }
+
+      // Get current arrays
+      final currentUserData = currentUserDoc.data() as Map<String, dynamic>;
+      final targetUserData = targetUserDoc.data() as Map<String, dynamic>;
+      
+      final following = List<String>.from(currentUserData['following'] ?? []);
+      final followers = List<String>.from(targetUserData['followers'] ?? []);
+      
+      // Remove from arrays
+      following.remove(targetUserId);
+      followers.remove(currentUserId);
+      
+      // Update both documents atomically
+      transaction.update(_usersCollection.doc(currentUserId), {
+        'following': following,
+        'followingCount': following.length,
+      });
+      
+      transaction.update(_usersCollection.doc(targetUserId), {
+        'followers': followers,
+        'followersCount': followers.length,
+      });
     });
   }
 
   Future<bool> isFollowing(String currentUserId, String targetUserId) async {
-    final currentUser = await getUser(currentUserId);
-    return currentUser?.following.contains(targetUserId) ?? false;
+    try {
+      // Get the target user's document
+      final doc = await _usersCollection.doc(targetUserId).get();
+      if (!doc.exists) return false;
+
+      // Check if currentUserId is in the followers array
+      final data = doc.data() as Map<String, dynamic>;
+      final followers = List<String>.from(data['followers'] ?? []);
+      return followers.contains(currentUserId);
+    } catch (e) {
+      print('Error checking follow status: $e');
+      return false;
+    }
+  }
+
+  // Stream for real-time follower count
+  Stream<int> getFollowerCount(String userId) {
+    return _usersCollection
+        .doc(userId)
+        .snapshots()
+        .map((doc) {
+          if (!doc.exists) return 0;
+          final data = doc.data() as Map<String, dynamic>;
+          final followers = List<String>.from(data['followers'] ?? []);
+          return followers.length;
+        });
+  }
+
+  // Stream for real-time user data
+  Stream<User?> getUserStream(String userId) {
+    return _usersCollection
+        .doc(userId)
+        .snapshots()
+        .map((doc) => doc.exists ? User.fromFirestore(doc) : null);
+  }
+
+  // User location operations
+  Stream<List<User>> getUsersWithLocation() {
+    return _usersCollection
+        .where('location', isNull: false)  // Only get users with location data
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => User.fromFirestore(doc))
+            .toList());
   }
 
   // Pet Operations
@@ -330,6 +498,19 @@ class DatabaseService {
           .map((snapshot) =>
               snapshot.docs.map((doc) => Pet.fromFirestore(doc)).toList());
     }
+  }
+
+  Future<List<Pet>> getPets(List<String> petIds) async {
+    if (petIds.isEmpty) return [];
+    
+    final pets = <Pet>[];
+    // Firestore has a limit of 10 items for 'in' queries, so we need to batch
+    for (var i = 0; i < petIds.length; i += 10) {
+      final batch = petIds.skip(i).take(10).toList();
+      final snapshot = await _petsCollection.where(FieldPath.documentId, whereIn: batch).get();
+      pets.addAll(snapshot.docs.map((doc) => Pet.fromFirestore(doc)));
+    }
+    return pets;
   }
 
   // Lost Pet Operations
@@ -700,5 +881,323 @@ class DatabaseService {
         .limit(30)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => Pet.fromFirestore(doc)).toList());
+  }
+
+  Future<void> updatePet(Pet pet, {bool isGuest = false}) async {
+    if (isGuest) {
+      await _localStorage.updateGuestPet(pet);
+    } else {
+      await _petsCollection.doc(pet.id).update(pet.toFirestore());
+    }
+  }
+
+  Future<void> updatePetPhotos(String petId, List<String> newImageUrls) async {
+    await _petsCollection.doc(petId).update({
+      'imageUrls': newImageUrls,
+      'lastUpdatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<Pet?> getPet(String petId) async {
+    final doc = await _petsCollection.doc(petId).get();
+    return doc.exists ? Pet.fromFirestore(doc) : null;
+  }
+
+  // Store Product Operations
+  Future<String> createStoreProduct(StoreProduct product) async {
+    try {
+      // Create the product
+      final docRef = await _storeProductsCollection.add(product.toFirestore());
+      
+      // Add product ID to store's products array
+      await _usersCollection.doc(product.storeId).update({
+        'products': FieldValue.arrayUnion([docRef.id]),
+      });
+      
+      return docRef.id;
+    } catch (e) {
+      print('Error creating store product: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateStoreProduct(StoreProduct product) async {
+    try {
+      await _storeProductsCollection.doc(product.id).update(product.toFirestore());
+    } catch (e) {
+      print('Error updating store product: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteStoreProduct(String productId, String storeId) async {
+    try {
+      // Remove product from store's products array
+      await _usersCollection.doc(storeId).update({
+        'products': FieldValue.arrayRemove([productId]),
+      });
+      
+      // Delete the product
+      await _storeProductsCollection.doc(productId).delete();
+    } catch (e) {
+      print('Error deleting store product: $e');
+      rethrow;
+    }
+  }
+
+  Stream<List<StoreProduct>> getStoreProducts({
+    String? category,
+    bool? isFreeShipping,
+    String? storeId,
+    int limit = 10,
+  }) {
+    Query query = _storeProductsCollection
+        .where('isActive', isEqualTo: true)
+        .orderBy('createdAt', descending: true);
+
+    if (category != null) {
+      query = query.where('category', isEqualTo: category);
+    }
+
+    if (isFreeShipping != null) {
+      query = query.where('isFreeShipping', isEqualTo: isFreeShipping);
+    }
+
+    if (storeId != null) {
+      query = query.where('storeId', isEqualTo: storeId);
+    }
+
+    return query
+        .limit(limit)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => StoreProduct.fromFirestore(doc))
+            .toList());
+  }
+
+  Stream<List<StoreProduct>> getPopularStoreProducts({int limit = 10}) {
+    return _storeProductsCollection
+        .where('isActive', isEqualTo: true)
+        .orderBy('totalOrders', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => StoreProduct.fromFirestore(doc))
+            .toList());
+  }
+
+  Future<List<StoreProduct>> getStoreProductsByIds(List<String> productIds) async {
+    if (productIds.isEmpty) return [];
+    
+    final products = <StoreProduct>[];
+    // Firestore has a limit of 10 items for 'in' queries, so we need to batch
+    for (var i = 0; i < productIds.length; i += 10) {
+      final batch = productIds.skip(i).take(10).toList();
+      final snapshot = await _storeProductsCollection
+          .where(FieldPath.documentId, whereIn: batch)
+          .get();
+      products.addAll(snapshot.docs.map((doc) => StoreProduct.fromFirestore(doc)));
+    }
+    return products;
+  }
+
+  // Update store rating and total orders
+  Future<void> updateStoreStats(String storeId) async {
+    try {
+      final products = await _storeProductsCollection
+          .where('storeId', isEqualTo: storeId)
+          .where('isActive', isEqualTo: true)
+          .get();
+      
+      int totalOrders = 0;
+      double totalRating = 0;
+      int ratedProducts = 0;
+      
+      for (var doc in products.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        totalOrders += data['totalOrders'] as int? ?? 0;
+        if (data['rating'] != null && data['rating'] > 0) {
+          totalRating += data['rating'] as double;
+          ratedProducts++;
+        }
+      }
+      
+      final averageRating = ratedProducts > 0 ? totalRating / ratedProducts : 0.0;
+      
+      await _usersCollection.doc(storeId).update({
+        'totalOrders': totalOrders,
+        'rating': averageRating,
+      });
+    } catch (e) {
+      print('Error updating store stats: $e');
+      rethrow;
+    }
+  }
+
+  Stream<List<MarketplaceProduct>> getMarketplaceProducts({
+    String? category,
+    bool? isFreeShipping,
+    String? storeId,
+    int limit = 10,
+  }) {
+    // Combine AliExpress and store products
+    return CombineLatestStream.combine2(
+      getAliexpressListings(
+        category: category,
+        limit: limit ~/ 2,  // Split limit between both sources
+      ),
+      getStoreProducts(
+        category: category,
+        isFreeShipping: isFreeShipping,
+        storeId: storeId,
+        limit: limit ~/ 2,
+      ),
+      (List<AliexpressProduct> aliProducts, List<StoreProduct> storeProducts) {
+        final products = [
+          ...aliProducts.map(MarketplaceProduct.fromAliexpress),
+          ...storeProducts.map(MarketplaceProduct.fromStore),
+        ];
+        
+        // Sort by rating and orders
+        products.sort((a, b) {
+          final ratingCompare = b.rating.compareTo(a.rating);
+          if (ratingCompare != 0) return ratingCompare;
+          return b.totalOrders.compareTo(a.totalOrders);
+        });
+        
+        return products;
+      },
+    );
+  }
+
+  Stream<List<MarketplaceProduct>> getRecommendedMarketplaceProducts({int limit = 10}) {
+    // For now, just combine recommended AliExpress products and top-rated store products
+    return CombineLatestStream.combine2(
+      getRecommendedListings(limit: limit ~/ 2),
+      getStoreProducts(limit: limit ~/ 2),
+      (List<AliexpressProduct> aliProducts, List<StoreProduct> storeProducts) {
+        final products = [
+          ...aliProducts.map(MarketplaceProduct.fromAliexpress),
+          ...storeProducts.map(MarketplaceProduct.fromStore),
+        ];
+        
+        // Sort by rating and orders
+        products.sort((a, b) {
+          final ratingCompare = b.rating.compareTo(a.rating);
+          if (ratingCompare != 0) return ratingCompare;
+          return b.totalOrders.compareTo(a.totalOrders);
+        });
+        
+        return products;
+      },
+    );
+  }
+
+  Stream<List<MarketplaceProduct>> getNewMarketplaceProducts({int limit = 10}) {
+    // For now, just combine new AliExpress products and store products
+    return CombineLatestStream.combine2(
+      getAliexpressListings(limit: limit ~/ 2),
+      getStoreProducts(limit: limit ~/ 2),
+      (List<AliexpressProduct> aliProducts, List<StoreProduct> storeProducts) {
+        final products = [
+          ...aliProducts.map(MarketplaceProduct.fromAliexpress),
+          ...storeProducts.map(MarketplaceProduct.fromStore),
+        ];
+        
+        // Sort by rating and orders
+        products.sort((a, b) {
+          final ratingCompare = b.rating.compareTo(a.rating);
+          if (ratingCompare != 0) return ratingCompare;
+          return b.totalOrders.compareTo(a.totalOrders);
+        });
+        
+        return products;
+      },
+    );
+  }
+
+  // Vet and Store Location Operations
+  Future<void> saveVetLocation(String placeId, double lat, double lng) async {
+    try {
+      await _vetLocationsCollection.doc(placeId).set({
+        'location': GeoPoint(lat, lng),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      print('Saved vet location: $placeId at $lat, $lng');
+    } catch (e) {
+      print('Error saving vet location: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> saveStoreLocation(String placeId, double lat, double lng) async {
+    try {
+      await _storeLocationsCollection.doc(placeId).set({
+        'location': GeoPoint(lat, lng),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      print('Saved store location: $placeId at $lat, $lng');
+    } catch (e) {
+      print('Error saving store location: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, GeoPoint>?> getVetLocation(String placeId) async {
+    try {
+      final doc = await _vetLocationsCollection.doc(placeId).get();
+      if (!doc.exists) return null;
+      
+      final data = doc.data() as Map<String, dynamic>;
+      final location = data['location'];
+      if (location == null || location is! GeoPoint) {
+        print('Invalid location data for vet $placeId: $location');
+        return null;
+      }
+      
+      return {placeId: location};
+    } catch (e) {
+      print('Error getting vet location: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, GeoPoint>?> getStoreLocation(String placeId) async {
+    try {
+      final doc = await _storeLocationsCollection.doc(placeId).get();
+      if (!doc.exists) return null;
+      
+      final data = doc.data() as Map<String, dynamic>;
+      final location = data['location'];
+      if (location == null || location is! GeoPoint) {
+        print('Invalid location data for store $placeId: $location');
+        return null;
+      }
+      
+      return {placeId: location};
+    } catch (e) {
+      print('Error getting store location: $e');
+      return null;
+    }
+  }
+
+  Future<List<String>> getAllVetPlaceIds() async {
+    try {
+      final snapshot = await _vetLocationsCollection.get();
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      print('Error getting vet place IDs: $e');
+      return [];
+    }
+  }
+
+  Future<List<String>> getAllStorePlaceIds() async {
+    try {
+      final snapshot = await _storeLocationsCollection.get();
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      print('Error getting store place IDs: $e');
+      return [];
+    }
   }
 } 

@@ -411,8 +411,8 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
               ),
             ),
             if (_isLoading)
-              Padding(
-                padding: const EdgeInsets.all(16),
+              const Padding(
+                padding: EdgeInsets.all(16),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: TypingIndicator(),

@@ -31,7 +31,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
   bool _isLoading = false;
   latlong.LatLng? _currentLocation;
   String? _currentAddress;
-  List<String> _contactNumbers = [];
+  final List<String> _contactNumbers = [];
 
   // Add pet type state
   String _selectedType = 'dog';
