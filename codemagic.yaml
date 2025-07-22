@@ -24,6 +24,10 @@ workflows:
           sed -i '' 's/PLATFORM_IOS = .*/PLATFORM_IOS = 14.0;/g' ios/Flutter/Generated.xcconfig || true
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = .*/IPHONEOS_DEPLOYMENT_TARGET = 14.0;/g' ios/Runner.xcodeproj/project.pbxproj || true
           plutil -replace MinimumOSVersion -string 14.0 ios/Runner/Info.plist || true
+      - name: Set iOS platform version in Podfile
+        script: |
+          sed -i '' 's/^# platform :ios, .*/platform :ios, '14.0'/g' ios/Podfile
+          sed -i '' 's/^platform :ios, .*/platform :ios, '14.0'/g' ios/Podfile
       - name: Install CocoaPods
         script: |
           cd ios
