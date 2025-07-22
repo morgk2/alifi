@@ -4,23 +4,16 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
-      xcode: 16.4                      # ✅ Moved here
-      ios_signing:
-        distribution_type: development
-        bundle_identifier: com.example.alifi
+      xcode: 16.4
+      flutter: stable
       vars:
         XCODE_WORKSPACE: "ios/Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
-      flutter: stable
     cache:
       cache_paths:
         - ~/.pub-cache
         - ~/.cocoapods/repos
     scripts:
-      - name: Set up code signing settings
-        script: |
-          echo "Setting up code signing"
-          keychain initialize
       - name: Get Flutter packages
         script: |
           flutter clean
@@ -31,18 +24,50 @@ workflows:
           sed -i '' 's/PLATFORM_IOS = .*/PLATFORM_IOS = 14.0;/g' ios/Flutter/Generated.xcconfig || true
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = .*/IPHONEOS_DEPLOYMENT_TARGET = 14.0;/g' ios/Runner.xcodeproj/project.pbxproj || true
           plutil -replace MinimumOSVersion -string 14.0 ios/Runner/Info.plist || true
-      - name: Install pods
+      - name: Install CocoaPods
         script: |
           cd ios
           rm -rf Pods Podfile.lock
-          pod repo remove trunk
-          pod repo add trunk https://cdn.cocoapods.org/
-          pod repo update
-          pod cache clean --all
           pod install --repo-update
-      - name: Build iOS
+          cd ..
+      - name: Build Flutter iOS
         script: |
           flutter build ios --release --no-codesign
+      - name: Export .ipa without signing
+        script: |
+          mkdir -p ios/export
+          cat > ios/export/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+          "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>development</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>compileBitcode</key>
+            <false/>
+            <key>signingCertificate</key>
+            <string></string>
+            <key>signingIdentity</key>
+            <string></string>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -workspace ios/Runner.xcworkspace \
+                     -scheme Runner \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -archivePath build/ios/archive.xcarchive \
+                     archive CODE_SIGNING_ALLOWED=NO
+
+          xcodebuild -exportArchive \
+                     -archivePath build/ios/archive.xcarchive \
+                     -exportOptionsPlist ios/export/ExportOptions.plist \
+                     -exportPath build/ios/ipa \
+                     CODE_SIGNING_ALLOWED=NO
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
