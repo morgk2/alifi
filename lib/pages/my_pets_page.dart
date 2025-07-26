@@ -21,6 +21,7 @@ import 'package:flutter/gestures.dart';
 import 'package:sensors_plus/sensors_plus.dart' if (dart.library.html) '../noop.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:share_plus/share_plus.dart';
+import 'pet_health_page.dart';
 
 class MyPetsPage extends StatefulWidget {
   const MyPetsPage({super.key});
@@ -404,7 +405,11 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
               'Health Information',
               Icons.favorite,
               () {
-                // TODO: Implement health info expansion
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => PetHealthPage(pet: pet),
+                  ),
+                );
               },
             ),
             const Divider(height: 1),
@@ -718,93 +723,175 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                             itemCount: _petsNotifier.value.length,
                             itemBuilder: (context, index) {
                               final pet = _petsNotifier.value[index];
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: Colors.white,
-                                  radius: 24,
-                                  child: Icon(Icons.pets, color: _parseColor(pet.color)),
-                                ),
-                                title: Text(pet.name),
-                                subtitle: Text(pet.breed),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit, color: Colors.orange),
-                                      onPressed: () async {
-                                        Navigator.of(context).pop();
-                                        await showDialog(
-                                          context: context,
-                                          builder: (context) => AddPetDialog(pet: pet),
-                                        );
-                                      },
+                              return FutureBuilder<bool>(
+                                future: DatabaseService().isPetLost(pet.id),
+                                builder: (context, snapshot) {
+                                  final isLost = snapshot.data ?? false;
+                                  return ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: Colors.white,
+                                      radius: 24,
+                                      child: Icon(Icons.pets, color: _parseColor(pet.color)),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete, color: Colors.red),
-                                      onPressed: () async {
-                                        final confirm = await showDialog<bool>(
-                                          context: context,
-                                          barrierColor: Colors.black.withOpacity(0.2),
-                                          builder: (context) => Dialog(
-                                            backgroundColor: Colors.transparent,
-                                            insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-                                            child: ClipRRect(
-                                              borderRadius: BorderRadius.circular(28),
-                                              child: BackdropFilter(
-                                                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                                                child: Container(
-                                                  color: Colors.white.withOpacity(0.95),
-                                                  padding: const EdgeInsets.all(24),
-                                                  child: Column(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 48),
-                                                      const SizedBox(height: 16),
-                                                      const Text('Delete Pet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
-                                                      const SizedBox(height: 8),
-                                                      Text('Are you sure you want to delete ${pet.name}?', textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
-                                                      const SizedBox(height: 24),
-                                                      Row(
-                                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                                        children: [
-                                                          TextButton(
-                                                            style: TextButton.styleFrom(
-                                                              backgroundColor: Colors.orange,
-                                                              foregroundColor: Colors.white,
-                                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                                            ),
-                                                            onPressed: () => Navigator.of(context).pop(false),
-                                                            child: const Text('Cancel'),
-                                                          ),
-                                                          TextButton(
-                                                            style: TextButton.styleFrom(
-                                                              backgroundColor: Colors.red,
-                                                              foregroundColor: Colors.white,
-                                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                                            ),
-                                                            onPressed: () => Navigator.of(context).pop(true),
-                                                            child: const Text('Delete'),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
+                                    title: Row(
+                                      children: [
+                                        Text(pet.name),
+                                        if (isLost) ...[
+                                          const SizedBox(width: 8),
+                                          GestureDetector(
+                                            onTap: () async {
+                                              // Find the lost_pets doc for this pet
+                                              final lostPetQuery = await FirebaseFirestore.instance
+                                                .collection('lost_pets')
+                                                .where('petId', isEqualTo: pet.id)
+                                                .where('isFound', isEqualTo: false)
+                                                .limit(1)
+                                                .get();
+                                              if (lostPetQuery.docs.isEmpty) {
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(content: Text('No lost pet report found for this pet.')),
+                                                  );
+                                                }
+                                                return;
+                                              }
+                                              final lostPetId = lostPetQuery.docs.first.id;
+                                              final confirmed = await showDialog<bool>(
+                                                context: context,
+                                                builder: (context) => AlertDialog(
+                                                  title: const Text('Mark as Found?'),
+                                                  content: const Text('Are you sure you want to mark this pet as found?'),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(context, false),
+                                                      child: const Text('Cancel'),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(context, true),
+                                                      child: const Text('Confirm'),
+                                                    ),
+                                                  ],
                                                 ),
+                                              );
+                                              if (confirmed == true) {
+                                                try {
+                                                  await DatabaseService().markLostPetAsFound(lostPetId);
+                                                  setDialogState(() {});
+                                                  if (mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(content: Text('Pet marked as found!')),
+                                                    );
+                                                  }
+                                                } catch (e) {
+                                                  if (mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text('Failed to mark as found: $e')),
+                                                    );
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            child: Container(
+                                              margin: const EdgeInsets.only(left: 4),
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red,
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Row(
+                                                children: const [
+                                                  Icon(Icons.warning_rounded, color: Colors.white, size: 14),
+                                                  SizedBox(width: 2),
+                                                  Text('LOST', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+                                                ],
                                               ),
                                             ),
                                           ),
-                                        );
-                                        if (confirm == true) {
-                                          await DatabaseService().deletePet(pet.id);
-                                          setDialogState(() {
-                                            _petsNotifier.value.removeAt(index);
-                                          });
-                                          setState(() {}); // Also update main page
-                                        }
-                                      },
+                                        ],
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                    subtitle: Text(pet.breed),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit, color: Colors.orange),
+                                          onPressed: () async {
+                                            Navigator.of(context).pop();
+                                            await showDialog(
+                                              context: context,
+                                              builder: (context) => AddPetDialog(pet: pet),
+                                            );
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete, color: Colors.red),
+                                          onPressed: () async {
+                                            final confirm = await showDialog<bool>(
+                                              context: context,
+                                              barrierColor: Colors.black.withOpacity(0.2),
+                                              builder: (context) => Dialog(
+                                                backgroundColor: Colors.transparent,
+                                                insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(28),
+                                                  child: BackdropFilter(
+                                                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                                                    child: Container(
+                                                      color: Colors.white.withOpacity(0.95),
+                                                      padding: const EdgeInsets.all(24),
+                                                      child: Column(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 48),
+                                                          const SizedBox(height: 16),
+                                                          const Text('Delete Pet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
+                                                          const SizedBox(height: 8),
+                                                          Text('Are you sure you want to delete ${pet.name}?', textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
+                                                          const SizedBox(height: 24),
+                                                          Row(
+                                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                            children: [
+                                                              TextButton(
+                                                                style: TextButton.styleFrom(
+                                                                  backgroundColor: Colors.orange,
+                                                                  foregroundColor: Colors.white,
+                                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                                                ),
+                                                                onPressed: () => Navigator.of(context).pop(false),
+                                                                child: const Text('Cancel'),
+                                                              ),
+                                                              TextButton(
+                                                                style: TextButton.styleFrom(
+                                                                  backgroundColor: Colors.red,
+                                                                  foregroundColor: Colors.white,
+                                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                                                ),
+                                                                onPressed: () => Navigator.of(context).pop(true),
+                                                                child: const Text('Delete'),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                            if (confirm == true) {
+                                              await DatabaseService().deletePet(pet.id);
+                                              setDialogState(() {
+                                                _petsNotifier.value.removeAt(index);
+                                              });
+                                              setState(() {}); // Also update main page
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                               );
                             },
                           ),

@@ -20,6 +20,8 @@ class Pet {
   final double? weight;
   final String? microchipId;
   final String? description;
+  List<Map<String, dynamic>>? vaccines;
+  List<Map<String, dynamic>>? illnesses;
 
   String? get photoURL => imageUrls.isNotEmpty ? imageUrls.first : null;
 
@@ -43,6 +45,8 @@ class Pet {
     this.weight,
     this.microchipId,
     this.description,
+    this.vaccines,
+    this.illnesses,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -65,6 +69,8 @@ class Pet {
       'weight': weight,
       'microchipId': microchipId,
       'description': description,
+      if (vaccines != null) 'vaccines': vaccines,
+      if (illnesses != null) 'illnesses': illnesses,
     };
   }
 
@@ -153,6 +159,8 @@ class Pet {
         weight: getDouble(data['weight']),
         microchipId: data['microchipId']?.toString(),
         description: data['description']?.toString(),
+        vaccines: (data['vaccines'] as List?)?.map((e) => Map<String, dynamic>.from(e)).toList(),
+        illnesses: (data['illnesses'] as List?)?.map((e) => Map<String, dynamic>.from(e)).toList(),
       );
       print('Successfully converted to Pet: ${pet.name}');
       return pet;
@@ -183,6 +191,8 @@ class Pet {
     double? weight,
     String? microchipId,
     String? description,
+    List<Map<String, dynamic>>? vaccines,
+    List<Map<String, dynamic>>? illnesses,
   }) {
     return Pet(
       id: id ?? this.id,
@@ -204,6 +214,8 @@ class Pet {
       weight: weight ?? this.weight,
       microchipId: microchipId ?? this.microchipId,
       description: description ?? this.description,
+      vaccines: vaccines ?? this.vaccines,
+      illnesses: illnesses ?? this.illnesses,
     );
   }
 } 

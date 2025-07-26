@@ -253,6 +253,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
   final _storeResults = <Map<String, dynamic>>[];
   final _processedStorePlaceIds = <String>{};
   bool _legendExpanded = false;
+  bool _legendVisible = true;
 
   void _minimizeLegend() {
     setState(() {
@@ -264,6 +265,22 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     setState(() {
       _legendExpanded = expanded;
     });
+  }
+
+  void _hideLegend() {
+    if (_legendVisible) {
+      setState(() {
+        _legendVisible = false;
+      });
+    }
+  }
+
+  void _showLegend() {
+    if (!_legendVisible) {
+      setState(() {
+        _legendVisible = true;
+      });
+    }
   }
 
   @override
@@ -2260,7 +2277,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                       _currentZoom = currentZoom;
                     });
                   }
+                  // Only hide legend on drag/move, NOT on tap
+                  if (event is MapEventMove || event is MapEventMoveStart || event is MapEventMoveEnd) {
+                    _hideLegend();
+                  }
                   if (_legendExpanded) _minimizeLegend();
+                },
+                onTap: (tapPosition, latlng) {
+                  _showLegend();
                 },
               ),
               children: [
@@ -2510,9 +2534,20 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                 ),
               ),
             ),
-          MapLegend(
-            onMinimize: _minimizeLegend,
-            onExpandChanged: _setLegendExpanded,
+          // Enable the AnimatedSlide for the legend
+          Positioned(
+            left: 24,
+            bottom: 100,
+            child: AnimatedSlide(
+              offset: _legendVisible ? Offset.zero : const Offset(-2.0, 0),
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeInOut,
+              child: MapLegend(
+                expanded: _legendExpanded,
+                onMinimize: _minimizeLegend,
+                onExpandChanged: _setLegendExpanded,
+              ),
+            ),
           ),
         ],
       ),
@@ -2845,106 +2880,94 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
 class MapLegend extends StatefulWidget {
   final VoidCallback? onMinimize;
   final ValueChanged<bool>? onExpandChanged;
-  const MapLegend({Key? key, this.onMinimize, this.onExpandChanged}) : super(key: key);
+  final bool expanded;
+  const MapLegend({Key? key, this.onMinimize, this.onExpandChanged, required this.expanded}) : super(key: key);
 
   @override
   State<MapLegend> createState() => _MapLegendState();
 }
 
 class _MapLegendState extends State<MapLegend> with TickerProviderStateMixin {
-  bool _expanded = false;
-
   void minimize() {
-    if (_expanded) setState(() => _expanded = false);
-  }
-
-  void _setExpanded(bool expanded) {
-    if (_expanded != expanded) {
-      setState(() => _expanded = expanded);
-      widget.onExpandChanged?.call(expanded);
-    }
+    if (widget.expanded) widget.onExpandChanged?.call(false);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      left: 24,
-      bottom: 100,
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.centerLeft,
+      child: Stack(
         alignment: Alignment.centerLeft,
-        child: Stack(
-          alignment: Alignment.centerLeft,
-          children: [
-            if (_expanded)
-              Positioned.fill(
-                child: GestureDetector(
-                  onTap: () {
-                    _setExpanded(false);
-                    widget.onMinimize?.call();
-                  },
-                  behavior: HitTestBehavior.translucent,
-                  child: Container(),
-                ),
-              ),
-            GestureDetector(
-              onTap: () {
-                _setExpanded(!_expanded);
-              },
-              child: Container(
-                width: _expanded ? 220 : 44,
-                padding: _expanded
-                    ? const EdgeInsets.symmetric(horizontal: 20, vertical: 20)
-                    : const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: _expanded
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: BackdropFilter(
-                          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                          child: Container(
-                            color: Colors.white.withOpacity(0.7),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _legendRow(Colors.orange, 'Your location', const Color(0xFFEA9800)),
-                                const SizedBox(height: 12),
-                                _legendRow(Colors.blue, 'Vet locations', const Color(0xFF2196F3)),
-                                const SizedBox(height: 12),
-                                _legendRow(Colors.green, 'Store locations', const Color(0xFF4CAF50)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _legendCircle(Colors.orange),
-                          const SizedBox(height: 12),
-                          _legendCircle(Colors.blue),
-                          const SizedBox(height: 12),
-                          _legendCircle(Colors.green),
-                        ],
-                      ),
+        children: [
+          if (widget.expanded)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  widget.onExpandChanged?.call(false);
+                  widget.onMinimize?.call();
+                },
+                behavior: HitTestBehavior.translucent,
+                child: Container(),
               ),
             ),
-          ],
-        ),
+          GestureDetector(
+            onTap: () {
+              widget.onExpandChanged?.call(!widget.expanded);
+            },
+            child: Container(
+              width: widget.expanded ? 220 : 44,
+              padding: widget.expanded
+                  ? const EdgeInsets.symmetric(horizontal: 20, vertical: 20)
+                  : const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: widget.expanded
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                        child: Container(
+                          color: Colors.white.withOpacity(0.7),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _legendRow(Colors.orange, 'Your location', const Color(0xFFEA9800)),
+                              const SizedBox(height: 12),
+                              _legendRow(Colors.blue, 'Vet locations', const Color(0xFF2196F3)),
+                              const SizedBox(height: 12),
+                              _legendRow(Colors.green, 'Store locations', const Color(0xFF4CAF50)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _legendCircle(Colors.orange),
+                        const SizedBox(height: 12),
+                        _legendCircle(Colors.blue),
+                        const SizedBox(height: 12),
+                        _legendCircle(Colors.green),
+                      ],
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
