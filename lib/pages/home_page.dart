@@ -7,6 +7,7 @@ import '../models/fundraising.dart';
 import '../models/lost_pet.dart';
 import '../models/store_item.dart';
 import '../services/database_service.dart';
+import '../services/auth_service.dart';
 import '../icons.dart';
 import '../widgets/placeholder_image.dart';
 import '../widgets/scrollable_fade_container.dart';
@@ -29,6 +30,7 @@ import 'package:latlong2/latlong.dart' as latlong;
 import 'package:flutter/animation.dart';
 import '../widgets/spinning_loader.dart';
 import '../widgets/ai_assistant_card.dart';
+import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback onNavigateToMap;
@@ -64,6 +66,26 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   final ValueNotifier<bool> _isLoadingLocationNotifier = ValueNotifier<bool>(true);
   final ValueNotifier<bool> _isRefreshingNotifier = ValueNotifier<bool>(false);
 
+  // Back button exit functionality
+  DateTime? _lastBackPressTime;
+
+  Future<bool> _onWillPop() async {
+    final now = DateTime.now();
+    if (_lastBackPressTime == null || 
+        now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+      _lastBackPressTime = now;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Press back again to exit'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.black87,
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
   // Use mock data for store items
   final List<StoreItem> _storeItems = StoreItem.mockItems;
 
@@ -97,6 +119,79 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
     
     return distance <= 10000; // 10km in meters
+  }
+
+  Future<void> _reportFound(BuildContext context, LostPet lostPet) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Report Found',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to mark this pet as found? This will remove it from the lost pets list.',
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Report Found',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _databaseService.markLostPetAsFound(lostPet.id);
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pet marked as found successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error marking pet as found: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -314,7 +409,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
@@ -606,6 +703,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -985,25 +1083,39 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                                   },
                                     ),
                                     const SizedBox(height: 8),
-                                    ElevatedButton(
-                                      onPressed: widget.onNavigateToMap,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFFF59E0B),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        minimumSize: const Size(120, 36),
-                                        elevation: 4,
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.map, size: 18),
-                                          SizedBox(width: 4),
-                                          Text('Open maps'),
-                                        ],
-                                      ),
+                                    Consumer<AuthService>(
+                                      builder: (context, authService, child) {
+                                        final currentUser = authService.currentUser;
+                                        final isCurrentUserPet = currentUser?.id == lostPet.reportedByUserId;
+                                        
+                                        return ElevatedButton(
+                                          onPressed: isCurrentUserPet 
+                                              ? () => _reportFound(context, lostPet)
+                                              : widget.onNavigateToMap,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: isCurrentUserPet 
+                                                ? Colors.green 
+                                                : const Color(0xFFF59E0B),
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            minimumSize: const Size(120, 36),
+                                            elevation: 4,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                isCurrentUserPet ? Icons.check_circle : Icons.map, 
+                                                size: 18
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(isCurrentUserPet ? 'Report Found' : 'Open maps'),
+                                            ],
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),

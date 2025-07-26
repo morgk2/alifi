@@ -13,6 +13,7 @@ class LostPet {
   final String reportedByUserId;
   final String? additionalInfo;
   final List<String> contactNumbers;
+  final DateTime? foundDate;
 
   LostPet({
     required this.id,
@@ -25,6 +26,7 @@ class LostPet {
     required this.reportedByUserId,
     this.additionalInfo,
     this.contactNumbers = const [],
+    this.foundDate,
   });
 
   static Future<LostPet?> fromFirestore(DocumentSnapshot doc, FirebaseFirestore db) async {
@@ -48,6 +50,7 @@ class LostPet {
       reportedByUserId: data['reportedByUserId']?.toString() ?? '',
       additionalInfo: data['additionalInfo']?.toString(),
       contactNumbers: List<String>.from(data['contactNumbers'] ?? []),
+      foundDate: data['foundDate'] != null ? (data['foundDate'] as Timestamp).toDate() : null,
     );
   }
 }

@@ -43,7 +43,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
   // For swipeable steps
   final PageController _pageController = PageController();
   int _currentStep = 0;
-  int get _totalSteps => widget.pet == null ? 5 : 3;
+  int get _totalSteps => widget.pet == null ? 5 : 4;
 
   bool get _isValid {
     if (widget.pet != null) {
@@ -893,7 +893,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                                     ),
           );
         case 1:
-                                  // Step 2: Last seen
+                                  // Step 2: Last seen and Location
           return Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                                     child: Column(
@@ -955,7 +955,71 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                                         ),
                                         const SizedBox(height: 16),
-                                        Container(
+                                        GestureDetector(
+                  onTap: () => _pickLocation(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.grey[300]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _currentAddress ?? 'Select location on map',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                  color: _currentAddress != null ? Colors.black : Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.map,
+                              color: Colors.grey[600],
+                            ),
+                          ],
+                        ),
+                        if (_currentLocation != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Coordinates: ${_currentLocation!.latitude.toStringAsFixed(6)}, ${_currentLocation!.longitude.toStringAsFixed(6)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                                      ],
+                                    ),
+          );
+        case 2:
+                                  // Step 3: Contact Numbers
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Contact Numbers (Required)',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                        ),
+                                        const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
                                           decoration: BoxDecoration(
                                             color: Colors.grey[100],
                                             borderRadius: BorderRadius.circular(16),
@@ -964,19 +1028,57 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                                               width: 1,
                                             ),
                                           ),
-                                          child: const TextField(
-                                            decoration: InputDecoration(
-                                              hintText: 'Enter the location where your pet was last seen',
+                        child: TextField(
+                          controller: _contactNumberController,
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(
+                            hintText: 'Enter contact number',
                                               contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                                               border: InputBorder.none,
                                             ),
                                           ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: _addContactNumber,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text('Add'),
                                         ),
                                       ],
                                     ),
+                const SizedBox(height: 16),
+                if (_contactNumbers.isNotEmpty) ...[
+                  const Text(
+                    'Added Numbers:',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _contactNumbers.map((number) {
+                      return Chip(
+                        label: Text(number),
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                        onDeleted: () => _removeContactNumber(number),
+                        backgroundColor: Colors.red[100],
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            ),
           );
-        case 2:
-                                  // Step 3: Reward (optional)
+        case 3:
+                                  // Step 4: Reward (optional)
           return Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                                     child: Column(

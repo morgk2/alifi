@@ -468,6 +468,44 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       height: 1.5,
                     ),
                   ),
+                  if (!isStoreProduct) ...[
+                    const SizedBox(height: 24),
+                    // Transparency section for AliExpress products
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.info_outline, color: Colors.grey[700], size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Affiliate Disclosure',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'This product is available through our affiliate partnership with AliExpress. When you make a purchase through these links, you help support our app at no additional cost to you. Thank you for helping us keep this app running!',
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   // You may be interested too
                   const Text(
@@ -542,31 +580,236 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ),
             ],
           ),
-          child: ElevatedButton(
-            onPressed: () async {
-              if (isStoreProduct) {
-                // TODO: Implement store product purchase
-                return;
-              }
-              final url = Uri.parse((widget.product as AliexpressProduct).affiliateUrl);
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url, mode: LaunchMode.externalApplication);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isStoreProduct ? Colors.green : Colors.orange,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          child: isStoreProduct
+              ? ElevatedButton(
+                  onPressed: () {
+                    // TODO: Implement store product purchase
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Contact Store',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () async {
+                          final url = Uri.parse((widget.product as AliexpressProduct).affiliateUrl);
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        child: Container(
+                          height: 56,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF5A623), // Orange
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(32),
+                              bottomLeft: Radius.circular(32),
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Buy now',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => const _HowItWorksDialog(),
+                          );
+                        },
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              height: 56,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFD32F2F), // Red
+                                borderRadius: BorderRadius.only(
+                                  topRight: Radius.circular(32),
+                                  bottomRight: Radius.circular(32),
+                                ),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Text(
+                                'Buy it for me',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 16,
+                              child: Text(
+                                "(i don't have a credit card)",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HowItWorksDialog extends StatefulWidget {
+  const _HowItWorksDialog();
+
+  @override
+  State<_HowItWorksDialog> createState() => _HowItWorksDialogState();
+}
+
+class _HowItWorksDialogState extends State<_HowItWorksDialog> {
+  final TextEditingController _addressController = TextEditingController();
+  String? _selectedCity;
+  final List<String> _wilayas = [
+    'Adrar', 'Chlef', 'Laghouat', 'Oum El Bouaghi', 'Batna', 'Béjaïa', 'Biskra', 'Béchar', 'Blida', 'Bouira',
+    'Tamanrasset', 'Tébessa', 'Tlemcen', 'Tiaret', 'Tizi Ouzou', 'Algiers', 'Djelfa', 'Jijel', 'Sétif', 'Saïda',
+    'Skikda', 'Sidi Bel Abbès', 'Annaba', 'Guelma', 'Constantine', 'Médéa', 'Mostaganem', 'M’Sila', 'Mascara', 'Ouargla',
+    'Oran', 'El Bayadh', 'Illizi', 'Bordj Bou Arréridj', 'Boumerdès', 'El Tarf', 'Tindouf', 'Tissemsilt', 'El Oued', 'Khenchela',
+    'Souk Ahras', 'Tipaza', 'Mila', 'Aïn Defla', 'Naâma', 'Aïn Témouchent', 'Ghardaïa', 'Relizane', 'Timimoun', 'Bordj Badji Mokhtar',
+    'Ouled Djellal', 'Béni Abbès', 'In Salah', 'In Guezzam', 'Touggourt', 'Djanet', 'El M’Ghair', 'El Meniaa'
+  ];
+
+  @override
+  void dispose() {
+    _addressController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: const [
+                  Icon(Icons.info_outline, size: 28),
+                  SizedBox(width: 8),
+                  Text(
+                    'How does it work',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            child: Text(
-              isStoreProduct ? 'Contact Store' : 'Buy Now',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 16),
+              RichText(
+                text: const TextSpan(
+                  style: TextStyle(color: Colors.black, fontSize: 15, height: 1.5),
+                  children: [
+                    TextSpan(text: 'You enter your address, and your city and then you make sure you send '),
+                    TextSpan(
+                      text: 'MONEY_AMOUNT',
+                      style: TextStyle(color: Color(0xFFF5A623), fontWeight: FontWeight.bold),
+                    ),
+                    TextSpan(text: ' to this ccp address '),
+                    TextSpan(
+                      text: '000000000000000000000000000000',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    TextSpan(text: ' and then send the proof of payment in this email '),
+                    TextSpan(
+                      text: 'payment@alifi.app',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    TextSpan(text: ", we'll make sure to get your product shipped as soon as possible"),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: _addressController,
+                decoration: InputDecoration(
+                  hintText: 'Enter your address',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedCity,
+                items: _wilayas
+                    .map((city) => DropdownMenuItem(
+                          value: city,
+                          child: Text(city),
+                        ))
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedCity = value),
+                decoration: InputDecoration(
+                  hintText: 'Select your city',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Center(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFF5A623),
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

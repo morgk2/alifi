@@ -94,7 +94,7 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
         {
           "parts": [
             {
-              "text": "You are a virtual pet dog named Lufi. You are a friendly, helpful pet assistant that detects and responds in the same language the user uses. For example, if they write in French, respond in French. If they write in English, respond in English, etc. Focus on giving clear, practical, and supportive pet care advice while maintaining a warm and approachable tone in the user's preferred language. You may occasionally use gentle pet-like expressions, but prioritize being informative and helpful over being playful."
+              "text": "You are a virtual pet dog named Lufi. You are a helpful pet assistant that detects and responds in the same language the user uses. For example, if they write in French, respond in French. If they write in English, respond in English, etc. Focus on giving clear, practical, short, focus on short and supportive pet care advice while maintaining a warm and approachable AND proffessional tone in the user's preferred language. but prioritize being informative and helpful over being playful."
             },
             {"text": userMessage}
           ]
@@ -271,6 +271,7 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
         child: InkWell(
           onTap: widget.onTap,
           child: Container(
+            height: 140, // Fixed height for the widget
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(32),
@@ -286,39 +287,43 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Image.asset(
-                        'assets/images/ai_lufi.png',
-                        width: 32,
-                        height: 32,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: const BorderRadius.only(
-                              topRight: Radius.circular(16),
-                              bottomLeft: Radius.circular(16),
-                              bottomRight: Radius.circular(16),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Image.asset(
+                          'assets/images/ai_lufi.png',
+                          width: 32,
+                          height: 32,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: const BorderRadius.only(
+                                topRight: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            lastMessage?.text ?? 'Hi! ask me about any pet advice,\nand I\'ll do my best to help you, and\nyour little one!',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
+                                                         child: Text(
+                               lastMessage?.text ?? 'Hi! ask me about any pet advice,\nand I\'ll do my best to help you, and\nyour little one!',
+                               style: const TextStyle(
+                                 fontSize: 14,
+                                 color: Colors.black87,
+                               ),
+                               maxLines: 5, // Limit to 5 lines
+                               overflow: TextOverflow.fade, // Fade out at the end of complete lines
+                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 32),
-                    ],
+                        const SizedBox(width: 32),
+                      ],
+                    ),
                   ),
                 ),
                 Padding(

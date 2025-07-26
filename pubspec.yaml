@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   percent_indicator: ^4.2.3
-  http: ^1.2.0
+  http: ^1.1.0
   flutter_svg: ^2.0.10+1
   flutter_colorpicker: ^1.0.3
   image_picker: ^1.0.7
@@ -23,13 +23,13 @@ dependencies:
   path: ^1.8.3  # Added for path manipulation
   google_sign_in: ^6.2.1  # Updated to latest stable version
   google_sign_in_web: ^0.12.3  # Updated to match google_sign_in
-  cloud_firestore: ^5.6.11
+  cloud_firestore: 5.6.12
   provider: ^6.1.2
-  shared_preferences: ^2.2.2
+  shared_preferences: ^2.2.0
   device_info_plus: ^11.5.0
   flutter_map: ^8.1.1
   latlong2: ^0.9.0
-  geolocator: ^14.0.2
+  geolocator: ^10.0.0
   permission_handler: ^12.0.1
   uuid: ^4.3.3  # Added for generating unique IDs
   google_generative_ai: ^0.2.2
@@ -42,6 +42,12 @@ dependencies:
   geocoding: ^4.0.0
   supabase_flutter: ^2.3.4  # Added for Supabase integration
   mime: ^1.0.5  # Added for file type detection
+  share_plus: ^7.2.1  # Added for sharing functionality
+  soft_edge_blur: 0.1.3  # Added for progressive blur effects
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.2
 
 dev_dependencies:
   flutter_test:
@@ -110,11 +116,18 @@ flutter:
     - assets/images/stripe_logo.png
     - assets/images/visa_mastercard.png
     - assets/images/adoption.png
+    - assets/images/gender_female.png
+    - assets/images/gender_male.png
+    - assets/images/card_example.PNG
+    - assets/images/age.png
+    - assets/images/weight.png
+    - assets/images/pet_id_cat.png
     - assets/fonts/Inter-Italic-VariableFont_opsz,wght.ttf
     - assets/fonts/Inter-VariableFont_opsz,wght.ttf
     - assets/fonts/InterDisplay-Regular.ttf
     - assets/fonts/Montserrat-Black.ttf
     - assets/fonts/Montserrat-ExtraBold.ttf
+    - assets/data/locations.json
   fonts:
     - family: Inter
       fonts:
@@ -124,9 +137,13 @@ flutter:
     - family: InterDisplay
       fonts:
         - asset: assets/fonts/InterDisplay-Regular.ttf
+        - asset: assets/fonts/InterDisplay-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/InterDisplay-Black.ttf
+          weight: 900
     - family: Montserrat
       fonts:
-        - asset: assets/fonts/Montserrat-ExtraBold.ttf
-          weight: 800
         - asset: assets/fonts/Montserrat-Black.ttf
           weight: 900
+        - asset: assets/fonts/Montserrat-ExtraBold.ttf
+          weight: 800

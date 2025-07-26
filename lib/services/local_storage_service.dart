@@ -2,6 +2,7 @@ import 'dart:convert';
 import '../models/pet.dart';
 import '../models/user.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Conditional export for LocalStorageService implementation
 export 'local_storage_service_stub.dart'
@@ -19,6 +20,11 @@ class LocalStorageService {
   static const String _storeLocationsKey = 'store_locations';
   static const String _vetLocationsTimestampKey = 'vet_locations_timestamp';
   static const Duration _cacheValidDuration = Duration(days: 7); // Cache valid for 7 days
+  static const String _vetCacheKey = 'vet_locations_cache';
+  static const String _storeCacheKey = 'store_locations_cache';
+  static const String _vetCacheTimeKey = 'vet_locations_cache_time';
+  static const String _storeCacheTimeKey = 'store_locations_cache_time';
+  static const Duration _cacheValidityDuration = Duration(days: 7);
 
   // Save guest mode status
   Future<void> setGuestMode(bool isGuest) async {
@@ -203,160 +209,79 @@ class LocalStorageService {
   }
 
   // Vet Locations methods
-  Future<void> saveVetLocations(List<Map<String, dynamic>> vets) async {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final data = {
-      'vets': vets,
-      'timestamp': timestamp,
-    };
-    final jsonString = json.encode(data);
+  Future<bool> isVetCacheValid() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastUpdateStr = prefs.getString(_vetCacheTimeKey);
+    if (lastUpdateStr == null) return false;
+    
+    final lastUpdate = DateTime.parse(lastUpdateStr);
+    return DateTime.now().difference(lastUpdate) < _cacheValidityDuration;
+  }
 
-    if (kIsWeb) {
-      // This method is no longer directly dependent on SharedPreferences or dart:html
-      // as it is now a conditional export.
-      // If the stub implementation is used, it will do nothing.
-      // If the web implementation is used, it will use dart:html.
-      // If the io implementation is used, it will do nothing.
-      // For now, we'll keep it simple, as the stub doesn't have this functionality.
-      // If the stub were to be updated, it would need to be passed a mock or actual dart:html.
-      // For now, we'll just print a message.
-      print('saveVetLocations called (stubbed)');
-    } else {
-      // This method is no longer directly dependent on SharedPreferences or dart:html
-      // as it is now a conditional export.
-      // If the stub implementation is used, it will do nothing.
-      // If the web implementation is used, it will use SharedPreferences.
-      // If the io implementation is used, it will do nothing.
-      // For now, we'll keep it simple, as the stub doesn't have this functionality.
-      // If the stub were to be updated, it would need to be passed a mock or actual SharedPreferences.
-      // For now, we'll just print a message.
-      print('saveVetLocations called (stubbed)');
-    }
+  Future<void> saveVetLocations(List<Map<String, dynamic>> vets) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_vetCacheKey, json.encode(vets));
+    await prefs.setString(_vetCacheTimeKey, DateTime.now().toIso8601String());
   }
 
   // Get cached vet locations
   Future<List<Map<String, dynamic>>?> getCachedVetLocations() async {
-    String? jsonString;
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString(_vetCacheKey);
+    if (data == null) return null;
     
-    if (kIsWeb) {
-      // This method is no longer directly dependent on SharedPreferences or dart:html
-      // as it is now a conditional export.
-      // If the stub implementation is used, it will do nothing.
-      // If the web implementation is used, it will use dart:html.
-      // If the io implementation is used, it will do nothing.
-      // For now, we'll keep it simple, as the stub doesn't have this functionality.
-      // If the stub were to be updated, it would need to be passed a mock or actual dart:html.
-      // For now, we'll just print a message.
-      print('getCachedVetLocations called (stubbed)');
-    } else {
-      // This method is no longer directly dependent on SharedPreferences or dart:html
-      // as it is now a conditional export.
-      // If the stub implementation is used, it will do nothing.
-      // If the web implementation is used, it will use SharedPreferences.
-      // If the io implementation is used, it will do nothing.
-      // For now, we'll keep it simple, as the stub doesn't have this functionality.
-      // If the stub were to be updated, it would need to be passed a mock or actual SharedPreferences.
-      // For now, we'll just print a message.
-      print('getCachedVetLocations called (stubbed)');
+    try {
+      return List<Map<String, dynamic>>.from(
+        json.decode(data).map((x) => Map<String, dynamic>.from(x))
+      );
+    } catch (e) {
+      print('Error parsing cached vet locations: $e');
+      return null;
     }
-    return null;
   }
 
   // Clear cached vet locations
   Future<void> clearCachedVetLocations() async {
-    if (kIsWeb) {
-      // This method is no longer directly dependent on SharedPreferences or dart:html
-      // as it is now a conditional export.
-      // If the stub implementation is used, it will do nothing.
-      // If the web implementation is used, it will use dart:html.
-      // If the io implementation is used, it will do nothing.
-      // For now, we'll keep it simple, as the stub doesn't have this functionality.
-      // If the stub were to be updated, it would need to be passed a mock or actual dart:html.
-      // For now, we'll just print a message.
-      print('clearCachedVetLocations called (stubbed)');
-    } else {
-      // This method is no longer directly dependent on SharedPreferences or dart:html
-      // as it is now a conditional export.
-      // If the stub implementation is used, it will do nothing.
-      // If the web implementation is used, it will use SharedPreferences.
-      // If the io implementation is used, it will do nothing.
-      // For now, we'll keep it simple, as the stub doesn't have this functionality.
-      // If the stub were to be updated, it would need to be passed a mock or actual SharedPreferences.
-      // For now, we'll just print a message.
-      print('clearCachedVetLocations called (stubbed)');
-    }
-  }
-
-  // Check if cache is valid
-  Future<bool> isCacheValid() async {
-    String? jsonString;
-    
-    if (kIsWeb) {
-      // This method is no longer directly dependent on SharedPreferences or dart:html
-      // as it is now a conditional export.
-      // If the stub implementation is used, it will do nothing.
-      // If the web implementation is used, it will use dart:html.
-      // If the io implementation is used, it will do nothing.
-      // For now, we'll keep it simple, as the stub doesn't have this functionality.
-      // If the stub were to be updated, it would need to be passed a mock or actual dart:html.
-      // For now, we'll just print a message.
-      print('isCacheValid called (stubbed)');
-    } else {
-      // This method is no longer directly dependent on SharedPreferences or dart:html
-      // as it is now a conditional export.
-      // If the stub implementation is used, it will do nothing.
-      // If the web implementation is used, it will use SharedPreferences.
-      // If the io implementation is used, it will do nothing.
-      // For now, we'll keep it simple, as the stub doesn't have this functionality.
-      // If the stub were to be updated, it would need to be passed a mock or actual SharedPreferences.
-      // For now, we'll just print a message.
-      print('isCacheValid called (stubbed)');
-    }
-    return false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_vetCacheKey);
+    await prefs.remove(_vetCacheTimeKey);
   }
 
   // Store Locations methods
-  Future<void> saveStoreLocations(List<Map<String, dynamic>> stores) async {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final data = {
-      'stores': stores,
-      'timestamp': timestamp,
-    };
-    final jsonString = json.encode(data);
+  Future<bool> isStoreCacheValid() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastUpdateStr = prefs.getString(_storeCacheTimeKey);
+    if (lastUpdateStr == null) return false;
+    
+    final lastUpdate = DateTime.parse(lastUpdateStr);
+    return DateTime.now().difference(lastUpdate) < _cacheValidityDuration;
+  }
 
-    if (kIsWeb) {
-      print('saveStoreLocations called (web)');
-    } else {
-      print('saveStoreLocations called (io)');
-    }
+  Future<void> saveStoreLocations(List<Map<String, dynamic>> stores) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_storeCacheKey, json.encode(stores));
+    await prefs.setString(_storeCacheTimeKey, DateTime.now().toIso8601String());
   }
 
   Future<List<Map<String, dynamic>>?> getCachedStoreLocations() async {
-    String? jsonString;
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString(_storeCacheKey);
+    if (data == null) return null;
     
-    if (kIsWeb) {
-      print('getCachedStoreLocations called (web)');
-    } else {
-      print('getCachedStoreLocations called (io)');
+    try {
+      return List<Map<String, dynamic>>.from(
+        json.decode(data).map((x) => Map<String, dynamic>.from(x))
+      );
+    } catch (e) {
+      print('Error parsing cached store locations: $e');
+      return null;
     }
-    return null;
   }
 
   Future<void> clearCachedStoreLocations() async {
-    if (kIsWeb) {
-      print('clearCachedStoreLocations called (web)');
-    } else {
-      print('clearCachedStoreLocations called (io)');
-    }
-  }
-
-  Future<bool> isStoreCacheValid() async {
-    if (kIsWeb) {
-      print('isStoreCacheValid called (web)');
-    } else {
-      print('isStoreCacheValid called (io)');
-    }
-    return false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storeCacheKey);
+    await prefs.remove(_storeCacheTimeKey);
   }
 
   @override

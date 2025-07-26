@@ -70,7 +70,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
       final url = Uri.parse(
         'https://maps.gomaps.pro/maps/api/place/details/json'
         '?place_id=$placeId'
-        '&key=AlzaSy8GCoFh_rNeeXKWnVnqeCauTmWq3i85B6H'
+        '&key=AlzaSylphbmAZJYT82Ie_cY1MVEbiQ4NRUxaqIo'
       );
       
       final response = await http.get(url);

@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/places_service.dart';
+import '../services/location_service.dart';
 import '../models/lost_pet.dart';
 import '../services/database_service.dart';
 import '../config/mapbox_config.dart';
@@ -211,6 +212,7 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
   final _placesService = PlacesService();
+  final _locationService = LocationService();
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
@@ -250,6 +252,19 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
   final _storeMarkersController = StreamController<List<Marker>>.broadcast();
   final _storeResults = <Map<String, dynamic>>[];
   final _processedStorePlaceIds = <String>{};
+  bool _legendExpanded = false;
+
+  void _minimizeLegend() {
+    setState(() {
+      _legendExpanded = false;
+    });
+  }
+
+  void _setLegendExpanded(bool expanded) {
+    setState(() {
+      _legendExpanded = expanded;
+    });
+  }
 
   @override
   void initState() {
@@ -275,14 +290,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     _loadStoreLocations();
     _loadUserLocations();
     _mapController.mapEventStream.listen((event) {
-      if (event is MapEventMove) {
-        final currentZoom = event.camera.zoom;
-        if ((_currentZoom < _zoomThreshold && currentZoom >= _zoomThreshold) ||
-            (_currentZoom >= _zoomThreshold && currentZoom < _zoomThreshold)) {
-          setState(() {
-            _currentZoom = currentZoom;
-          });
-        }
+      final currentZoom = event.camera.zoom;
+      if ((_currentZoom < _zoomThreshold && currentZoom >= _zoomThreshold) ||
+          (_currentZoom >= _zoomThreshold && currentZoom < _zoomThreshold) ||
+          (_currentZoom != currentZoom)) {
+        setState(() {
+          _currentZoom = currentZoom;
+        });
       }
     });
     _setupMarkerControllers();
@@ -705,13 +719,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
       final url = Uri.parse(
         'https://maps.gomaps.pro/maps/api/place/details/json'
         '?place_id=$placeId'
-        '&key=AlzaSy8GCoFh_rNeeXKWnVnqeCauTmWq3i85B6H'
+        '&key=AlzaSylphbmAZJYT82Ie_cY1MVEbiQ4NRUxaqIo'
       );
       
       print('Making request to URL: $url');
       final response = await http.get(url);
-      print('Response status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      print('Response status code: \\${response.statusCode}');
+      print('API response: \\${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -851,34 +865,34 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: _searchResults.isEmpty ? 0.0 : 1.0,
-            child: Container(
-              decoration: BoxDecoration(
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _searchResults.isEmpty ? 0.0 : 1.0,
+                child: Container(
+                decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.45),
-                borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: _isLoading
-                ? const Center(
-                    child: SpinningLoader(
-                      size: 32,
-                      color: Colors.orange,
+                  boxShadow: [
+                    BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                  offset: const Offset(0, 2),
                     ),
-                  )
-                : ListView.builder(
-                    padding: EdgeInsets.zero,
-                    itemCount: _searchResults.length,
-                    itemBuilder: (context, index) {
-                      final prediction = _searchResults[index];
+                  ],
+                ),
+            child: _isLoading
+              ? const Center(
+                  child: SpinningLoader(
+                    size: 32,
+                    color: Colors.orange,
+                  ),
+                )
+              : ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: _searchResults.length,
+                  itemBuilder: (context, index) {
+                    final prediction = _searchResults[index];
                       final isVet = prediction.description.toLowerCase().contains('vet') ||
                                   prediction.description.toLowerCase().contains('veterinaire') ||
                                   prediction.description.toLowerCase().contains('clinic');
@@ -886,40 +900,40 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                                     prediction.description.toLowerCase().contains('animal') ||
                                     prediction.description.toLowerCase().contains('animalerie');
                       
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut,
-                        decoration: BoxDecoration(
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.3),
-                          border: Border(
-                            bottom: BorderSide(
+                        border: Border(
+                          bottom: BorderSide(
                               color: Colors.white.withOpacity(0.2),
-                              width: 1,
-                            ),
+                            width: 1,
                           ),
                         ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _selectSearchResult(prediction),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _selectSearchResult(prediction),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
                                       color: isVet 
                                         ? Colors.blue.withOpacity(0.1)
                                         : isStore
                                           ? Colors.green.withOpacity(0.1)
                                           : Colors.black.withOpacity(0.05),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
                                       isVet 
                                         ? Icons.medical_services
                                         : isStore
@@ -930,36 +944,36 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                                         : isStore
                                           ? Colors.green
                                           : Colors.orange.shade700,
-                                      size: 20,
-                                    ),
+                                    size: 20,
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          prediction.mainText,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        prediction.mainText,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                  fontSize: 16,
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          prediction.secondaryText,
-                                          style: TextStyle(
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        prediction.secondaryText,
+                                        style: TextStyle(
                                             color: Colors.black.withOpacity(0.6),
-                                            fontSize: 14,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                          fontSize: 14,
                                         ),
-                                      ],
-                                    ),
-                                  ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
                                   if (isAdmin) ...[
                                     IconButton(
                                       icon: const Icon(Icons.local_hospital),
@@ -974,22 +988,22 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                                       tooltip: 'Add as Store',
                                     ),
                                   ],
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    Icons.arrow_forward_ios,
+                                const SizedBox(width: 8),
+                                Icon(
+                                  Icons.arrow_forward_ios,
                                     color: Colors.black.withOpacity(0.3),
-                                    size: 16,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                                  size: 16,
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
+                      ),
+                    );
+                  },
+                  ),
+                ),
+              ),
         ),
       ),
     );
@@ -1127,12 +1141,28 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
 
   // Add this method to the _MapPageState class
   void _showPlaceDetails(Map<String, dynamic> placeDetails, String prediction) {
+    print('DEBUG: placeDetails = $placeDetails');
     if (!mounted) return;
 
-    final result = placeDetails['result'];
+    // Support both wrapped and unwrapped result
+    final result = placeDetails['result'] ?? placeDetails;
+    if (result == null) {
+      _handleError('No details found for this place.');
+      return;
+    }
+    if (result['geometry'] == null || result['geometry']['location'] == null) {
+      _handleError('No location data found for this place.');
+      return;
+    }
+
     final location = result['geometry']['location'];
-    final lat = location['lat'] as double;
-    final lng = location['lng'] as double;
+    final lat = (location['lat'] as num?)?.toDouble();
+    final lng = (location['lng'] as num?)?.toDouble();
+    if (lat == null || lng == null) {
+      _handleError('Invalid coordinates for this place.');
+      return;
+    }
+
     final hasPhotos = result['photos'] != null && result['photos'].isNotEmpty;
     
     // Calculate distance if user location is available
@@ -1560,81 +1590,113 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
 
   // Helper function to create a marker
   Marker _createVetMarker(Map<String, dynamic> vet) {
-    final lat = vet['geometry']['location']['lat'] as double;
-    final lng = vet['geometry']['location']['lng'] as double;
+    print('Creating vet marker for: \\${vet['place_id']}');
+    print('Vet data: $vet');
     
-    return Marker(
-      point: LatLng(lat, lng),
-      width: 40,
-      height: 40,
-      child: RepaintBoundary(
-        child: GestureDetector(
-          onTap: () => _showPlaceDetails({'result': vet}, vet['name']),
-          child: Column(
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: Colors.blue,  // Blue for vets
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+    try {
+      // Support both 'location' and 'geometry.location'
+      final location = vet['location'] ?? vet['geometry']?['location'];
+      print('Location data: $location');
+      
+      if (location == null) {
+        print('Error: Location is null for vet \\${vet['place_id']}');
+        return Marker(
+          point: const LatLng(0, 0),
+          child: Container(),
+        );
+      }
+
+      // Support both 'lat'/'lng' and 'latitude'/'longitude' keys
+      final lat = (location['lat'] ?? location['latitude']) as double;
+      final lng = (location['lng'] ?? location['longitude']) as double;
+      print('Lat: $lat, Lng: $lng');
+
+      return Marker(
+        point: LatLng(lat, lng),
+        width: 20,
+        height: 20,
+        child: RepaintBoundary(
+          child: GestureDetector(
+            onTap: () => _showVetDetails(vet),
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.blue,  // Blue for vets
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2,
                 ),
               ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } catch (e, stackTrace) {
+      print('Error creating vet marker: $e');
+      print('Stack trace: $stackTrace');
+      print('Vet data that caused error: $vet');
+      return Marker(
+        point: const LatLng(0, 0),
+        child: Container(),
+      );
+    }
   }
 
   Marker _createStoreMarker(Map<String, dynamic> store) {
-    final lat = store['geometry']['location']['lat'] as double;
-    final lng = store['geometry']['location']['lng'] as double;
+    print('Creating store marker for: \\${store['place_id']}');
+    print('Store data: $store');
     
-    return Marker(
-      point: LatLng(lat, lng),
-      width: 40,
-      height: 40,
-      child: RepaintBoundary(
-        child: GestureDetector(
-          onTap: () => _showPlaceDetails({'result': store}, store['name']),
-          child: Column(
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: Colors.green,  // Green for stores
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+    try {
+      // Support both 'location' and 'geometry.location'
+      final location = store['location'] ?? store['geometry']?['location'];
+      print('Location data: $location');
+      
+      if (location == null) {
+        print('Error: Location is null for store \\${store['place_id']}');
+        return Marker(
+          point: const LatLng(0, 0),
+          child: Container(),
+        );
+      }
+
+      // Support both 'lat'/'lng' and 'latitude'/'longitude' keys
+      final lat = (location['lat'] ?? location['latitude']) as double;
+      final lng = (location['lng'] ?? location['longitude']) as double;
+      print('Lat: $lat, Lng: $lng');
+
+      return Marker(
+        point: LatLng(lat, lng),
+        width: 20,
+        height: 20,
+        child: RepaintBoundary(
+          child: GestureDetector(
+            onTap: () => _showStoreDetails(store),
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.green,  // Green for stores
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2,
                 ),
               ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } catch (e, stackTrace) {
+      print('Error creating store marker: $e');
+      print('Stack trace: $stackTrace');
+      print('Store data that caused error: $store');
+      return Marker(
+        point: const LatLng(0, 0),
+        child: Container(),
+      );
+    }
   }
 
   Marker _createUserMarker(User user) {
@@ -1643,8 +1705,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     
     return Marker(
       point: LatLng(lat, lng),
-      width: 40,
-      height: 40,
+      width: 20,
+      height: 20,
       child: RepaintBoundary(
         child: GestureDetector(
           onTap: () => Navigator.push(
@@ -1653,48 +1715,133 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
               builder: (context) => UserProfilePage(user: user),
             ),
           ),
-          child: Column(
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: Colors.orange,  // Orange for users
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
+          child: Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              color: Colors.orange,  // Orange for users
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white,
+                width: 2,
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  // Add this method to cluster markers
+  List<Marker> _clusterMarkers(List<Marker> markers, double zoom) {
+    if (zoom >= 10) {  // Changed from 13 to 10 to show individual markers sooner
+      return markers;
+    }
+
+    final clusters = <Marker>[];
+    final gridSize = zoom < 8 ? 0.5 : 0.2;  // Reduced grid sizes to create smaller clusters
+    final processed = <int>{};
+
+    for (var i = 0; i < markers.length; i++) {
+      if (processed.contains(i)) continue;
+
+      final marker = markers[i];
+      final lat = marker.point.latitude;
+      final lng = marker.point.longitude;
+      
+      // Find nearby markers
+      final nearbyMarkers = <Marker>[marker];
+      processed.add(i);
+
+      for (var j = i + 1; j < markers.length; j++) {
+        if (processed.contains(j)) continue;
+
+        final other = markers[j];
+        final otherLat = other.point.latitude;
+        final otherLng = other.point.longitude;
+
+        // Check if markers are in the same grid cell
+        if ((otherLat - lat).abs() <= gridSize && 
+            (otherLng - lng).abs() <= gridSize) {
+          nearbyMarkers.add(other);
+          processed.add(j);
+        }
+      }
+
+      if (nearbyMarkers.length == 1) {
+        clusters.add(marker);
+      } else {
+        // Create a cluster marker
+        final centerLat = nearbyMarkers.map((m) => m.point.latitude).reduce((a, b) => a + b) / nearbyMarkers.length;
+        final centerLng = nearbyMarkers.map((m) => m.point.longitude).reduce((a, b) => a + b) / nearbyMarkers.length;
+
+        clusters.add(Marker(
+          point: LatLng(centerLat, centerLng),
+          width: 30,
+          height: 30,
+          child: RepaintBoundary(
+            child: GestureDetector(
+              onTap: () {
+                // Zoom in when cluster is tapped
+                _mapController.move(LatLng(centerLat, centerLng), zoom + 2);  // Zoom in by 2 levels
+              },
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.grey.shade300,
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    '${nearbyMarkers.length}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ));
+      }
+    }
+
+    return clusters;
+  }
+
   // Helper function to add new vets to the map
-  void _addNewVets(List<Map<String, dynamic>> newVets, Set<String> processedPlaceIds) {
+  Future<void> _addNewVets(List<Map<String, dynamic>> newVets, Set<String> processedPlaceIds) async {
+    if (!mounted) return;
+    
     final newMarkers = <Marker>[];
     
     for (final vet in newVets) {
-      final placeId = vet['place_id'] as String;
-      if (!processedPlaceIds.contains(placeId)) {
-        processedPlaceIds.add(placeId);
-        newMarkers.add(_createVetMarker(vet));
-        print('Added vet: ${vet['name']}');
-        print('  Address: ${vet['vicinity']}');
-        if (vet['opening_hours'] != null) {
-          print('  Open now: ${vet['opening_hours']['open_now']}');
+      try {
+        final placeId = vet['place_id'] as String;
+        if (!processedPlaceIds.contains(placeId)) {
+          processedPlaceIds.add(placeId);
+          newMarkers.add(_createVetMarker(vet));
+          print('Added vet: ${vet['name']}');
+          print('  Address: ${vet['vicinity']}');
+          if (vet['opening_hours'] != null) {
+            print('  Open now: ${vet['opening_hours']['open_now']}');
+          }
         }
+      } catch (e) {
+        print('Error creating vet marker: $e');
       }
     }
 
@@ -1706,119 +1853,39 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
   }
 
   Future<void> _loadVetLocations() async {
-    if (_isLoadingVets) return;
-
-    setState(() {
-      _isLoadingVets = true;
-      _vetMarkers = []; // Clear existing markers
-    });
-
-    final localStorageService = LocalStorageService();
-
-    // Try to load cached data first
-    final cachedVets = await localStorageService.getCachedVetLocations();
-    if (cachedVets != null) {
-      print('Loading vets from cache (${cachedVets.length} locations)');
-      _addNewVets(cachedVets, <String>{});
-      setState(() => _isLoadingVets = false);
-      
-      // If cache is old, refresh in background
-      if (!await localStorageService.isCacheValid()) {
-        print('Cache is old, refreshing in background...');
-        _refreshVetLocations();
-      }
-      return;
-    }
-
-    // No cache available, load from API
-    await _refreshVetLocations();
-  }
-
-  Future<void> _refreshVetLocations() async {
-    final localStorageService = LocalStorageService();
-    final processedPlaceIds = <String>{};
-    final allVets = <Map<String, dynamic>>[];
+    setState(() => _isLoadingVets = true);
 
     try {
-      // First, search around user's current location if available
-      if (_currentPosition != null) {
-        print('Searching vets near current location');
-        final nearbyVets = await _placesService.searchNearbyVets(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-        );
-        _addNewVets(nearbyVets, processedPlaceIds);
-        allVets.addAll(nearbyVets.where((vet) => 
-          processedPlaceIds.contains(vet['place_id'])
-        ));
-      }
-
-      // Then search in nearby cities first (within 100km of user's location or default location)
-      final userLat = _currentPosition?.latitude ?? 36.7538; // Default to Algiers if no location
-      final userLng = _currentPosition?.longitude ?? 3.0588;
+      // Initialize Places Service
+      await PlacesService.initialize();
       
-      // Sort cities by distance from user
-      final sortedCities = List<Map<String, dynamic>>.from(PlacesService.algeriaCities);
-      sortedCities.sort((a, b) {
-        final distA = Geolocator.distanceBetween(
-          userLat, userLng,
-          a['lat'], a['lng']
-        );
-        final distB = Geolocator.distanceBetween(
-          userLat, userLng,
-          b['lat'], b['lng']
-        );
-        return distA.compareTo(distB);
-      });
-
-      // Process cities in order of proximity
-      for (final city in sortedCities) {
-        try {
-          print('Searching vets in ${city['name']}');
-          final results = await _placesService.searchNearbyVets(
-            city['lat'],
-            city['lng'],
-          );
-          _addNewVets(results, processedPlaceIds);
-          allVets.addAll(results.where((vet) => 
-            processedPlaceIds.contains(vet['place_id'])
-          ));
-
-          // For Saharan cities, search surrounding areas
-          if (PlacesService.isSaharanRegion(city['lat'], city['lng'])) {
-            for (var latOffset = -0.5; latOffset <= 0.5; latOffset += 0.5) {
-              for (var lngOffset = -0.5; lngOffset <= 0.5; lngOffset += 0.5) {
-                if (latOffset == 0 && lngOffset == 0) continue;
-                
-                final lat = city['lat'] + latOffset;
-                final lng = city['lng'] + lngOffset;
-                
-                print('Searching additional area near ${city['name']}: $lat, $lng');
-                final additionalResults = await _placesService.searchNearbyVets(lat, lng);
-                _addNewVets(additionalResults, processedPlaceIds);
-                allVets.addAll(additionalResults.where((vet) => 
-                  processedPlaceIds.contains(vet['place_id'])
-                ));
-              }
-            }
-          }
-        } catch (e) {
-          print('Error searching vets in ${city['name']}: $e');
-        }
-      }
-
-      // Save results to cache
-      await localStorageService.saveVetLocations(allVets);
-      print('Saved ${allVets.length} vet locations to cache');
-
+      // Load from LocationService first as fallback
+      final vets = await _locationService.getAllVetClinics();
+      final vetMarkers = vets.map((vet) => _createVetMarker(vet)).toList();
+      
       if (mounted) {
         setState(() {
-          _isLoadingVets = false;
+          _vetMarkers = vetMarkers;
         });
-        print('Completed vet search. Total vets found: ${_vetMarkers.length}');
+      }
+
+      // Then try to load additional vets from Places Service
+      final placesVets = await _placesService.getAllVetClinics();
+      if (placesVets.isNotEmpty) {
+        final additionalMarkers = placesVets
+          .where((vet) => !_vetMarkers.any((m) => m.key.toString() == vet['place_id']))
+          .map((vet) => _createVetMarker(vet))
+          .toList();
+
+        if (mounted) {
+          setState(() {
+            _vetMarkers = [..._vetMarkers, ...additionalMarkers];
+          });
+        }
       }
     } catch (e) {
       print('Error loading vet locations: $e');
+    } finally {
       if (mounted) {
         setState(() => _isLoadingVets = false);
       }
@@ -1833,91 +1900,40 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
       _storeMarkers = [];
     });
 
-    final localStorageService = LocalStorageService();
-
-    // Try to load cached data first
-    final cachedStores = await localStorageService.getCachedStoreLocations();
-    if (cachedStores != null) {
-      print('Loading stores from cache (${cachedStores.length} locations)');
-      _addNewStores(cachedStores, <String>{});
-      setState(() => _isLoadingStores = false);
-      
-      // If cache is old, refresh in background
-      if (!await localStorageService.isStoreCacheValid()) {
-        print('Cache is old, refreshing in background...');
-        _refreshStoreLocations();
-      }
-      return;
-    }
-
-    // No cache available, load from API
-    await _refreshStoreLocations();
-  }
-
-  Future<void> _refreshStoreLocations() async {
-    final localStorageService = LocalStorageService();
-    final processedPlaceIds = <String>{};
-    final allStores = <Map<String, dynamic>>[];
-
     try {
-      // First, search around user's current location if available
-      if (_currentPosition != null) {
-        print('Searching stores near current location');
-        final nearbyStores = await _placesService.searchNearbyStores(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-        );
-        _addNewStores(nearbyStores, processedPlaceIds);
-        allStores.addAll(nearbyStores.where((store) => 
-          processedPlaceIds.contains(store['place_id'])
-        ));
-      }
-
-      // Then search in all cities
-      final results = await _placesService.searchStoresInAllCities();
-      _addNewStores(results, processedPlaceIds);
-      allStores.addAll(results.where((store) => 
-        processedPlaceIds.contains(store['place_id'])
-      ));
-
-      // Save results to cache
-      await localStorageService.saveStoreLocations(allStores);
-      print('Saved ${allStores.length} store locations to cache');
-
+      // Initialize Places Service
+      await PlacesService.initialize();
+      
+      // Load from LocationService first as fallback
+      final stores = await _locationService.getAllPetStores();
+      final storeMarkers = stores.map((store) => _createStoreMarker(store)).toList();
+      
       if (mounted) {
         setState(() {
-          _isLoadingStores = false;
+          _storeMarkers = storeMarkers;
         });
-        print('Completed store search. Total stores found: ${_storeMarkers.length}');
+      }
+
+      // Then try to load additional stores from Places Service
+      final placesStores = await _placesService.getAllPetStores();
+      if (placesStores.isNotEmpty) {
+        final additionalMarkers = placesStores
+          .where((store) => !_storeMarkers.any((m) => m.key.toString() == store['place_id']))
+          .map((store) => _createStoreMarker(store))
+          .toList();
+
+        if (mounted) {
+          setState(() {
+            _storeMarkers = [..._storeMarkers, ...additionalMarkers];
+          });
+        }
       }
     } catch (e) {
       print('Error loading store locations: $e');
+    } finally {
       if (mounted) {
         setState(() => _isLoadingStores = false);
       }
-    }
-  }
-
-  void _addNewStores(List<Map<String, dynamic>> newStores, Set<String> processedPlaceIds) {
-    final newMarkers = <Marker>[];
-    
-    for (final store in newStores) {
-      final placeId = store['place_id'] as String;
-      if (!processedPlaceIds.contains(placeId)) {
-        processedPlaceIds.add(placeId);
-        newMarkers.add(_createStoreMarker(store));
-        print('Added store: ${store['name']}');
-        print('  Address: ${store['vicinity']}');
-        if (store['opening_hours'] != null) {
-          print('  Open now: ${store['opening_hours']['open_now']}');
-        }
-      }
-    }
-
-    if (newMarkers.isNotEmpty && mounted) {
-      setState(() {
-        _storeMarkers = [..._storeMarkers, ...newMarkers];
-      });
     }
   }
 
@@ -2143,7 +2159,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
       final lng = location['lng'] as double;
 
       // Check if place already exists in database
-      final dbService = DatabaseService();
+      final dbService = context.read<DatabaseService>();
       final existingLocation = isVet 
         ? await dbService.getVetLocation(prediction.placeId)
         : await dbService.getStoreLocation(prediction.placeId);
@@ -2159,7 +2175,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
         return;
       }
 
-      // Save to database
+      // Save to database using new methods
       if (isVet) {
         await dbService.saveVetLocation(prediction.placeId, lat, lng);
       } else {
@@ -2194,6 +2210,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
       // Move map to new location
       _mapController.move(LatLng(lat, lng), 15.0);
 
+      // Refresh the cache in PlacesService
+      await PlacesService.initialize();
+
     } catch (e) {
       print('Error adding business: $e');
       if (!mounted) return;
@@ -2212,335 +2231,82 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    // Apply clustering based on zoom level
+    final displayedVetMarkers = _clusterMarkers(_vetMarkers, _currentZoom);
+    final displayedStoreMarkers = _clusterMarkers(_storeMarkers, _currentZoom);
+
+    // Debug: Print the number of markers being displayed
+    print('DEBUG: Displaying \\${displayedStoreMarkers.length} store markers, \\${displayedVetMarkers.length} vet markers, \\${_userMarkers.length} user markers at zoom level \\${_currentZoom}');
+
     return Scaffold(
       body: Stack(
         children: [
           RepaintBoundary(
             child: FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _currentPosition != null
-                ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-                : const LatLng(36.7538, 3.0588), // Default to Algiers
-              initialZoom: 15,
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _currentPosition != null
+                  ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                  : const LatLng(36.7538, 3.0588), // Default to Algiers
+                initialZoom: 10.0,  // Changed from 15 to 10 to show more markers initially
+                minZoom: 5.0,  // Add minimum zoom level
+                maxZoom: 18.0,  // Add maximum zoom level
                 onMapEvent: (event) {
-                  if (event is MapEventMove) {
-                    final currentZoom = event.camera.zoom;
-                    if ((_currentZoom < _zoomThreshold && currentZoom >= _zoomThreshold) ||
-                        (_currentZoom >= _zoomThreshold && currentZoom < _zoomThreshold)) {
-                      setState(() {
-                        _currentZoom = currentZoom;
-                      });
-                    }
+                  final currentZoom = event.camera.zoom;
+                  if ((_currentZoom < _zoomThreshold && currentZoom >= _zoomThreshold) ||
+                      (_currentZoom >= _zoomThreshold && currentZoom < _zoomThreshold) ||
+                      (_currentZoom != currentZoom)) {
+                    setState(() {
+                      _currentZoom = currentZoom;
+                    });
                   }
+                  if (_legendExpanded) _minimizeLegend();
                 },
-            ),
-          children: [
-              TileLayer(
-                urlTemplate: MapboxConfig.mapboxStyleUrl,
-                additionalOptions: const {
-                  'accessToken': MapboxConfig.mapboxAccessToken,
-                  'id': MapboxConfig.mapboxStyleId,
-                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: MapboxConfig.mapboxStyleUrl,
+                  additionalOptions: const {
+                    'accessToken': MapboxConfig.mapboxAccessToken,
+                    'id': MapboxConfig.mapboxStyleId,
+                  },
                   tileBuilder: (context, widget, tile) {
                     return RepaintBoundary(
                       child: widget,
                     );
-                },
-              ),
-              // Lost pet zones
-              if (_nearbyLostPets.isNotEmpty)
-                CircleLayer(
-                  circles: _nearbyLostPets.map((pet) {
-                    final circleColor = Colors.red.withOpacity(0.2);
-                    final borderColor = Colors.red.withOpacity(0.5);
-                    
-                    return CircleMarker(
-                      point: pet.location,
-                      radius: 500.0, // 500 meters radius
-                      useRadiusInMeter: true,
-                      color: circleColor,
-                      borderColor: borderColor,
-                      borderStrokeWidth: 2,
-                    );
-                  }).toList(),
+                  },
                 ),
-                // Add lost pet markers
+                // Lost pet zones
+                if (_nearbyLostPets.isNotEmpty)
+                  CircleLayer(
+                    circles: _nearbyLostPets.map((pet) {
+                      final circleColor = Colors.red.withOpacity(0.2);
+                      final borderColor = Colors.red.withOpacity(0.5);
+                      
+                      return CircleMarker(
+                        point: pet.location,
+                        radius: 500.0, // 500 meters radius
+                        useRadiusInMeter: true,
+                        color: circleColor,
+                        borderColor: borderColor,
+                        borderStrokeWidth: 2,
+                      );
+                    }).toList(),
+                  ),
+
+                // Lost pet markers
                 if (_nearbyLostPets.isNotEmpty)
                   MarkerLayer(
                     markers: _nearbyLostPets.map((pet) {
                       return Marker(
                         point: pet.location,
-                        width: 40,
-                        height: 40,
+                        width: 20,
+                        height: 20,
                         child: GestureDetector(
-                          onTap: () {
-                            showDialog(
-                              context: context,
-                              barrierColor: Colors.black38,
-                              builder: (context) => Dialog(
-                                backgroundColor: Colors.transparent,
-                                child: Container(
-                                  constraints: BoxConstraints(
-                                    maxWidth: 400,
-                                    maxHeight: MediaQuery.of(context).size.height * 0.8,
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(24), // Increased corner radius
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.45),
-                                          borderRadius: BorderRadius.circular(24), // Increased corner radius
-                                          border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.1),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                                          children: [
-                                            if (pet.pet.imageUrls.isNotEmpty) ...[
-                                              SizedBox(
-                                                height: 200,
-                                                child: PageView.builder(
-                                                  itemCount: pet.pet.imageUrls.length,
-                                                  itemBuilder: (context, index) {
-                                                    return Stack(
-                                                      children: [
-                                                        Container(
-                                                          decoration: BoxDecoration(
-                                                            image: DecorationImage(
-                                                              image: NetworkImage(pet.pet.imageUrls[index]),
-                                                              fit: BoxFit.cover,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        // Photo count indicator
-                                                        if (pet.pet.imageUrls.length > 1)
-                                                          Positioned(
-                                                            right: 16,
-                                                            bottom: 16,
-                                                            child: Container(
-                                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                              decoration: BoxDecoration(
-                                                                color: Colors.black.withOpacity(0.7),
-                                                                borderRadius: BorderRadius.circular(16),
-                                                              ),
-                                                              child: Text(
-                                                                '${index + 1}/${pet.pet.imageUrls.length}',
-                                                                style: const TextStyle(
-                                                                  color: Colors.white,
-                                                                  fontSize: 12,
-                                                                  fontWeight: FontWeight.bold,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                      ],
-                                                    );
-                                                  },
-                                                ),
-                                              ),
-                                            ],
-                                            Flexible(
-                                              child: SingleChildScrollView(
-                                                child: Padding(
-                                                  padding: const EdgeInsets.all(16),
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      // Pet Name and Status
-                                                      Row(
-                                                        children: [
-                                                          Expanded(
-                                                            child: Text(
-                                                              pet.pet.name,
-                                                              style: const TextStyle(
-                                                                fontSize: 24,
-                                                                fontWeight: FontWeight.bold,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          Container(
-                                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.red.withOpacity(0.9),
-                                                              borderRadius: BorderRadius.circular(16),
-                                                            ),
-                                                            child: const Text(
-                                                              'LOST',
-                                                              style: TextStyle(
-                                                                color: Colors.white,
-                                                                fontWeight: FontWeight.bold,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      const SizedBox(height: 8),
-                                                      // Pet Type and Last Seen
-                                                      Row(
-                                                        children: [
-                                                          Text(
-                                                            pet.pet.species,
-                                                            style: TextStyle(
-                                                              color: Colors.black.withOpacity(0.6),
-                                                              fontSize: 16,
-                                                              fontWeight: FontWeight.w500,
-                                                            ),
-                                                          ),
-                                                          Text(
-                                                            ' • ',
-                                                            style: TextStyle(
-                                                              color: Colors.black.withOpacity(0.6),
-                                                              fontSize: 16,
-                                                            ),
-                                                          ),
-                                                          Text(
-                                                            'Last seen ${_formatDate(pet.lastSeenDate)}',
-                                                            style: TextStyle(
-                                                              color: Colors.black.withOpacity(0.6),
-                                                              fontSize: 16,
-                                                              fontWeight: FontWeight.w500,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      const SizedBox(height: 16),
-                                                      // Location
-                                                      Text(
-                                                        'Last Known Location:',
-                                                        style: TextStyle(
-                                                          color: Colors.black.withOpacity(0.8),
-                                                          fontSize: 16,
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        pet.address,
-                                                        style: TextStyle(
-                                                          color: Colors.black.withOpacity(0.6),
-                                                          fontSize: 15,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 16),
-                                                      // Description
-                                                      if (pet.additionalInfo != null && pet.additionalInfo!.isNotEmpty) ...[
-                                                        Text(
-                                                          'Description:',
-                                                          style: TextStyle(
-                                                            color: Colors.black.withOpacity(0.8),
-                                                            fontSize: 16,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 4),
-                                                        Text(
-                                                          pet.additionalInfo!,
-                                                          style: TextStyle(
-                                                            color: Colors.black.withOpacity(0.6),
-                                                            fontSize: 15,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 16),
-                                                      ],
-                                                      // Contact Numbers
-                                                      if (pet.contactNumbers.isNotEmpty) ...[
-                                                        Text(
-                                                          'Contact Numbers:',
-                                                          style: TextStyle(
-                                                            color: Colors.black.withOpacity(0.8),
-                                                            fontSize: 16,
-                                                            fontWeight: FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 8),
-                                                        ...pet.contactNumbers.map((number) => 
-                                                          Padding(
-                                                            padding: const EdgeInsets.only(bottom: 8),
-                                                            child: ElevatedButton.icon(
-                                                              onPressed: () => launchUrl(Uri.parse('tel:$number')),
-                                                              style: ElevatedButton.styleFrom(
-                                                                backgroundColor: Colors.green.withOpacity(0.9),
-                                                                foregroundColor: Colors.white,
-                                                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                                                                shape: RoundedRectangleBorder(
-                                                                  borderRadius: BorderRadius.circular(16),
-                                                                ),
-                                                              ),
-                                                              icon: const Icon(Icons.phone),
-                                                              label: Text(
-                                                                number,
-                                                                style: const TextStyle(
-                                                                  fontSize: 15,
-                                                                  fontWeight: FontWeight.bold,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                      const SizedBox(height: 16),
-                                                      // Visit Owner Profile Button
-                                                      SizedBox(
-                                                        width: double.infinity,
-                                                        child: ElevatedButton.icon(
-                                                          onPressed: () async {
-                                                            // First close the dialog
-                                                            Navigator.pop(context);
-                                                            // Then get the owner's data
-                                                            final owner = await DatabaseService().getUser(pet.reportedByUserId);
-                                                            if (owner != null && context.mounted) {
-                                                              // Navigate to owner's profile
-                                                              Navigator.push(
-                                                                context,
-                                                                MaterialPageRoute(
-                                                                  builder: (context) => UserProfilePage(user: owner),
-                                                                ),
-                                                              );
-                                                            }
-                                                          },
-                                                          style: ElevatedButton.styleFrom(
-                                                            backgroundColor: Colors.blue.withOpacity(0.9),
-                                                            foregroundColor: Colors.white,
-                                                            padding: const EdgeInsets.symmetric(vertical: 12),
-                                                            shape: RoundedRectangleBorder(
-                                                              borderRadius: BorderRadius.circular(16),
-                                                            ),
-                                                          ),
-                                                          icon: const Icon(Icons.person),
-                                                          label: const Text(
-                                                            'Visit Owner\'s Profile',
-                                                            style: TextStyle(
-                                                              fontSize: 15,
-                                                              fontWeight: FontWeight.bold,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
+                          onTap: () => _showLostPetDetails(pet),
                           child: Container(
+                            width: 16,
+                            height: 16,
                             decoration: BoxDecoration(
                               color: Colors.red,
                               shape: BoxShape.circle,
@@ -2548,100 +2314,66 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                                 color: Colors.white,
                                 width: 2,
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
                             ),
                             child: const Icon(
                               Icons.pets,
                               color: Colors.white,
-                              size: 16,
+                              size: 10,
                             ),
                           ),
                         ),
                       );
                     }).toList(),
                   ),
-                // Route polyline
-                if (_routePoints != null && _routePoints!.length >= 2)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: _routePoints!,
-                        strokeWidth: 4.0,
-                        gradientColors: _gradientColors,
+
+                // Current location marker
+                if (_currentPosition != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                        width: 20,
+                        height: 20,
+                        child: Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.orange,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 2,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                // Current location marker
-                if (_currentPosition != null && mounted)
-                  RepaintBoundary(
-                    child: MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-                          width: 40,
-                          height: 40,
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: Colors.orange,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+
                 // Selected place marker
-                if (_selectedPlaceMarker != null && mounted)
-                  RepaintBoundary(
-                    child: MarkerLayer(
-                  markers: [_selectedPlaceMarker!],
-                ),
+                if (_selectedPlaceMarker != null)
+                  MarkerLayer(
+                    markers: [_selectedPlaceMarker!],
                   ),
-                // Vet markers layer with RepaintBoundary
-                if (_vetMarkers.isNotEmpty)
-                  RepaintBoundary(
-                    child: MarkerLayer(
-                      markers: _vetMarkers,
-                    ),
+
+                // Vet markers layer with clustering
+                if (displayedVetMarkers.isNotEmpty)
+                  MarkerLayer(
+                    markers: displayedVetMarkers,
                   ),
-                // Store markers layer with RepaintBoundary
-                if (_storeMarkers.isNotEmpty)
-                  RepaintBoundary(
-                    child: MarkerLayer(
-                      markers: _storeMarkers,
-                    ),
+
+                // Store markers layer with clustering
+                if (displayedStoreMarkers.isNotEmpty)
+                  MarkerLayer(
+                    markers: displayedStoreMarkers,
                   ),
-                // User markers layer with RepaintBoundary
+
+                // User markers layer
                 if (_userMarkers.isNotEmpty)
-                  RepaintBoundary(
-                    child: MarkerLayer(
-                      markers: _userMarkers,
-                    ),
+                  MarkerLayer(
+                    markers: _userMarkers,
                   ),
-            ],
+              ],
             ),
           ),
           Positioned(
@@ -2778,6 +2510,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                 ),
               ),
             ),
+          MapLegend(
+            onMinimize: _minimizeLegend,
+            onExpandChanged: _setLegendExpanded,
+          ),
         ],
       ),
     );
@@ -2808,5 +2544,445 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     } else {
       return DateFormat('MMM d, y').format(date);
     }
+  }
+
+  void _showLostPetDetails(LostPet pet) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black38,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: 400,
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.45),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (pet.pet.imageUrls.isNotEmpty) ...[
+                      SizedBox(
+                        height: 200,
+                        child: PageView.builder(
+                          itemCount: pet.pet.imageUrls.length,
+                          itemBuilder: (context, index) {
+                            return Stack(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    image: DecorationImage(
+                                      image: NetworkImage(pet.pet.imageUrls[index]),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                                // Photo count indicator
+                                if (pet.pet.imageUrls.length > 1)
+                                  Positioned(
+                                    right: 16,
+                                    bottom: 16,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.7),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Text(
+                                        '${index + 1}/${pet.pet.imageUrls.length}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Pet Name and Status
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      pet.pet.name,
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.9),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Text(
+                                      'LOST',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              // Pet Type and Last Seen
+                              Row(
+                                children: [
+                                  Text(
+                                    pet.pet.species,
+                                    style: TextStyle(
+                                      color: Colors.black.withOpacity(0.6),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    ' • ',
+                                    style: TextStyle(
+                                      color: Colors.black.withOpacity(0.6),
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Last seen ${_formatDate(pet.lastSeenDate)}',
+                                    style: TextStyle(
+                                      color: Colors.black.withOpacity(0.6),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              // Location
+                              Text(
+                                'Last Known Location:',
+                                style: TextStyle(
+                                  color: Colors.black.withOpacity(0.8),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                pet.address,
+                                style: TextStyle(
+                                  color: Colors.black.withOpacity(0.6),
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Description
+                              if (pet.additionalInfo != null && pet.additionalInfo!.isNotEmpty) ...[
+                                Text(
+                                  'Description:',
+                                  style: TextStyle(
+                                    color: Colors.black.withOpacity(0.8),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  pet.additionalInfo!,
+                                  style: TextStyle(
+                                    color: Colors.black.withOpacity(0.6),
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                              // Contact Numbers
+                              if (pet.contactNumbers.isNotEmpty) ...[
+                                Text(
+                                  'Contact Numbers:',
+                                  style: TextStyle(
+                                    color: Colors.black.withOpacity(0.8),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ...pet.contactNumbers.map((number) => 
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => launchUrl(Uri.parse('tel:$number')),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green.withOpacity(0.9),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                      ),
+                                      icon: const Icon(Icons.phone),
+                                      label: Text(
+                                        number,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 16),
+                              // Visit Owner Profile Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    // First close the dialog
+                                    Navigator.pop(context);
+                                    // Then get the owner's data
+                                    final owner = await context.read<DatabaseService>().getUser(pet.reportedByUserId);
+                                    if (owner != null && context.mounted) {
+                                      // Navigate to owner's profile
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => UserProfilePage(user: owner),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue.withOpacity(0.9),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.person),
+                                  label: const Text(
+                                    'Visit Owner\'s Profile',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showVetDetails(Map<String, dynamic> vet) async {
+    final placeId = vet['place_id'];
+    final details = await _getPlaceDetails(placeId);
+    if (details != null) {
+      if (details.containsKey('result')) {
+        _showPlaceDetails(details, details['result']['name'] ?? vet['name'] ?? '');
+      } else {
+        _showPlaceDetails({'result': details}, details['name'] ?? vet['name'] ?? '');
+      }
+    } else {
+      _handleError('Could not find location details');
+    }
+  }
+
+  void _showStoreDetails(Map<String, dynamic> store) async {
+    final placeId = store['place_id'];
+    final details = await _getPlaceDetails(placeId);
+    if (details != null) {
+      if (details.containsKey('result')) {
+        _showPlaceDetails(details, details['result']['name'] ?? store['name'] ?? '');
+      } else {
+        _showPlaceDetails({'result': details}, details['name'] ?? store['name'] ?? '');
+      }
+    } else {
+      _handleError('Could not find location details');
+    }
+  }
+}
+
+class MapLegend extends StatefulWidget {
+  final VoidCallback? onMinimize;
+  final ValueChanged<bool>? onExpandChanged;
+  const MapLegend({Key? key, this.onMinimize, this.onExpandChanged}) : super(key: key);
+
+  @override
+  State<MapLegend> createState() => _MapLegendState();
+}
+
+class _MapLegendState extends State<MapLegend> with TickerProviderStateMixin {
+  bool _expanded = false;
+
+  void minimize() {
+    if (_expanded) setState(() => _expanded = false);
+  }
+
+  void _setExpanded(bool expanded) {
+    if (_expanded != expanded) {
+      setState(() => _expanded = expanded);
+      widget.onExpandChanged?.call(expanded);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: 24,
+      bottom: 100,
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.centerLeft,
+        child: Stack(
+          alignment: Alignment.centerLeft,
+          children: [
+            if (_expanded)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    _setExpanded(false);
+                    widget.onMinimize?.call();
+                  },
+                  behavior: HitTestBehavior.translucent,
+                  child: Container(),
+                ),
+              ),
+            GestureDetector(
+              onTap: () {
+                _setExpanded(!_expanded);
+              },
+              child: Container(
+                width: _expanded ? 220 : 44,
+                padding: _expanded
+                    ? const EdgeInsets.symmetric(horizontal: 20, vertical: 20)
+                    : const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: _expanded
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: BackdropFilter(
+                          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                          child: Container(
+                            color: Colors.white.withOpacity(0.7),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _legendRow(Colors.orange, 'Your location', const Color(0xFFEA9800)),
+                                const SizedBox(height: 12),
+                                _legendRow(Colors.blue, 'Vet locations', const Color(0xFF2196F3)),
+                                const SizedBox(height: 12),
+                                _legendRow(Colors.green, 'Store locations', const Color(0xFF4CAF50)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _legendCircle(Colors.orange),
+                          const SizedBox(height: 12),
+                          _legendCircle(Colors.blue),
+                          const SizedBox(height: 12),
+                          _legendCircle(Colors.green),
+                        ],
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _legendCircle(Color color) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 4),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendRow(Color color, String label, Color? overrideColor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _legendCircle(overrideColor ?? color),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: overrideColor ?? color,
+          ),
+        ),
+      ],
+    );
   }
 }

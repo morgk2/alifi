@@ -1,99 +1,233 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions for validation
-    function isValidUserData(data) {
-      return data.level is number 
-        && data.petsRescued is number 
-        && data.level >= 1 
-        && data.petsRescued >= 0
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isValidStoreProductData(data) {
+      return data.name is string 
+        && data.name.size() > 0
+        && data.description is string
+        && data.price is number 
+        && data.price >= 0
+        && data.currency is string
+        && data.imageUrls is list
+        && data.category is string
+        && data.storeId is string
+        && data.isActive is bool
         && data.createdAt is timestamp
-        && data.lastLoginAt is timestamp;
+        && data.lastUpdatedAt is timestamp
+        && data.rating is number
+        && data.rating >= 0 && data.rating <= 5
+        && data.totalOrders is number
+        && data.totalOrders >= 0
+        && (!('stockQuantity' in data) || data.stockQuantity is number)
+        && (!('variants' in data) || data.variants is list)
+        && (!('tags' in data) || data.tags is list)
+        && (!('specifications' in data) || data.specifications is map)
+        && (!('discountedPrice' in data) || (data.discountedPrice is number && data.discountedPrice <= data.price))
+        && (!('minimumOrder' in data) || data.minimumOrder is number)
+        && (!('maximumOrder' in data) || data.maximumOrder is number);
     }
 
-    function isValidUserUpdate(data) {
-      let hasValidLeaderboardFields = (!('level' in data) || data.level is number && data.level >= resource.data.level)
-        && (!('petsRescued' in data) || data.petsRescued is number && data.petsRescued >= resource.data.petsRescued);
+    function isValidMarketplaceProductData(data) {
+      return data.name is string 
+        && data.name.size() > 0
+        && data.description is string
+        && data.price is number 
+        && data.price >= 0
+        && data.imageUrls is list
+        && data.category is string
+        && data.createdAt is timestamp
+        && data.lastUpdatedAt is timestamp;
+    }
+
+    function isValidAliExpressData(data) {
+      return data.title is string 
+        && data.title.size() > 0
+        && data.description is string
+        && data.price is number 
+        && data.price >= 0
+        && data.originalPrice is number
+        && data.originalPrice >= 0
+        && data.photos is list
+        && data.photos.size() > 0
+        && data.category is string
+        && data.affiliateUrl is string
+        && data.orders is number
+        && data.orders >= 0
+        && data.rating is number
+        && data.rating >= 0 && data.rating <= 5
+        && data.shippingTime is string
+        && data.isFreeShipping is bool
+        && data.createdAt is timestamp
+        && data.lastUpdatedAt is timestamp
+        && data.isActive is bool;
+    }
+
+    // AliExpress listings collection
+    match /aliexpresslistings/{productId} {
+      // Anyone can read listings
+      allow read: if true;
       
-      return hasValidLeaderboardFields
-        && (!('lastLoginAt' in data) || data.lastLoginAt is timestamp);
+      // Only admins can write to listings with validation
+      allow create: if isAdmin() && isValidAliExpressData(request.resource.data);
+      allow update: if isAdmin() && isValidAliExpressData(request.resource.data);
+      allow delete: if isAdmin();
     }
 
-    function isValidLostPetData(data) {
-      return data.petId is string
-        && data.location is map 
-        && data.location.latitude is number
-        && data.location.longitude is number
-        && data.address is string
-        && data.lastSeenDate is timestamp
-        && data.reportedDate is timestamp
-        && data.isFound is bool
-        && data.reportedByUserId is string
-        && (!('additionalInfo' in data) || data.additionalInfo is string)
-        && (!('contactNumbers' in data) || data.contactNumbers is list);
+    // Locations collection (vets and stores)
+    match /locations/{document} {
+      // Anyone can read locations
+      allow read: if true;
+      
+      // Only admins can write to locations
+      allow write: if isAdmin();
+
+      // Allow writing to subcollections
+      match /{subcollection}/{document=**} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
     }
 
-    // Allow public read access to users collection
+    // Store products collection
+    match /storeproducts/{productId} {
+      // Anyone can read products
+      allow read: if true;
+      
+      // Only store owners and admins can create
+      allow create: if request.auth != null 
+        && isValidStoreProductData(request.resource.data)
+        && (
+          request.resource.data.storeId == request.auth.uid
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+        );
+      
+      // Only store owners and admins can update
+      allow update: if request.auth != null 
+        && isValidStoreProductData(request.resource.data)
+        && request.resource.data.storeId == resource.data.storeId  // Can't change owner
+        && (
+          resource.data.storeId == request.auth.uid
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+        );
+      
+      // Only store owners and admins can delete
+      allow delete: if request.auth != null 
+        && (
+          resource.data.storeId == request.auth.uid
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+        );
+    }
+
+    // Marketplace products collection
+    match /marketplace_products/{productId} {
+      // Anyone can read products
+      allow read: if true;
+      
+      // Only admins can write marketplace products
+      allow create: if isAdmin() && isValidMarketplaceProductData(request.resource.data);
+      allow update: if isAdmin() && isValidMarketplaceProductData(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Users collection
     match /users/{userId} {
+      // Anyone can read user profiles
       allow read: if true;
       
-      // Allow creation with valid initial data
-      allow create: if request.auth != null 
-        && request.auth.uid == userId
-        && isValidUserData(request.resource.data);
-      
-      // Allow updates with validated fields
-      allow update: if request.auth != null 
-        && request.auth.uid == userId
-        && isValidUserUpdate(request.resource.data);
-    }
-    
-    // Pet collection rules
-    match /pets/{petId} {
-      // Allow anyone to read pet data
-      allow read: if true;
-      
-      // Allow creation if user is authenticated and sets themselves as owner
-      allow create: if request.auth != null 
-        && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.lastUpdatedAt is timestamp;
-      
-      // Allow updates if user is the owner and isn't changing ownership
-      allow update: if request.auth != null 
-        && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.lastUpdatedAt is timestamp;
-      
-      // Allow deletion if user is the owner
-      allow delete: if request.auth != null 
-        && resource.data.ownerId == request.auth.uid;
+      // Users can only edit their own profile, admins can edit any profile
+      allow write: if isAuthenticated() && (
+        request.auth.uid == userId || isAdmin()
+      );
+
+      // Chat messages subcollection (AI assistant)
+      match /chat_messages/{messageId} {
+        // Only the user can read/write their own chat messages
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
-    // Lost pets collection rules
-    match /lost_pets/{lostPetId} {
-      // Allow anyone to read lost pet data
+    // Pets collection
+    match /pets/{petId} {
+      // Anyone can read pet info
       allow read: if true;
       
-      // Allow creation if user is authenticated and data is valid
-      allow create: if request.auth != null 
-        && request.resource.data.reportedByUserId == request.auth.uid
-        && isValidLostPetData(request.resource.data);
-      
-      // Allow updates if user is the reporter and maintaining valid data
-      allow update: if request.auth != null 
-        && resource.data.reportedByUserId == request.auth.uid
-        && request.resource.data.reportedByUserId == resource.data.reportedByUserId
-        && isValidLostPetData(request.resource.data);
-      
-      // Allow deletion if user is the reporter
-      allow delete: if request.auth != null 
-        && resource.data.reportedByUserId == request.auth.uid;
+      // Only pet owner or admin can edit
+      allow write: if isAuthenticated() && (
+        request.resource.data.ownerId == request.auth.uid || isAdmin()
+      );
     }
-    
-    // Restrict all other collections to authenticated users
+
+    // Lost pets collection
+    match /lost_pets/{petId} {
+      // Anyone can read lost pet reports
+      allow read: if true;
+      
+      // Authenticated users can create lost pet reports
+      // Only report creator or admin can edit/delete
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (
+        resource.data.reportedByUserId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // Pet ID collection
+    match /petId/{petIdDoc} {
+      // Users can read their own pet ID documents
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      
+      // Authenticated users can create pet ID documents for themselves
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own pet ID documents, admins can update any
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      
+      // Users can delete their own pet ID documents, admins can delete any
+      allow delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // Physical Pet ID collection
+    match /physicalPetIds/{physicalIdDoc} {
+      // Users can read their own physical pet ID requests
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      
+      // Authenticated users can create physical pet ID requests for themselves
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own physical pet ID requests, admins can update any
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      
+      // Users can delete their own physical pet ID requests, admins can delete any
+      allow delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // Default deny for unspecified paths
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read: if true;  // Public read access for all collections
+      allow write: if false; // No write access by default
     }
   }
 } 

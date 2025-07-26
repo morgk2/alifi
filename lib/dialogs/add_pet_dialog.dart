@@ -126,6 +126,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
   // Error message for top banner
   String? _errorMessage;
   bool _isSaving = false;
+  
+  // Pet status
+  bool _isPetLost = false;
 
   // Update weight methods
   void _updateWeight(String value) {
@@ -187,6 +190,23 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
       _weightController.text = _weight > 0 ? _weight.toStringAsFixed(1) : '';
       _selectedColor = _parseColor(widget.pet!.color);
       // _selectedImage: not prefilled (would require loading from URL)
+      
+      // Check if pet is lost
+      _checkPetStatus();
+    }
+  }
+
+  Future<void> _checkPetStatus() async {
+    if (widget.pet != null) {
+      try {
+        final databaseService = DatabaseService();
+        final isLost = await databaseService.isPetLost(widget.pet!.id);
+        setState(() {
+          _isPetLost = isLost;
+        });
+      } catch (e) {
+        print('Error checking pet status: $e');
+      }
     }
   }
 
@@ -1338,28 +1358,62 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
             // Header with cancel button and title
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(),
-                                        child: const Text(
-                                          'Cancel',
-                                          style: TextStyle(
-                                            color: Colors.grey,
-                                                  fontSize: 16,
-                                                ),
-                                              ),
-                                      ),
-                  Text(
-                    widget.pet != null ? 'Edit existing pet' : 'Add Pet',
-                    style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        widget.pet != null ? 'Edit existing pet' : 'Add Pet',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      // Empty space for symmetry
+                      const SizedBox(width: 70),
+                    ],
+                  ),
+                  // Pet status indicator
+                  if (widget.pet != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _isPetLost ? Colors.red : Colors.green,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isPetLost ? Icons.warning_rounded : Icons.check_circle,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _isPetLost ? 'LOST' : 'FOUND',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  // Empty space for symmetry
-                  SizedBox(width: 70),
+                  ],
                 ],
               ),
             ),

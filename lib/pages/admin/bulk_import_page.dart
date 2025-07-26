@@ -97,31 +97,26 @@ class _BulkImportPageState extends State<BulkImportPage> {
         });
 
         // Search for vets
-        final vets = await PlacesService().searchNearbyVets(
+        int cityVetCount = 0;
+        await for (final vet in PlacesService.searchNearbyVets(
           city['lat'],
           city['lng'],
-          forceApiSearch: true, // New parameter to force API search
-        );
-        _fetchedVets += vets.length;
-
-        // Search for stores using both methods
-        await for (final store in PlacesService().searchNearbyStoresByType(
-          city['lat'],
-          city['lng'],
-          forceApiSearch: true, // New parameter to force API search
+          forceApiSearch: true,
         )) {
-          _fetchedStores++;
-          setState(() {});
+          cityVetCount++;
         }
+        _fetchedVets += cityVetCount;
 
-        await for (final store in PlacesService().searchNearbyStoresByKeyword(
+        // Search for stores
+        int cityStoreCount = 0;
+        await for (final store in PlacesService.searchNearbyStores(
           city['lat'],
           city['lng'],
-          forceApiSearch: true, // New parameter to force API search
+          forceApiSearch: true,
         )) {
-          _fetchedStores++;
-          setState(() {});
+          cityStoreCount++;
         }
+        _fetchedStores += cityStoreCount;
 
         // Update status
         setState(() {

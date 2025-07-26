@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/lost_pet.dart';
+import '../services/database_service.dart';
+import '../services/auth_service.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 
 class LostPetCard extends StatelessWidget {
   final LostPet lostPet;
@@ -34,8 +37,85 @@ class LostPetCard extends StatelessWidget {
     }
   }
 
+  Future<void> _reportFound(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Report Found',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to mark this pet as found? This will remove it from the lost pets list.',
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Report Found',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final databaseService = context.read<DatabaseService>();
+        await databaseService.markLostPetAsFound(lostPet.id);
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pet marked as found successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error marking pet as found: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currentUser = context.read<AuthService>().currentUser;
+    final isCurrentUserPet = currentUser?.id == lostPet.reportedByUserId;
+    
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(
@@ -181,20 +261,32 @@ class LostPetCard extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _openInMaps,
-                          icon: const Icon(Icons.map),
-                          label: const Text('Open in Maps'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.blue,
-                            side: const BorderSide(color: Colors.blue),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
+                        child: isCurrentUserPet
+                            ? FilledButton.icon(
+                                onPressed: () => _reportFound(context),
+                                icon: const Icon(Icons.check_circle),
+                                label: const Text('Report Found'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              )
+                            : OutlinedButton.icon(
+                                onPressed: _openInMaps,
+                                icon: const Icon(Icons.map),
+                                label: const Text('Open in Maps'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.blue,
+                                  side: const BorderSide(color: Colors.blue),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
                       ),
-                      if (lostPet.contactNumbers.isNotEmpty) ...[
+                      if (lostPet.contactNumbers.isNotEmpty && !isCurrentUserPet) ...[
                         const SizedBox(width: 8),
                         Expanded(
                           child: FilledButton.icon(

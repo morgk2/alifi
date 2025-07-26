@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
-import 'database_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:isolate';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 class PlacesPrediction {
   final String placeId;
@@ -21,539 +22,97 @@ class PlacesPrediction {
   });
 }
 
+class LocationData {
+  final String placeId;
+  final LatLng location;
+  final DateTime createdAt;
+  final String? name;
+  final String? vicinity;
+  final Map<String, dynamic>? openingHours;
+
+  LocationData({
+    required this.placeId,
+    required this.location,
+    required this.createdAt,
+    this.name,
+    this.vicinity,
+    this.openingHours,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'placeId': placeId,
+    'lat': location.latitude,
+    'lng': location.longitude,
+    'createdAt': createdAt.toIso8601String(),
+    'name': name,
+    'vicinity': vicinity,
+    'openingHours': openingHours,
+  };
+
+  factory LocationData.fromJson(Map<String, dynamic> json) => LocationData(
+    placeId: json['placeId'],
+    location: LatLng(json['lat'], json['lng']),
+    createdAt: DateTime.parse(json['createdAt']),
+    name: json['name'],
+    vicinity: json['vicinity'],
+    openingHours: json['openingHours'] != null 
+      ? Map<String, dynamic>.from(json['openingHours'])
+      : null,
+  );
+
+  factory LocationData.fromFirestore(String placeId, Map<String, dynamic> data) {
+    final geoPoint = data['location'] as GeoPoint;
+    return LocationData(
+      placeId: placeId,
+      location: LatLng(geoPoint.latitude, geoPoint.longitude),
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      name: data['name'],
+      vicinity: data['vicinity'],
+      openingHours: data['openingHours'],
+    );
+  }
+
+  Map<String, dynamic> toPlaceResult() => {
+    'place_id': placeId,
+    'name': name,
+    'vicinity': vicinity,
+    'geometry': {
+      'location': {
+        'lat': location.latitude,
+        'lng': location.longitude,
+      }
+    },
+    'opening_hours': openingHours,
+  };
+}
+
 class PlacesService {
-  static const String _apiKey = 'AlzaSy8GCoFh_rNeeXKWnVnqeCauTmWq3i85B6H';
+  static const String _apiKey = 'AlzaSylphbmAZJYT82Ie_cY1MVEbiQ4NRUxaqIo';
   
-  // Cache for stored locations
-  static Map<String, LatLng>? _cachedVetLocations;
-  static Map<String, LatLng>? _cachedStoreLocations;
+  // Cache keys
+  static const String _vetCacheKey = 'vet_locations_cache_v2';
+  static const String _storeCacheKey = 'store_locations_cache_v2';
+  static const String _lastUpdateKey = 'locations_last_update_v2';
+  static const Duration _cacheValidityDuration = Duration(hours: 1);
+  
+  // In-memory cache
+  static Map<String, LocationData>? _cachedVetLocations;
+  static Map<String, LocationData>? _cachedStoreLocations;
   static bool _isInitialized = false;
   static DateTime? _lastUpdateTime;
-  static const String _vetCacheKey = 'vet_locations_cache';
-  static const String _storeCacheKey = 'store_locations_cache';
-  static const String _lastUpdateKey = 'locations_last_update';
-  static const Duration _cacheValidityDuration = Duration(days: 7); // Cache valid for 7 days
   
-  // Initialize cache from local storage first, then update from Firestore in background
-  static Future<void> initialize() async {
-    if (_isInitialized) return;
-    
-    print('Initializing PlacesService cache...');
-    
-    // Load from local storage first (fast)
-    await _loadFromLocalStorage();
-    
-    // Start background Firestore sync if needed
-    _startBackgroundSync();
-    
-    _isInitialized = true;
-  }
-  
-  static Future<void> _loadFromLocalStorage() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Check last update time
-      final lastUpdateStr = prefs.getString(_lastUpdateKey);
-      if (lastUpdateStr != null) {
-        _lastUpdateTime = DateTime.parse(lastUpdateStr);
-      }
-      
-      // Load vet locations
-      final vetCacheStr = prefs.getString(_vetCacheKey);
-      if (vetCacheStr != null) {
-        final vetCache = json.decode(vetCacheStr) as Map<String, dynamic>;
-        _cachedVetLocations = vetCache.map((key, value) {
-          final coords = (value as List<dynamic>).cast<double>();
-          return MapEntry(key, LatLng(coords[0], coords[1]));
-        });
-        print('Loaded ${_cachedVetLocations?.length ?? 0} vet locations from local storage');
-      }
-      
-      // Load store locations
-      final storeCacheStr = prefs.getString(_storeCacheKey);
-      if (storeCacheStr != null) {
-        final storeCache = json.decode(storeCacheStr) as Map<String, dynamic>;
-        _cachedStoreLocations = storeCache.map((key, value) {
-          final coords = (value as List<dynamic>).cast<double>();
-          return MapEntry(key, LatLng(coords[0], coords[1]));
-        });
-        print('Loaded ${_cachedStoreLocations?.length ?? 0} store locations from local storage');
-      }
-    } catch (e) {
-      print('Error loading from local storage: $e');
-      _cachedVetLocations = {};
-      _cachedStoreLocations = {};
-    }
-  }
-  
-  static Future<void> _saveToLocalStorage() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Save vet locations
-      if (_cachedVetLocations != null) {
-        final vetCache = _cachedVetLocations!.map((key, value) => 
-          MapEntry(key, [value.latitude, value.longitude]));
-        await prefs.setString(_vetCacheKey, json.encode(vetCache));
-      }
-      
-      // Save store locations
-      if (_cachedStoreLocations != null) {
-        final storeCache = _cachedStoreLocations!.map((key, value) => 
-          MapEntry(key, [value.latitude, value.longitude]));
-        await prefs.setString(_storeCacheKey, json.encode(storeCache));
-      }
-      
-      // Save update time
-      _lastUpdateTime = DateTime.now();
-      await prefs.setString(_lastUpdateKey, _lastUpdateTime!.toIso8601String());
-      
-      print('Saved locations to local storage');
-    } catch (e) {
-      print('Error saving to local storage: $e');
-    }
-  }
-  
-  static void _startBackgroundSync() async {
-    // Skip sync if cache is still valid
-    if (_lastUpdateTime != null && 
-        DateTime.now().difference(_lastUpdateTime!) < _cacheValidityDuration) {
-      print('Cache is still valid, skipping Firestore sync');
-      return;
-    }
-    
-    print('Starting background Firestore sync...');
-    
-    // Use compute for background processing
-    compute(_syncWithFirestore, null).then((_) {
-      print('Background sync completed');
-    }).catchError((e) {
-      print('Error in background sync: $e');
-    });
-  }
-  
-  static Future<void> _syncWithFirestore(void _) async {
-    final dbService = DatabaseService();
-    final newVetLocations = <String, LatLng>{};
-    final newStoreLocations = <String, LatLng>{};
-    
-    try {
-      // Load vet locations
-      final vetIds = await dbService.getAllVetPlaceIds();
-      for (final id in vetIds) {
-        final locationData = await dbService.getVetLocation(id);
-        if (locationData != null) {
-          final geoPoint = locationData[id]!;
-          newVetLocations[id] = LatLng(geoPoint.latitude, geoPoint.longitude);
-        }
-      }
-      
-      // Load store locations
-      final storeIds = await dbService.getAllStorePlaceIds();
-      for (final id in storeIds) {
-        final locationData = await dbService.getStoreLocation(id);
-        if (locationData != null) {
-          final geoPoint = locationData[id]!;
-          newStoreLocations[id] = LatLng(geoPoint.latitude, geoPoint.longitude);
-        }
-      }
-      
-      // Update cache
-      _cachedVetLocations = newVetLocations;
-      _cachedStoreLocations = newStoreLocations;
-      
-      // Save to local storage
-      await _saveToLocalStorage();
-      
-      print('Synced ${newVetLocations.length} vets and ${newStoreLocations.length} stores from Firestore');
-    } catch (e) {
-      print('Error syncing with Firestore: $e');
-    }
-  }
+  // Spatial index for quick radius search
+  static Map<String, List<LocationData>> _vetSpatialIndex = {};
+  static Map<String, List<LocationData>> _storeSpatialIndex = {};
+  static const double _gridSize = 0.1; // Grid size in degrees
 
-  Future<List<PlacesPrediction>> getPlacePredictions(String input) async {
-    // Add "Algeria" to the query if not already present
-    final searchQuery = input.toLowerCase().contains('algeria') ? input : '$input, Algeria';
-    
-    final url = Uri.parse(
-      'https://maps.gomaps.pro/maps/api/place/autocomplete/json'
-      '?input=$searchQuery'
-      '&key=$_apiKey'
-      '&components=country:dz'
-      '&types=establishment|geocode'  // Added types to get both businesses and addresses
-    );
-
-    try {
-      print('Searching for: $searchQuery');
-      final response = await http.get(url);
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK') {
-          return (data['predictions'] as List).map((prediction) {
-            final structuredFormatting = prediction['structured_formatting'];
-            return PlacesPrediction(
-              placeId: prediction['place_id'],
-              mainText: structuredFormatting['main_text'] ?? '',
-              secondaryText: structuredFormatting['secondary_text'] ?? '',
-              description: prediction['description'] ?? '',
-            );
-          }).toList();
-        } else {
-          print('Places API error: ${data['status']} - ${data['error_message'] ?? 'No error message'}');
-        }
-      }
-      return [];
-    } catch (e) {
-      print('Error getting place predictions: $e');
-      return [];
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> searchNearbyVets(
-    double lat,
-    double lng, {
-    int radius = 50000,
-    bool forceApiSearch = false,
-  }) async {
-    final results = <Map<String, dynamic>>[];
-    final processedIds = <String>{};
-    
-    try {
-      print('Searching for vets at $lat, $lng (radius: ${radius}m)');
-      
-      // Check cached locations first
-      if (_cachedVetLocations != null) {
-        _cachedVetLocations!.forEach((placeId, location) {
-          final distance = const Distance().as(
-            LengthUnit.Kilometer,
-            LatLng(lat, lng),
-            location,
-          );
-          
-          final adjustedRadius = PlacesService.isSaharanRegion(lat, lng) ? 100 : 50;
-          if (distance <= adjustedRadius) {
-            results.add({
-              'place_id': placeId,
-              'geometry': {
-                'location': {
-                  'lat': location.latitude,
-                  'lng': location.longitude,
-                }
-              }
-            });
-            processedIds.add(placeId);
-          }
-        });
-        
-        print('Found ${results.length} vets from cache within radius');
-        
-        // Return cache results unless forced API search
-        if (!forceApiSearch && results.isNotEmpty) {
-          return results;
-        }
-      }
-      
-      // Only proceed with API search if forced or no results found
-      if (forceApiSearch || results.isEmpty) {
-    final adjustedRadius = PlacesService.isSaharanRegion(lat, lng) ? 100000 : 50000;
-    
-    final url = Uri.parse(
-      'https://maps.gomaps.pro/maps/api/place/nearbysearch/json'
-      '?location=$lat,$lng'
-      '&radius=$adjustedRadius'
-      '&keyword=veterinaire|veterinary|clinique veterinaire|عيادة بيطرية|طبيب بيطري|vétérinaire|clinique animaux|animal clinic|pet clinic'
-      '&key=$_apiKey'
-    );
-
-        print('Fetching additional vets from Places API...');
-      final response = await http.get(url);
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK') {
-            final apiResults = List<Map<String, dynamic>>.from(data['results']);
-            print('Found ${apiResults.length} vets from API');
-            
-            for (final result in apiResults) {
-              try {
-                final placeId = result['place_id'] as String;
-                if (processedIds.contains(placeId)) continue;
-                
-                final location = result['geometry']['location'];
-                final lat = location['lat'] as double;
-                final lng = location['lng'] as double;
-                
-                await DatabaseService().saveVetLocation(placeId, lat, lng);
-                results.add(result);
-                processedIds.add(placeId);
-              } catch (e) {
-                print('Error processing API vet result: $e');
-                continue;
-              }
-            }
-        } else {
-          print('Places API error: ${data['status']} - ${data['error_message'] ?? 'No error message'}');
-          }
-        }
-      }
-    } catch (e) {
-      print('Error in searchNearbyVets: $e');
-    }
-    
-    print('Returning ${results.length} total vets');
-    return results;
-  }
-
-  Stream<Map<String, dynamic>> searchNearbyStoresByType(
-    double lat,
-    double lng, {
-    bool forceApiSearch = false,
-  }) async* {
-    final processedIds = <String>{};
-    
-    try {
-      print('Searching for stores by type at $lat, $lng');
-      
-      // Check cached locations first
-      if (_cachedStoreLocations != null) {
-        for (final entry in _cachedStoreLocations!.entries) {
-          if (processedIds.contains(entry.key)) continue;
-          
-          final distance = const Distance().as(
-            LengthUnit.Kilometer,
-            LatLng(lat, lng),
-            entry.value,
-          );
-          
-          final adjustedRadius = PlacesService.isSaharanRegion(lat, lng) ? 100 : 50;
-          if (distance <= adjustedRadius) {
-            processedIds.add(entry.key);
-            yield {
-              'place_id': entry.key,
-              'geometry': {
-                'location': {
-                  'lat': entry.value.latitude,
-                  'lng': entry.value.longitude,
-                }
-              }
-            };
-          }
-        }
-      }
-      
-      // Only proceed with API search if forced
-      if (forceApiSearch) {
-    final adjustedRadius = PlacesService.isSaharanRegion(lat, lng) ? 100000 : 50000;
-    
-    final typeUrl = Uri.parse(
-      'https://maps.gomaps.pro/maps/api/place/nearbysearch/json'
-      '?location=$lat,$lng'
-      '&radius=$adjustedRadius'
-      '&type=pet_store|store'
-      '&key=$_apiKey'
-    );
-
-        print('Fetching additional stores from Places API...');
-      final response = await http.get(typeUrl);
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK') {
-          final results = List<Map<String, dynamic>>.from(data['results']);
-            print('Found ${results.length} stores from API');
-            
-          for (final result in results) {
-              try {
-                final placeId = result['place_id'] as String;
-                if (processedIds.contains(placeId)) continue;
-                
-                final location = result['geometry']['location'];
-                final lat = location['lat'] as double;
-                final lng = location['lng'] as double;
-                
-                await DatabaseService().saveStoreLocation(placeId, lat, lng);
-                processedIds.add(placeId);
-            yield result;
-              } catch (e) {
-                print('Error processing API store result: $e');
-                continue;
-              }
-            }
-          } else {
-            print('Places API error: ${data['status']} - ${data['error_message'] ?? 'No error message'}');
-          }
-        }
-      }
-    } catch (e) {
-      print('Error in searchNearbyStoresByType: $e');
-    }
-  }
-
-  Stream<Map<String, dynamic>> searchNearbyStoresByKeyword(
-    double lat,
-    double lng, {
-    bool forceApiSearch = false,
-  }) async* {
-    final processedIds = <String>{};
-    
-    try {
-      print('Searching for stores by keyword at $lat, $lng');
-      
-      // Check cached locations first
-      if (_cachedStoreLocations != null) {
-        for (final entry in _cachedStoreLocations!.entries) {
-          if (processedIds.contains(entry.key)) continue;
-          
-          final distance = const Distance().as(
-            LengthUnit.Kilometer,
-            LatLng(lat, lng),
-            entry.value,
-          );
-          
-          final adjustedRadius = PlacesService.isSaharanRegion(lat, lng) ? 100 : 50;
-          if (distance <= adjustedRadius) {
-            processedIds.add(entry.key);
-            yield {
-              'place_id': entry.key,
-              'geometry': {
-                'location': {
-                  'lat': entry.value.latitude,
-                  'lng': entry.value.longitude,
-                }
-              }
-            };
-          }
-        }
-      }
-      
-      // Only proceed with API search if forced
-      if (forceApiSearch) {
-    final adjustedRadius = PlacesService.isSaharanRegion(lat, lng) ? 100000 : 50000;
-    
-    final keywordUrl = Uri.parse(
-      'https://maps.gomaps.pro/maps/api/place/nearbysearch/json'
-      '?location=$lat,$lng'
-      '&radius=$adjustedRadius'
-      '&keyword=animalerie|pet|pets|animal|animaux|animal shop|oasis|petshop|مستلزمات الحيوانات | حيوانات'
-      '&key=$_apiKey'
-    );
-
-        print('Fetching additional stores from Places API...');
-      final response = await http.get(keywordUrl);
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK') {
-          final results = List<Map<String, dynamic>>.from(data['results']);
-            print('Found ${results.length} stores from API');
-            
-          for (final result in results) {
-              try {
-                final placeId = result['place_id'] as String;
-                if (processedIds.contains(placeId)) continue;
-                
-                final location = result['geometry']['location'];
-                final lat = location['lat'] as double;
-                final lng = location['lng'] as double;
-                
-                await DatabaseService().saveStoreLocation(placeId, lat, lng);
-                processedIds.add(placeId);
-            yield result;
-              } catch (e) {
-                print('Error processing API store result: $e');
-                continue;
-              }
-            }
-          } else {
-            print('Places API error: ${data['status']} - ${data['error_message'] ?? 'No error message'}');
-          }
-        }
-      }
-    } catch (e) {
-      print('Error in searchNearbyStoresByKeyword: $e');
-    }
-  }
-
-  Stream<Map<String, dynamic>> searchNearbyStoresByText(double lat, double lng) async* {
-    final adjustedRadius = PlacesService.isSaharanRegion(lat, lng) ? 100000 : 50000;
-    
-    final textUrl = Uri.parse(
-      'https://maps.gomaps.pro/maps/api/place/textsearch/json'
-      '?location=$lat,$lng'
-      '&radius=$adjustedRadius'
-      '&query=animalerie OR pet shop OR pet store OR magasin animaux'
-      '&key=$_apiKey'
-    );
-
-    try {
-      print('Searching for stores by text at $lat, $lng');
-      final response = await http.get(textUrl);
-      print('Text search response status: ${response.statusCode}');
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK') {
-          final results = List<Map<String, dynamic>>.from(data['results']);
-          print('Found ${results.length} stores by text search');
-          for (final result in results) {
-            yield result;
-          }
-        }
-      }
-    } catch (e) {
-      print('Error in text search: $e');
-    }
-  }
-
-  // Keep the old method for backward compatibility but implement it using the new streaming methods
-  Future<List<Map<String, dynamic>>> searchNearbyStores(double lat, double lng, {int radius = 50000}) async {
-    final List<Map<String, dynamic>> allResults = [];
-    final Set<String> processedPlaceIds = {};
-
-    try {
-      await for (final result in searchNearbyStoresByType(lat, lng)) {
-        final placeId = result['place_id'] as String;
-        if (!processedPlaceIds.contains(placeId)) {
-          processedPlaceIds.add(placeId);
-          allResults.add(result);
-        }
-      }
-
-      await for (final result in searchNearbyStoresByKeyword(lat, lng)) {
-        final placeId = result['place_id'] as String;
-        if (!processedPlaceIds.contains(placeId)) {
-          processedPlaceIds.add(placeId);
-          allResults.add(result);
-        }
-      }
-
-      await for (final result in searchNearbyStoresByText(lat, lng)) {
-        final placeId = result['place_id'] as String;
-        if (!processedPlaceIds.contains(placeId)) {
-          processedPlaceIds.add(placeId);
-          allResults.add(result);
-        }
-      }
-
-      print('Found ${allResults.length} total unique stores');
-      return allResults;
-    } catch (e) {
-      print('Error searching nearby stores: $e');
-      return [];
-    }
-  }
-
-  static bool isSaharanRegion(double lat, double lng) {
-    // Approximate boundary for Saharan region in Algeria
-    return lat < 34.0;
-  }
+  // Firestore references
+  static final _firestore = FirebaseFirestore.instance;
+  static final _vetsDoc = _firestore.collection('locations').doc('vets');
+  static final _storesDoc = _firestore.collection('locations').doc('stores');
 
   // Major cities in Algeria with their coordinates
-  static final List<Map<String, dynamic>> algeriaCities = [
+  static List<Map<String, dynamic>> get algeriaCities => [
     // Northern Cities
     {'name': 'Alger', 'lat': 36.7538, 'lng': 3.0588},
     {'name': 'Oran', 'lat': 35.6987, 'lng': -0.6349},
@@ -606,58 +165,472 @@ class PlacesService {
     {'name': 'Tiaret', 'lat': 35.3667, 'lng': 1.3167},
   ];
 
-  Future<List<Map<String, dynamic>>> searchVetsInAllCities() async {
-    final allResults = <Map<String, dynamic>>[];
-    final processedPlaceIds = <String>{};
+  static Future<void> initialize() async {
+    if (_isInitialized) return;
+    
+    print('Initializing PlacesService...');
+    
+    try {
+      // First try to load from bundled JSON
+      await _loadFromJson();
+      
+      // Build spatial index
+      _buildSpatialIndex();
+      
+      _isInitialized = true;
+      print('PlacesService initialized successfully');
+      print('Loaded ${_cachedVetLocations?.length ?? 0} vets');
+      print('Loaded ${_cachedStoreLocations?.length ?? 0} stores');
+      
+    } catch (e) {
+      print('Error loading from JSON: $e');
+      throw Exception('Failed to load locations from JSON: $e');
+    }
+  }
 
-    // First search in major cities
-    for (final city in algeriaCities) {
-      try {
-        print('Searching vets in ${city['name']}');
-        final results = await searchNearbyVets(
-          city['lat'], 
-          city['lng'],
-        );
-        
-        for (final result in results) {
-          final placeId = result['place_id'] as String;
-          if (!processedPlaceIds.contains(placeId)) {
-            processedPlaceIds.add(placeId);
-            allResults.add(result);
-            print('Found vet in ${city['name']}: ${result['name']}');
+  static Future<void> _loadFromJson() async {
+    try {
+      print('\n=== Starting JSON Loading Process ===');
+      print('Loading locations from bundled JSON...');
+      
+      final jsonString = await rootBundle.loadString('assets/data/locations.json');
+      final Map<String, dynamic> jsonData = json.decode(jsonString);
+      
+      // Initialize cache maps if they don't exist
+      _cachedVetLocations ??= {};
+      _cachedStoreLocations ??= {};
+      
+      // Load stores
+      if (jsonData.containsKey('stores')) {
+        final stores = jsonData['stores'] as Map<String, dynamic>;
+        stores.forEach((placeId, data) {
+          if (data is Map<String, dynamic> && data.containsKey('location')) {
+            final location = data['location'] as Map<String, dynamic>;
+            _cachedStoreLocations![placeId] = LocationData(
+              placeId: placeId,
+              location: LatLng(
+                location['latitude'] as double,
+                location['longitude'] as double
+              ),
+              createdAt: DateTime.now(), // Use current date instead of future date
+              name: data['name'] as String?,
+              vicinity: data['vicinity'] as String?,
+              openingHours: data['opening_hours'] as Map<String, dynamic>?,
+            );
+          }
+        });
+      }
+      
+      // Load vets
+      if (jsonData.containsKey('vets')) {
+        final vets = jsonData['vets'] as Map<String, dynamic>;
+        vets.forEach((placeId, data) {
+          if (data is Map<String, dynamic> && data.containsKey('location')) {
+            final location = data['location'] as Map<String, dynamic>;
+            _cachedVetLocations![placeId] = LocationData(
+              placeId: placeId,
+              location: LatLng(
+                location['latitude'] as double,
+                location['longitude'] as double
+              ),
+              createdAt: DateTime.now(), // Use current date instead of future date
+              name: data['name'] as String?,
+              vicinity: data['vicinity'] as String?,
+              openingHours: data['opening_hours'] as Map<String, dynamic>?,
+            );
+          }
+        });
+      }
+      
+      print('Successfully loaded ${_cachedStoreLocations?.length ?? 0} stores and ${_cachedVetLocations?.length ?? 0} vets');
+      _lastUpdateTime = DateTime.now();
+      
+    } catch (e, stackTrace) {
+      print('Error loading from JSON: $e');
+      print('Stack trace: $stackTrace');
+      // Don't throw, just log the error and continue with empty caches
+      _cachedStoreLocations = {};
+      _cachedVetLocations = {};
+    }
+  }
+
+  static void _initializeWithData(Map<String, dynamic> data) {
+    _cachedVetLocations = {};
+    _cachedStoreLocations = {};
+    print('Initialized with empty location caches');
+  }
+  
+  static Future<void> _loadFromLocalStorage() async {
+    try {
+      print('Loading from local storage (fallback)...');
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Check last update time
+      final lastUpdateStr = prefs.getString(_lastUpdateKey);
+      if (lastUpdateStr != null) {
+        _lastUpdateTime = DateTime.parse(lastUpdateStr);
+      }
+      
+      // Load vet locations
+      final vetCacheStr = prefs.getString(_vetCacheKey);
+      if (vetCacheStr != null) {
+        final vetCache = json.decode(vetCacheStr) as Map<String, dynamic>;
+        _cachedVetLocations = vetCache.map((key, value) => MapEntry(
+          key, 
+          LocationData.fromJson(value as Map<String, dynamic>),
+        ));
+        print('Loaded ${_cachedVetLocations?.length ?? 0} vet locations from local storage');
+      } else {
+        _cachedVetLocations = {};
+      }
+      
+      // Load store locations
+      final storeCacheStr = prefs.getString(_storeCacheKey);
+      if (storeCacheStr != null) {
+        final storeCache = json.decode(storeCacheStr) as Map<String, dynamic>;
+        _cachedStoreLocations = storeCache.map((key, value) => MapEntry(
+          key, 
+          LocationData.fromJson(value as Map<String, dynamic>),
+        ));
+        print('Loaded ${_cachedStoreLocations?.length ?? 0} store locations from local storage');
+      } else {
+        _cachedStoreLocations = {};
+      }
+    } catch (e) {
+      print('Error loading from local storage: $e');
+      _cachedVetLocations = {};
+      _cachedStoreLocations = {};
+    }
+  }
+  
+  static Future<void> _saveToLocalStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Save vet locations
+      if (_cachedVetLocations != null) {
+        final vetCache = _cachedVetLocations!.map((key, value) => 
+          MapEntry(key, value.toJson()));
+        await prefs.setString(_vetCacheKey, json.encode(vetCache));
+      }
+      
+      // Save store locations
+      if (_cachedStoreLocations != null) {
+        final storeCache = _cachedStoreLocations!.map((key, value) => 
+          MapEntry(key, value.toJson()));
+        await prefs.setString(_storeCacheKey, json.encode(storeCache));
+      }
+      
+      // Save update time
+      if (_lastUpdateTime != null) {
+        await prefs.setString(_lastUpdateKey, _lastUpdateTime!.toIso8601String());
+      }
+      
+      print('Saved locations to local storage');
+    } catch (e) {
+      print('Error saving to local storage: $e');
+    }
+  }
+  
+  static void _buildSpatialIndex() {
+    try {
+      print('Building spatial index...');
+      _vetSpatialIndex.clear();
+      _storeSpatialIndex.clear();
+      
+      // Index vet locations
+      if (_cachedVetLocations != null) {
+        for (final location in _cachedVetLocations!.values) {
+          try {
+            if (location.location != null) {
+              final gridKey = _getGridKey(location.location.latitude, location.location.longitude);
+              _vetSpatialIndex.putIfAbsent(gridKey, () => []).add(location);
+            }
+          } catch (e, stackTrace) {
+            print('Error indexing vet location: $e');
+            print('Stack trace: $stackTrace');
           }
         }
+        print('Indexed ${_cachedVetLocations!.length} vet locations into ${_vetSpatialIndex.length} grids');
+      }
+      
+      // Index store locations
+      if (_cachedStoreLocations != null) {
+        for (final location in _cachedStoreLocations!.values) {
+          try {
+            if (location.location != null) {
+              final gridKey = _getGridKey(location.location.latitude, location.location.longitude);
+              _storeSpatialIndex.putIfAbsent(gridKey, () => []).add(location);
+            }
+          } catch (e, stackTrace) {
+            print('Error indexing store location: $e');
+            print('Stack trace: $stackTrace');
+          }
+        }
+        print('Indexed ${_cachedStoreLocations!.length} store locations into ${_storeSpatialIndex.length} grids');
+      }
+    } catch (e, stackTrace) {
+      print('Error building spatial index: $e');
+      print('Stack trace: $stackTrace');
+      // Initialize empty indices if indexing fails
+      _vetSpatialIndex = {};
+      _storeSpatialIndex = {};
+    }
+  }
 
-        // For Saharan cities, also search in surrounding areas
-        if (PlacesService.isSaharanRegion(city['lat'], city['lng'])) {
-          // Search in a grid around the city to cover more area
-          for (var latOffset = -0.5; latOffset <= 0.5; latOffset += 0.5) {
-            for (var lngOffset = -0.5; lngOffset <= 0.5; lngOffset += 0.5) {
-              if (latOffset == 0 && lngOffset == 0) continue; // Skip center point as it's already searched
-              
-              final lat = city['lat'] + latOffset;
-              final lng = city['lng'] + lngOffset;
-              
-              print('Searching additional area near ${city['name']}: $lat, $lng');
-              final additionalResults = await searchNearbyVets(lat, lng);
-              
-              for (final result in additionalResults) {
-                final placeId = result['place_id'] as String;
-                if (!processedPlaceIds.contains(placeId)) {
-                  processedPlaceIds.add(placeId);
-                  allResults.add(result);
-                  print('Found vet in extended area near ${city['name']}: ${result['name']}');
+  static String _getGridKey(double lat, double lng) {
+    try {
+      final gridLat = (lat / _gridSize).floor();
+      final gridLng = (lng / _gridSize).floor();
+      return '$gridLat:$gridLng';
+    } catch (e) {
+      print('Error generating grid key for lat: $lat, lng: $lng - $e');
+      // Return a default grid key that won't affect real data
+      return '0:0';
+    }
+  }
+
+  static List<LocationData> _getLocationsInRadius(
+    double lat, 
+    double lng, 
+    double radiusKm,
+    bool isVet,
+  ) {
+    try {
+      final results = <LocationData>{};
+      final distance = const Distance();
+      
+      // Calculate grid cells to check based on radius
+      final gridRadius = (radiusKm / 11.0).ceil(); // Convert km to grid cells
+      final centerGridLat = (lat / _gridSize).floor();
+      final centerGridLng = (lng / _gridSize).floor();
+      
+      for (var i = -gridRadius; i <= gridRadius; i++) {
+        for (var j = -gridRadius; j <= gridRadius; j++) {
+          try {
+            final gridKey = '${centerGridLat + i}:${centerGridLng + j}';
+            final locations = isVet 
+              ? _vetSpatialIndex[gridKey] ?? []
+              : _storeSpatialIndex[gridKey] ?? [];
+            
+            for (final location in locations) {
+              if (location.location != null) {
+                final dist = distance.as(
+                  LengthUnit.Kilometer,
+                  LatLng(lat, lng),
+                  location.location,
+                );
+                
+                if (dist <= radiusKm) {
+                  results.add(location);
                 }
               }
             }
+          } catch (e) {
+            print('Error processing grid cell: $e');
           }
         }
-      } catch (e) {
-        print('Error searching vets in ${city['name']}: $e');
       }
+      
+      return results.toList();
+    } catch (e, stackTrace) {
+      print('Error getting locations in radius: $e');
+      print('Stack trace: $stackTrace');
+      return [];
     }
+  }
 
-    return allResults;
+  // Convert searchNearbyVets to use Stream for progressive loading
+  static Stream<Map<String, dynamic>> searchNearbyVets(
+    double lat,
+    double lng, {
+    int radius = 50000,
+    bool forceApiSearch = false,
+  }) async* {
+    await initialize();
+    
+    final processedIds = <String>{};
+    final radiusKm = radius / 1000;
+    
+    try {
+      // Get locations from spatial index
+      final locations = _getLocationsInRadius(lat, lng, radiusKm, true);
+      
+      // Yield cached results first (instant results)
+      for (final location in locations) {
+        yield {
+          'place_id': location.placeId,
+          'geometry': {
+            'location': {
+              'lat': location.location.latitude,
+              'lng': location.location.longitude,
+            },
+          },
+        };
+        processedIds.add(location.placeId);
+      }
+      
+      print('Found ${locations.length} vets within ${radiusKm}km radius');
+      
+      // Only proceed with API search if forced
+      if (forceApiSearch) {
+        final apiResults = await _searchNearbyVetsFromApi(lat, lng, radius);
+        for (final result in apiResults) {
+          final placeId = result['place_id'] as String;
+          if (!processedIds.contains(placeId)) {
+            yield result;
+            processedIds.add(placeId);
+          }
+        }
+      }
+    } catch (e) {
+      print('Error in searchNearbyVets: $e');
+    }
+  }
+
+  // Make API search methods return Lists instead of Streams
+  static Future<List<Map<String, dynamic>>> _searchNearbyVetsFromApi(
+    double lat,
+    double lng,
+    int radius,
+  ) async {
+    try {
+      final url = Uri.https('maps.googleapis.com', '/maps/api/place/nearbysearch/json', {
+        'location': '$lat,$lng',
+        'radius': radius.toString(),
+        'type': 'veterinary_care',
+        'key': _apiKey,
+      });
+
+      final response = await http.get(url);
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      
+      if (data['status'] != 'OK') {
+        print('API Error: ${data['status']} - ${data['error_message']}');
+        return [];
+      }
+
+      return (data['results'] as List).cast<Map<String, dynamic>>();
+    } catch (e) {
+      print('Error searching vets from API: $e');
+      return [];
+    }
+  }
+
+  static Stream<Map<String, dynamic>> searchNearbyStores(
+    double lat,
+    double lng, {
+    int radius = 50000,
+    bool forceApiSearch = false,
+  }) async* {
+    await initialize();
+    
+    final processedIds = <String>{};
+    final radiusKm = radius / 1000;
+    
+    try {
+      // Get locations from spatial index
+      final locations = _getLocationsInRadius(lat, lng, radiusKm, false);
+      
+      // Yield cached results first (instant results)
+      for (final location in locations) {
+        yield {
+          'place_id': location.placeId,
+          'geometry': {
+            'location': {
+              'lat': location.location.latitude,
+              'lng': location.location.longitude,
+            },
+          },
+        };
+        processedIds.add(location.placeId);
+      }
+      
+      print('Found ${locations.length} stores within ${radiusKm}km radius');
+      
+      // Only proceed with API search if forced
+      if (forceApiSearch) {
+        final apiResults = await _searchNearbyStoresFromApi(lat, lng, radius);
+        for (final result in apiResults) {
+          final placeId = result['place_id'] as String;
+          if (!processedIds.contains(placeId)) {
+            yield result;
+            processedIds.add(placeId);
+          }
+        }
+      }
+    } catch (e) {
+      print('Error in searchNearbyStores: $e');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> _searchNearbyStoresFromApi(
+    double lat,
+    double lng,
+    int radius,
+  ) async {
+    try {
+      final url = Uri.https('maps.googleapis.com', '/maps/api/place/nearbysearch/json', {
+        'location': '$lat,$lng',
+        'radius': radius.toString(),
+        'type': 'pet_store',
+        'key': _apiKey,
+      });
+
+      final response = await http.get(url);
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      
+      if (data['status'] != 'OK') {
+        print('API Error: ${data['status']} - ${data['error_message']}');
+        return [];
+      }
+
+      return (data['results'] as List).cast<Map<String, dynamic>>();
+    } catch (e) {
+      print('Error searching stores from API: $e');
+      return [];
+    }
+  }
+
+  static bool isSaharanRegion(double lat, double lng) {
+    return lat < 34.0;
+  }
+
+  Future<List<PlacesPrediction>> getPlacePredictions(String input) async {
+    // Add "Algeria" to the query if not already present
+    final searchQuery = input.toLowerCase().contains('algeria') ? input : '$input, Algeria';
+    
+    final url = Uri.parse(
+      'https://maps.gomaps.pro/maps/api/place/autocomplete/json'
+      '?input=$searchQuery'
+      '&key=$_apiKey'
+      '&components=country:dz'
+      '&types=establishment|geocode'
+    );
+
+    try {
+      print('Searching for: $searchQuery');
+      final response = await http.get(url);
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          return (data['predictions'] as List).map((prediction) {
+            final structuredFormatting = prediction['structured_formatting'];
+            return PlacesPrediction(
+              placeId: prediction['place_id'],
+              mainText: structuredFormatting['main_text'] ?? '',
+              secondaryText: structuredFormatting['secondary_text'] ?? '',
+              description: prediction['description'] ?? '',
+            );
+          }).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error getting place predictions: $e');
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> searchStoresInAllCities() async {
@@ -668,23 +641,20 @@ class PlacesService {
     for (final city in algeriaCities) {
       try {
         print('Searching stores in ${city['name']}');
-        final results = await searchNearbyStores(
+        await for (final store in searchNearbyStores(
           city['lat'], 
           city['lng'],
-        );
-        
-        for (final result in results) {
-          final placeId = result['place_id'] as String;
+          forceApiSearch: true,
+        )) {
+          final placeId = store['place_id'] as String;
           if (!processedPlaceIds.contains(placeId)) {
             processedPlaceIds.add(placeId);
-            allResults.add(result);
-            print('Found store in ${city['name']}: ${result['name']}');
+            allResults.add(store);
           }
         }
 
         // For Saharan cities, also search in surrounding areas
-        if (PlacesService.isSaharanRegion(city['lat'], city['lng'])) {
-          // Search in a grid around the city to cover more area
+        if (isSaharanRegion(city['lat'], city['lng'])) {
           for (var latOffset = -0.5; latOffset <= 0.5; latOffset += 0.5) {
             for (var lngOffset = -0.5; lngOffset <= 0.5; lngOffset += 0.5) {
               if (latOffset == 0 && lngOffset == 0) continue;
@@ -692,15 +662,11 @@ class PlacesService {
               final lat = city['lat'] + latOffset;
               final lng = city['lng'] + lngOffset;
               
-              print('Searching additional area near ${city['name']}: $lat, $lng');
-              final additionalResults = await searchNearbyStores(lat, lng);
-              
-              for (final result in additionalResults) {
-                final placeId = result['place_id'] as String;
+              await for (final store in searchNearbyStores(lat, lng, forceApiSearch: true)) {
+                final placeId = store['place_id'] as String;
                 if (!processedPlaceIds.contains(placeId)) {
                   processedPlaceIds.add(placeId);
-                  allResults.add(result);
-                  print('Found store in extended area near ${city['name']}: ${result['name']}');
+                  allResults.add(store);
                 }
               }
             }
@@ -712,5 +678,81 @@ class PlacesService {
     }
 
     return allResults;
+  }
+
+  // Get all vet clinics from the cache
+  Future<List<Map<String, dynamic>>> getAllVetClinics() async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+    return _cachedVetLocations?.values.map((data) => data.toPlaceResult()).toList() ?? [];
+  }
+
+  // Get all pet stores from the cache
+  Future<List<Map<String, dynamic>>> getAllPetStores() async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+    return _cachedStoreLocations?.values.map((data) => data.toPlaceResult()).toList() ?? [];
+  }
+
+  static Future<void> _startBackgroundSync() async {
+    try {
+      print('Starting background Firestore sync...');
+      
+      // Get vet locations
+      final vetsDoc = await _vetsDoc.get();
+      if (vetsDoc.exists) {
+        final locations = vetsDoc.data()?['locations'] as Map<String, dynamic>? ?? {};
+        _cachedVetLocations = {};
+        
+        for (final entry in locations.entries) {
+          try {
+            _cachedVetLocations![entry.key] = LocationData.fromFirestore(
+              entry.key,
+              entry.value as Map<String, dynamic>,
+            );
+          } catch (e, stackTrace) {
+            print('Error parsing vet location ${entry.key}: $e');
+            print('Stack trace: $stackTrace');
+          }
+        }
+        print('Synced ${_cachedVetLocations!.length} vet locations from Firestore');
+      }
+      
+      // Get store locations
+      final storesDoc = await _storesDoc.get();
+      if (storesDoc.exists) {
+        final locations = storesDoc.data()?['locations'] as Map<String, dynamic>? ?? {};
+        _cachedStoreLocations = {};
+        
+        for (final entry in locations.entries) {
+          try {
+            _cachedStoreLocations![entry.key] = LocationData.fromFirestore(
+              entry.key,
+              entry.value as Map<String, dynamic>,
+            );
+          } catch (e, stackTrace) {
+            print('Error parsing store location ${entry.key}: $e');
+            print('Stack trace: $stackTrace');
+          }
+        }
+        print('Synced ${_cachedStoreLocations!.length} store locations from Firestore');
+      }
+      
+      // Update last sync time
+      _lastUpdateTime = DateTime.now();
+      
+      // Rebuild spatial index with new data
+      _buildSpatialIndex();
+      
+      // Save to local storage
+      await _saveToLocalStorage();
+      
+      print('Background sync completed successfully');
+    } catch (e, stackTrace) {
+      print('Error in background sync: $e');
+      print('Stack trace: $stackTrace');
+    }
   }
 } 

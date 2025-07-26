@@ -11,6 +11,8 @@ import 'package:latlong2/latlong.dart';
 import '../models/aliexpress_product.dart';
 import '../models/marketplace_product.dart';
 import 'package:rxdart/rxdart.dart';
+import 'dart:convert'; // Added for json.decode
+import 'package:http/http.dart' as http; // Added for http.get
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -24,6 +26,143 @@ class DatabaseService {
   CollectionReference get _storeProductsCollection => _db.collection('storeproducts');
   CollectionReference get _vetLocationsCollection => _db.collection('vet_locations');
   CollectionReference get _storeLocationsCollection => _db.collection('store_locations');
+
+  // Single document for all locations in 'locations' collection
+  DocumentReference get _vetLocationsDoc => _db.collection('locations').doc('vets');
+  DocumentReference get _storeLocationsDoc => _db.collection('locations').doc('stores');
+
+  // Add migration method for locations
+  Future<void> migrateLocations() async {
+    try {
+      print('Starting location migration...');
+      
+      // Create batch for atomic operations
+      var batch = _db.batch();
+      int operationCount = 0;
+      
+      // Create the locations document references
+      final vetsDoc = _db.collection('locations').doc('vets');
+      final storesDoc = _db.collection('locations').doc('stores');
+      
+      // Get existing locations first
+      print('Fetching existing locations...');
+      final existingVetsDoc = await vetsDoc.get();
+      final existingStoresDoc = await storesDoc.get();
+      
+      // Extract existing locations
+      Map<String, dynamic> existingVetLocations = 
+        (existingVetsDoc.data()?['locations'] as Map<String, dynamic>?) ?? {};
+      Map<String, dynamic> existingStoreLocations = 
+        (existingStoresDoc.data()?['locations'] as Map<String, dynamic>?) ?? {};
+      
+      print('Found ${existingVetLocations.length} existing vet locations');
+      print('Found ${existingStoreLocations.length} existing store locations');
+      
+      // Get all vet locations
+      print('Fetching vet locations from old collection...');
+      final vetDocs = await _db.collection('vet_locations').get();
+      
+      // Prepare vet locations data
+      Map<String, dynamic> vetLocations = Map.from(existingVetLocations);
+      int newVetCount = 0;
+      for (var doc in vetDocs.docs) {
+        final data = doc.data();
+        if (data['location'] != null && !vetLocations.containsKey(doc.id)) {
+          // Get place details for each vet
+          final details = await _getPlaceDetails(doc.id);
+          vetLocations[doc.id] = {
+            'location': data['location'],
+            'createdAt': data['createdAt'] ?? FieldValue.serverTimestamp(),
+            'name': details?['name'] ?? 'Unknown Vet',
+            'vicinity': details?['vicinity'] ?? 'Location unavailable',
+            'openingHours': details?['opening_hours'],
+          };
+          newVetCount++;
+          print('Added vet: ${details?['name'] ?? 'Unknown Vet'}');
+        }
+      }
+      
+      // Set vet locations if there are new ones
+      if (newVetCount > 0) {
+        batch.set(vetsDoc, {'locations': vetLocations}, SetOptions(merge: true));
+        print('Prepared $newVetCount new vet locations');
+        operationCount++;
+      } else {
+        print('No new vet locations to migrate');
+      }
+      
+      // Get all store locations
+      print('Fetching store locations from old collection...');
+      final storeDocs = await _db.collection('store_locations').get();
+      
+      // Prepare store locations data
+      Map<String, dynamic> storeLocations = Map.from(existingStoreLocations);
+      int newStoreCount = 0;
+      for (var doc in storeDocs.docs) {
+        final data = doc.data();
+        if (data['location'] != null && !storeLocations.containsKey(doc.id)) {
+          // Get place details for each store
+          final details = await _getPlaceDetails(doc.id);
+          storeLocations[doc.id] = {
+            'location': data['location'],
+            'createdAt': data['createdAt'] ?? FieldValue.serverTimestamp(),
+            'name': details?['name'] ?? 'Unknown Store',
+            'vicinity': details?['vicinity'] ?? 'Location unavailable',
+            'openingHours': details?['opening_hours'],
+          };
+          newStoreCount++;
+          print('Added store: ${details?['name'] ?? 'Unknown Store'}');
+        }
+      }
+      
+      // Set store locations if there are new ones
+      if (newStoreCount > 0) {
+        batch.set(storesDoc, {'locations': storeLocations}, SetOptions(merge: true));
+        print('Prepared $newStoreCount new store locations');
+        operationCount++;
+      } else {
+        print('No new store locations to migrate');
+      }
+      
+      // Commit the batch if there are any changes
+      if (operationCount > 0) {
+        print('Committing changes...');
+        await batch.commit();
+        print('Migration completed successfully');
+        print('Total locations after migration:');
+        print('- Vets: ${vetLocations.length}');
+        print('- Stores: ${storeLocations.length}');
+      } else {
+        print('No new locations to migrate');
+      }
+      
+    } catch (e) {
+      print('Error during migration: $e');
+      throw e;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _getPlaceDetails(String placeId) async {
+    final url = Uri.parse(
+      'https://maps.gomaps.pro/maps/api/place/details/json'
+      '?place_id=$placeId'
+      '&key=AlzaSylphbmAZJYT82Ie_cY1MVEbiQ4NRUxaqIo'
+      '&fields=name,vicinity,opening_hours'
+    );
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          return data['result'];
+        }
+      }
+    } catch (e) {
+      print('Error getting place details: $e');
+    }
+    return null;
+  }
 
   // User Operations
   Future<void> createUser(User user) async {
@@ -650,6 +789,34 @@ class DatabaseService {
         });
   }
 
+  // Mark lost pet as found
+  Future<void> markLostPetAsFound(String lostPetId) async {
+    try {
+      await _lostPetsCollection.doc(lostPetId).update({
+        'isFound': true,
+        'foundDate': FieldValue.serverTimestamp(),
+      });
+      print('Marked lost pet $lostPetId as found');
+    } catch (e) {
+      print('Error marking lost pet as found: $e');
+      rethrow;
+    }
+  }
+
+  // Check if a pet is currently lost
+  Future<bool> isPetLost(String petId) async {
+    try {
+      final snapshot = await _lostPetsCollection
+          .where('petId', isEqualTo: petId)
+          .where('isFound', isEqualTo: false)
+          .get();
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking if pet is lost: $e');
+      return false;
+    }
+  }
+
   // Leaderboard Operations
   Stream<List<User>> getLeaderboardUsers({int limit = 50}) {
     return _usersCollection
@@ -1119,72 +1286,92 @@ class DatabaseService {
   // Vet and Store Location Operations
   Future<void> saveVetLocation(String placeId, double lat, double lng) async {
     try {
-      await _vetLocationsCollection.doc(placeId).set({
-        'location': GeoPoint(lat, lng),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      print('Saved vet location: $placeId at $lat, $lng');
+      final vetsDoc = _db.collection('locations').doc('vets');
+      
+      // Get place details first
+      final details = await _getPlaceDetails(placeId);
+      if (details == null) return;
+
+      await vetsDoc.set({
+        'locations': {
+          placeId: {
+            'location': GeoPoint(lat, lng),
+            'createdAt': FieldValue.serverTimestamp(),
+            'name': details['name'],
+            'vicinity': details['vicinity'],
+            'openingHours': details['opening_hours'],
+          }
+        }
+      }, SetOptions(merge: true));
+      
+      print('Saved vet location: ${details['name']}');
     } catch (e) {
       print('Error saving vet location: $e');
-      rethrow;
+      throw e;
     }
   }
 
   Future<void> saveStoreLocation(String placeId, double lat, double lng) async {
     try {
-      await _storeLocationsCollection.doc(placeId).set({
-        'location': GeoPoint(lat, lng),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      print('Saved store location: $placeId at $lat, $lng');
+      final storesDoc = _db.collection('locations').doc('stores');
+      
+      // Get place details first
+      final details = await _getPlaceDetails(placeId);
+      if (details == null) return;
+
+      await storesDoc.set({
+        'locations': {
+          placeId: {
+            'location': GeoPoint(lat, lng),
+            'createdAt': FieldValue.serverTimestamp(),
+            'name': details['name'],
+            'vicinity': details['vicinity'],
+            'openingHours': details['opening_hours'],
+          }
+        }
+      }, SetOptions(merge: true));
+      
+      print('Saved store location: ${details['name']}');
     } catch (e) {
       print('Error saving store location: $e');
-      rethrow;
+      throw e;
     }
   }
 
-  Future<Map<String, GeoPoint>?> getVetLocation(String placeId) async {
+  Future<Map<String, dynamic>?> getVetLocation(String placeId) async {
     try {
-      final doc = await _vetLocationsCollection.doc(placeId).get();
-      if (!doc.exists) return null;
-      
-      final data = doc.data() as Map<String, dynamic>;
-      final location = data['location'];
-      if (location == null || location is! GeoPoint) {
-        print('Invalid location data for vet $placeId: $location');
-        return null;
+      final doc = await _db.collection('locations').doc('vets').get();
+      if (doc.exists) {
+        final locations = doc.data()?['locations'] as Map<String, dynamic>?;
+        return locations?[placeId] as Map<String, dynamic>?;
       }
-      
-      return {placeId: location};
     } catch (e) {
       print('Error getting vet location: $e');
-      return null;
     }
+    return null;
   }
 
-  Future<Map<String, GeoPoint>?> getStoreLocation(String placeId) async {
+  Future<Map<String, dynamic>?> getStoreLocation(String placeId) async {
     try {
-      final doc = await _storeLocationsCollection.doc(placeId).get();
-      if (!doc.exists) return null;
-      
-      final data = doc.data() as Map<String, dynamic>;
-      final location = data['location'];
-      if (location == null || location is! GeoPoint) {
-        print('Invalid location data for store $placeId: $location');
-        return null;
+      final doc = await _db.collection('locations').doc('stores').get();
+      if (doc.exists) {
+        final locations = doc.data()?['locations'] as Map<String, dynamic>?;
+        return locations?[placeId] as Map<String, dynamic>?;
       }
-      
-      return {placeId: location};
     } catch (e) {
       print('Error getting store location: $e');
-      return null;
     }
+    return null;
   }
 
   Future<List<String>> getAllVetPlaceIds() async {
     try {
-      final snapshot = await _vetLocationsCollection.get();
-      return snapshot.docs.map((doc) => doc.id).toList();
+      final doc = await _vetLocationsDoc.get();
+      if (!doc.exists) return [];
+      
+      final data = doc.data() as Map<String, dynamic>;
+      final locations = data['locations'] as Map<String, dynamic>;
+      return locations.keys.toList();
     } catch (e) {
       print('Error getting vet place IDs: $e');
       return [];
@@ -1193,11 +1380,51 @@ class DatabaseService {
 
   Future<List<String>> getAllStorePlaceIds() async {
     try {
-      final snapshot = await _storeLocationsCollection.get();
-      return snapshot.docs.map((doc) => doc.id).toList();
+      final doc = await _storeLocationsDoc.get();
+      if (!doc.exists) return [];
+      
+      final data = doc.data() as Map<String, dynamic>;
+      final locations = data['locations'] as Map<String, dynamic>;
+      return locations.keys.toList();
     } catch (e) {
       print('Error getting store place IDs: $e');
       return [];
+    }
+  }
+
+  Future<Map<String, GeoPoint>> getAllVetLocations() async {
+    try {
+      final doc = await _vetLocationsDoc.get();
+      if (!doc.exists) return {};
+      
+      final data = doc.data() as Map<String, dynamic>;
+      final locations = data['locations'] as Map<String, dynamic>;
+      
+      return locations.map((placeId, locationData) {
+        final location = locationData['location'] as GeoPoint;
+        return MapEntry(placeId, location);
+      });
+    } catch (e) {
+      print('Error getting all vet locations: $e');
+      return {};
+    }
+  }
+
+  Future<Map<String, GeoPoint>> getAllStoreLocations() async {
+    try {
+      final doc = await _storeLocationsDoc.get();
+      if (!doc.exists) return {};
+      
+      final data = doc.data() as Map<String, dynamic>;
+      final locations = data['locations'] as Map<String, dynamic>;
+      
+      return locations.map((placeId, locationData) {
+        final location = locationData['location'] as GeoPoint;
+        return MapEntry(placeId, location);
+      });
+    } catch (e) {
+      print('Error getting all store locations: $e');
+      return {};
     }
   }
 } 
