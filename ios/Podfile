@@ -43,8 +43,6 @@ target 'Runner' do
   pod 'GoogleUtilities/Network', '~> 7.12.0'
   pod 'GoogleUtilities/MethodSwizzler', '~> 7.12.0'
   
-  # Google Sign In
-  pod 'GoogleSignIn', '~> 7.0.0'  # Downgrading to 7.0.0 to maintain compatibility
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
