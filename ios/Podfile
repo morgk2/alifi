@@ -44,9 +44,9 @@ target 'Runner' do
   pod 'GoogleUtilities/MethodSwizzler', '~> 7.12.0'
   
   # Firebase dependencies
-  pod 'Firebase/Core', '~> 10.15.0'
-  pod 'Firebase/Auth', '~> 10.15.0'
-  pod 'Firebase/Firestore', '~> 10.15.0'
+  pod 'Firebase/Core', '~> 11.15.0'
+  pod 'Firebase/Auth', '~> 11.15.0'
+  pod 'Firebase/Firestore', '~> 11.15.0'
   
   # Google Sign In
   pod 'GoogleSignIn', '~> 7.0.0'  # Downgrading to 7.0.0 to maintain compatibility
