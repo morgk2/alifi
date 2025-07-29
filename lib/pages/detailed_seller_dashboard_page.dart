@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../widgets/sales_chart_widget.dart';
 import 'store/add_product_page.dart';
 import 'store_messages_tab.dart';
 import 'store_orders_tab.dart';
@@ -112,24 +113,166 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
             ),
           ),
           const SizedBox(height: 16),
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Text(
-                'Revenue Graph Coming Soon',
-                style: TextStyle(fontFamily: 'Inter'),
-              ),
-            ),
+          // Sales Analytics Cards
+          StreamBuilder<Map<String, dynamic>>(
+            stream: DatabaseService().getStoreSalesAnalytics(user.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              
+              final analytics = snapshot.data ?? {
+                'todaySales': 0.0,
+                'weekSales': 0.0,
+                'monthSales': 0.0,
+                'totalSales': 0.0,
+                'orderCount': 0,
+              };
+              
+              return Column(
+                children: [
+                  // Today's Sales
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.green[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.today_rounded,
+                              color: Colors.green[600],
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Today\'s Sales',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green[700],
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '\$${analytics['todaySales'].toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.green[700],
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Weekly and Monthly Sales Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_view_week_rounded,
+                                    color: Colors.blue[600],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'This Week',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue[700],
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '\$${analytics['weekSales'].toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.blue[700],
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.purple[50],
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.purple[200]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_month_rounded,
+                                    color: Colors.purple[600],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'This Month',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.purple[700],
+                                      fontFamily: 'Inter',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '\$${analytics['monthSales'].toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.purple[700],
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 24),
           const Text(
@@ -166,7 +309,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                     Colors.green,
                   ),
                   _buildStatCard(
-                    'Engagement',
+                    'Unique Customers',
                     stats['engagementCount'].toString(),
                     Icons.people_alt_rounded,
                     Colors.blue,
@@ -186,7 +329,35 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                 ],
               );
             },
-          )
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Sales Analytics',
+            style: TextStyle(
+              fontFamily: 'Montserrat',
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 16),
+          StreamBuilder<Map<String, List<Map<String, dynamic>>>>(
+            stream: DatabaseService().getStoreSalesChartData(user.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              
+              final chartData = snapshot.data ?? {
+                'weekly': <Map<String, dynamic>>[],
+                'monthly': <Map<String, dynamic>>[],
+              };
+              
+              return SalesChartWidget(
+                chartData: chartData,
+                title: 'Sales Analytics',
+              );
+            },
+          ),
         ],
       ),
     );

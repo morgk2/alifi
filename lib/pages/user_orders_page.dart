@@ -3,9 +3,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/order.dart' as store_order;
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
-import '../pages/store_chat_page.dart';
+import '../pages/discussion_chat_page.dart';
 import '../models/store_product.dart';
 import '../models/user.dart';
+import '../dialogs/order_action_dialog.dart';
 import 'package:provider/provider.dart';
 
 class UserOrdersPage extends StatefulWidget {
@@ -868,17 +869,32 @@ class _UserOrdersPageState extends State<UserOrdersPage>
                            print('🔍 [UserOrdersPage] Building CircleAvatar for user: ${storeUser?.displayName}');
                            print('🔍 [UserOrdersPage] CircleAvatar photoURL: ${storeUser?.photoURL}');
                            print('🔍 [UserOrdersPage] CircleAvatar photoURL is null: ${storeUser?.photoURL == null}');
+                           print('🔍 [UserOrdersPage] CircleAvatar storeUser is null: ${storeUser == null}');
+                           
+                           if (storeUser == null) {
+                             print('🔍 [UserOrdersPage] storeUser is null, showing error avatar');
+                             return CircleAvatar(
+                               radius: 24,
+                               backgroundColor: Colors.red[100],
+                               child: Icon(
+                                 Icons.error_outline,
+                                 color: Colors.red[600],
+                                 size: 20,
+                               ),
+                             );
+                           }
                            
                            try {
-                             final initials = _getInitials(storeUser?.displayName);
+                             print('🔍 [UserOrdersPage] About to call _getInitials with: "${storeUser.displayName}"');
+                             final initials = _getInitials(storeUser.displayName);
                              print('🔍 [UserOrdersPage] CircleAvatar initials: "$initials"');
                              
                              return CircleAvatar(
                                radius: 24,
-                               backgroundImage: storeUser?.photoURL != null
-                                   ? CachedNetworkImageProvider(storeUser!.photoURL!)
+                               backgroundImage: storeUser.photoURL != null
+                                   ? CachedNetworkImageProvider(storeUser.photoURL!)
                                    : null,
-                               child: storeUser?.photoURL == null
+                               child: storeUser.photoURL == null
                                    ? Text(
                                        initials,
                                        style: const TextStyle(
@@ -891,6 +907,8 @@ class _UserOrdersPageState extends State<UserOrdersPage>
                            } catch (e) {
                              print('🔍 [UserOrdersPage] ERROR in CircleAvatar creation: $e');
                              print('🔍 [UserOrdersPage] ERROR stack trace: ${StackTrace.current}');
+                             print('🔍 [UserOrdersPage] ERROR storeUser.displayName: "${storeUser.displayName}"');
+                             print('🔍 [UserOrdersPage] ERROR storeUser.displayName type: ${storeUser.displayName.runtimeType}');
                              return CircleAvatar(
                                radius: 24,
                                backgroundColor: Colors.red[100],
@@ -989,43 +1007,55 @@ class _UserOrdersPageState extends State<UserOrdersPage>
   String _getInitials(String? displayName) {
     print('🔍 [UserOrdersPage] _getInitials called with: "$displayName"');
     print('🔍 [UserOrdersPage] _getInitials displayName is null: ${displayName == null}');
-    print('🔍 [UserOrdersPage] _getInitials displayName is empty: ${displayName?.isEmpty}');
     print('🔍 [UserOrdersPage] _getInitials displayName runtime type: ${displayName.runtimeType}');
     
+    // Handle null case
     if (displayName == null) {
       print('🔍 [UserOrdersPage] _getInitials: displayName is null, returning "U"');
       return 'U';
     }
     
-    print('🔍 [UserOrdersPage] _getInitials displayName length: ${displayName.length}');
-    print('🔍 [UserOrdersPage] _getInitials displayName trimmed: "${displayName.trim()}"');
-    print('🔍 [UserOrdersPage] _getInitials displayName trimmed length: ${displayName.trim().length}');
-    print('🔍 [UserOrdersPage] _getInitials displayName trimmed isEmpty: ${displayName.trim().isEmpty}');
+    // Handle non-string case
+    if (displayName is! String) {
+      print('🔍 [UserOrdersPage] _getInitials: displayName is not a String, returning "U"');
+      return 'U';
+    }
     
-    // Extra safety check - if trimmed string is empty, return 'U'
-    if (displayName.trim().isEmpty) {
+    print('🔍 [UserOrdersPage] _getInitials displayName length: ${displayName.length}');
+    print('🔍 [UserOrdersPage] _getInitials displayName isEmpty: ${displayName.isEmpty}');
+    
+    // Handle empty string case
+    if (displayName.isEmpty) {
+      print('🔍 [UserOrdersPage] _getInitials: displayName is empty, returning "U"');
+      return 'U';
+    }
+    
+    // Trim the string
+    final trimmedName = displayName.trim();
+    print('🔍 [UserOrdersPage] _getInitials displayName trimmed: "$trimmedName"');
+    print('🔍 [UserOrdersPage] _getInitials displayName trimmed length: ${trimmedName.length}');
+    print('🔍 [UserOrdersPage] _getInitials displayName trimmed isEmpty: ${trimmedName.isEmpty}');
+    
+    // Handle empty string after trim
+    if (trimmedName.isEmpty) {
       print('🔍 [UserOrdersPage] _getInitials: displayName is empty after trim, returning "U"');
       return 'U';
     }
     
     try {
-      final trimmedName = displayName.trim();
-      print('🔍 [UserOrdersPage] _getInitials: trimmedName = "$trimmedName"');
-      print('🔍 [UserOrdersPage] _getInitials: trimmedName length = ${trimmedName.length}');
-      
-      if (trimmedName.isEmpty) {
-        print('🔍 [UserOrdersPage] _getInitials: trimmedName is empty, returning "U"');
-        return 'U';
-      }
-      
+      // Get the first character
       final firstChar = trimmedName[0];
       print('🔍 [UserOrdersPage] _getInitials: first character is "$firstChar"');
+      
+      // Convert to uppercase
       final result = firstChar.toUpperCase();
       print('🔍 [UserOrdersPage] _getInitials: returning "$result"');
       return result;
     } catch (e) {
       print('🔍 [UserOrdersPage] _getInitials ERROR: $e');
       print('🔍 [UserOrdersPage] _getInitials ERROR stack trace: ${StackTrace.current}');
+      print('🔍 [UserOrdersPage] _getInitials ERROR displayName: "$displayName"');
+      print('🔍 [UserOrdersPage] _getInitials ERROR trimmedName: "$trimmedName"');
       return 'U';
     }
   }
@@ -1090,21 +1120,34 @@ class _UserOrdersPageState extends State<UserOrdersPage>
   }
 
   Future<void> _cancelOrder(String orderId) async {
-    try {
-      await DatabaseService().updateOrderStatus(orderId, 'cancelled');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Order cancelled successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to cancel order: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    // For now, we'll use a generic message since we don't have the product name
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => OrderActionDialog.cancelOrder(
+        productName: 'this product',
+        onConfirm: () {
+          Navigator.of(context).pop(true);
+        },
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await DatabaseService().updateOrderStatus(orderId, 'cancelled');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order cancelled successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel order: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -1115,22 +1158,7 @@ class _UserOrdersPageState extends State<UserOrdersPage>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => StoreChatPage(
-          product: StoreProduct(
-            id: 'discussion_${storeUser.id}', // Unique ID for discussion
-            name: 'Discussion with ${storeUser.displayName ?? 'Store'}',
-            description: 'Chat with ${storeUser.displayName ?? 'this store'} about your orders and inquiries',
-            price: 0.0,
-            imageUrls: [],
-            storeId: storeUser.id,
-            category: 'discussion',
-            createdAt: DateTime.now(),
-            currency: 'USD',
-            isFreeShipping: false,
-            shippingTime: 'N/A',
-            stockQuantity: 1,
-            lastUpdatedAt: DateTime.now(),
-          ),
+        builder: (context) => DiscussionChatPage(
           storeUser: storeUser,
         ),
       ),

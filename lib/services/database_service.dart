@@ -1344,10 +1344,14 @@ class DatabaseService {
   }
 
   Stream<List<Map<String, dynamic>>> getStoreDashboardStats(String storeId) {
-    return _storeProductsCollection
+    print('🔍 [DatabaseService] getStoreDashboardStats called for storeId: $storeId');
+    
+    return _ordersCollection
         .where('storeId', isEqualTo: storeId)
         .snapshots()
         .map((snapshot) {
+      print('🔍 [DatabaseService] getStoreDashboardStats received ${snapshot.docs.length} orders');
+      
       double totalSales = 0;
       int ordersCount = 0;
       int activeOrders = 0;
@@ -1355,22 +1359,232 @@ class DatabaseService {
 
       for (var doc in snapshot.docs) {
         final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        totalSales += ((data['price'] ?? 0) as num) * ((data['totalOrders'] ?? 0) as num);
-        ordersCount += (data['totalOrders'] ?? 0) as int;
-        activeOrders += (data['activeOrders'] ?? 0) as int;
-        engagementCount += (data['viewCount'] ?? 0) as int;
-        engagementCount += (data['favoriteCount'] ?? 0) as int;
+        final status = data['status'] as String? ?? 'pending';
+        final price = (data['price'] ?? 0) as num;
+        final quantity = (data['quantity'] ?? 1) as num;
+        
+        // Calculate total sales from completed orders
+        if (status == 'delivered') {
+          totalSales += price * quantity;
+        }
+        
+        // Count all orders
+        ordersCount++;
+        
+        // Count active orders (pending, confirmed, shipped)
+        if (['pending', 'confirmed', 'shipped'].contains(status)) {
+          activeOrders++;
+        }
       }
 
+      // Use unique customers as engagement metric
+      final uniqueCustomers = snapshot.docs
+          .map((doc) => (doc.data() as Map<String, dynamic>)['customerId'] as String?)
+          .where((id) => id != null)
+          .toSet()
+          .length;
+      engagementCount = uniqueCustomers;
+
+      final stats = {
+        'totalSales': totalSales,
+        'ordersCount': ordersCount,
+        'activeOrders': activeOrders,
+        'engagementCount': engagementCount,
+      };
+      
+      print('🔍 [DatabaseService] getStoreDashboardStats calculated stats: $stats');
+      
+      return [stats];
+    }).handleError((error) {
+      print('🔍 [DatabaseService] getStoreDashboardStats error: $error');
+      // Return default stats on error
       return [
         {
-          'totalSales': totalSales,
-          'ordersCount': ordersCount,
-          'activeOrders': activeOrders,
-          'engagementCount': engagementCount,
+          'totalSales': 0.0,
+          'ordersCount': 0,
+          'activeOrders': 0,
+          'engagementCount': 0,
         }
       ];
     });
+  }
+
+  Stream<Map<String, dynamic>> getStoreSalesAnalytics(String storeId) {
+    print('🔍 [DatabaseService] getStoreSalesAnalytics called for storeId: $storeId');
+    
+    return _ordersCollection
+        .where('storeId', isEqualTo: storeId)
+        .where('status', isEqualTo: 'delivered')
+        .snapshots()
+        .map((snapshot) {
+      print('🔍 [DatabaseService] getStoreSalesAnalytics received ${snapshot.docs.length} delivered orders');
+      
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final weekAgo = today.subtract(const Duration(days: 7));
+      final monthAgo = DateTime(now.year, now.month - 1, now.day);
+      
+      double todaySales = 0;
+      double weekSales = 0;
+      double monthSales = 0;
+      double totalSales = 0;
+      
+      for (var doc in snapshot.docs) {
+        final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        final createdAt = (data['createdAt'] as Timestamp).toDate();
+        final price = (data['price'] ?? 0) as num;
+        final quantity = (data['quantity'] ?? 1) as num;
+        final orderTotal = (price * quantity).clamp(0, double.infinity); // Ensure non-negative
+        
+        totalSales += orderTotal;
+        
+        // Today's sales
+        if (createdAt.isAfter(today)) {
+          todaySales += orderTotal;
+        }
+        
+        // This week's sales
+        if (createdAt.isAfter(weekAgo)) {
+          weekSales += orderTotal;
+        }
+        
+        // This month's sales
+        if (createdAt.isAfter(monthAgo)) {
+          monthSales += orderTotal;
+        }
+      }
+      
+      final analytics = {
+        'todaySales': todaySales,
+        'weekSales': weekSales,
+        'monthSales': monthSales,
+        'totalSales': totalSales,
+        'orderCount': snapshot.docs.length,
+      };
+      
+      print('🔍 [DatabaseService] getStoreSalesAnalytics calculated: $analytics');
+      
+      return analytics;
+    }).handleError((error) {
+      print('🔍 [DatabaseService] getStoreSalesAnalytics error: $error');
+      return {
+        'todaySales': 0.0,
+        'weekSales': 0.0,
+        'monthSales': 0.0,
+        'totalSales': 0.0,
+        'orderCount': 0,
+      };
+    });
+  }
+
+  Stream<Map<String, List<Map<String, dynamic>>>> getStoreSalesChartData(String storeId) {
+    print('🔍 [DatabaseService] getStoreSalesChartData called for storeId: $storeId');
+    
+    return _ordersCollection
+        .where('storeId', isEqualTo: storeId)
+        .where('status', isEqualTo: 'delivered')
+        .snapshots()
+        .map((snapshot) {
+      print('🔍 [DatabaseService] getStoreSalesChartData received ${snapshot.docs.length} delivered orders');
+      
+      final now = DateTime.now();
+      final Map<String, double> dailyData = {};
+      final Map<String, double> weeklyData = {};
+      final Map<String, double> monthlyData = {};
+      
+      // Initialize last 7 days (current week)
+      for (int i = 6; i >= 0; i--) {
+        final day = now.subtract(Duration(days: i));
+        final dayKey = _getDayName(day.weekday);
+        dailyData[dayKey] = 0.0;
+      }
+      
+      // Initialize last 8 weeks
+      for (int i = 7; i >= 0; i--) {
+        final weekStart = now.subtract(Duration(days: i * 7));
+        final weekKey = 'W${(weekStart.day / 7).ceil()}';
+        weeklyData[weekKey] = 0.0;
+      }
+      
+      // Initialize last 12 months
+      for (int i = 11; i >= 0; i--) {
+        final monthStart = DateTime(now.year, now.month - i, 1);
+        final monthKey = _getMonthName(monthStart.month);
+        monthlyData[monthKey] = 0.0;
+      }
+      
+      for (var doc in snapshot.docs) {
+        final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        final createdAt = (data['createdAt'] as Timestamp).toDate();
+        final price = (data['price'] ?? 0) as num;
+        final quantity = (data['quantity'] ?? 1) as num;
+        final orderTotal = (price * quantity).clamp(0, double.infinity); // Ensure non-negative
+        
+        // Daily data (current week)
+        final dayKey = _getDayName(createdAt.weekday);
+        if (dailyData.containsKey(dayKey)) {
+          dailyData[dayKey] = (dailyData[dayKey] ?? 0) + orderTotal;
+        }
+        
+        // Weekly data
+        final weekStart = createdAt.subtract(Duration(days: createdAt.weekday - 1));
+        final weekKey = 'W${(weekStart.day / 7).ceil()}';
+        if (weeklyData.containsKey(weekKey)) {
+          weeklyData[weekKey] = (weeklyData[weekKey] ?? 0) + orderTotal;
+        }
+        
+        // Monthly data
+        final monthKey = _getMonthName(createdAt.month);
+        if (monthlyData.containsKey(monthKey)) {
+          monthlyData[monthKey] = (monthlyData[monthKey] ?? 0) + orderTotal;
+        }
+      }
+      
+      final dailyChartData = dailyData.entries.map((entry) => {
+        'period': entry.key,
+        'sales': entry.value,
+      }).toList();
+      
+      final weeklyChartData = weeklyData.entries.map((entry) => {
+        'period': entry.key,
+        'sales': entry.value,
+      }).toList();
+      
+      final monthlyChartData = monthlyData.entries.map((entry) => {
+        'period': entry.key,
+        'sales': entry.value,
+      }).toList();
+      
+      final chartData = {
+        'daily': dailyChartData,
+        'weekly': weeklyChartData,
+        'monthly': monthlyChartData,
+      };
+      
+      print('🔍 [DatabaseService] getStoreSalesChartData calculated: ${dailyChartData.length} days, ${weeklyChartData.length} weeks, ${monthlyChartData.length} months');
+      
+      return chartData;
+    }).handleError((error) {
+      print('🔍 [DatabaseService] getStoreSalesChartData error: $error');
+      return {
+        'daily': <Map<String, dynamic>>[],
+        'weekly': <Map<String, dynamic>>[],
+        'monthly': <Map<String, dynamic>>[],
+      };
+    });
+  }
+  
+  String _getDayName(int weekday) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[weekday - 1];
+  }
+  
+  String _getMonthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[month - 1];
   }
 
   Stream<List<StoreProduct>> getProductsByStore(String storeId) {
@@ -1423,8 +1637,8 @@ class DatabaseService {
           placeId: {
             'location': GeoPoint(lat, lng),
             'createdAt': FieldValue.serverTimestamp(),
-            'name': details['name'],
-            'vicinity': details['vicinity'],
+            'name': details['name'] ?? 'Unknown Store',
+            'vicinity': details['vicinity'] ?? 'Location unavailable',
             'openingHours': details['opening_hours'],
           }
         }

@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/order.dart' as store_order;
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../dialogs/order_action_dialog.dart';
 import 'package:provider/provider.dart';
 
 class StoreOrdersTab extends StatelessWidget {
@@ -418,6 +419,51 @@ class StoreOrdersTab extends StatelessWidget {
   }
 
   Future<void> _updateOrderStatus(BuildContext context, String orderId, String newStatus) async {
+    // Show confirmation dialog based on the action
+    bool? confirmed;
+    
+    switch (newStatus) {
+      case 'confirmed':
+        confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => OrderActionDialog.confirmOrder(
+            productName: 'this product',
+            onConfirm: () {
+              Navigator.of(context).pop(true);
+            },
+          ),
+        );
+        break;
+      case 'shipped':
+        confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => OrderActionDialog.shipOrder(
+            productName: 'this product',
+            onConfirm: () {
+              Navigator.of(context).pop(true);
+            },
+          ),
+        );
+        break;
+      case 'delivered':
+        confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => OrderActionDialog.deliverOrder(
+            productName: 'this product',
+            onConfirm: () {
+              Navigator.of(context).pop(true);
+            },
+          ),
+        );
+        break;
+      default:
+        confirmed = true; // For other statuses, proceed without confirmation
+    }
+
+    if (confirmed != true) {
+      return; // User cancelled
+    }
+
     try {
       await DatabaseService().updateOrderStatus(orderId, newStatus);
       ScaffoldMessenger.of(context).showSnackBar(
