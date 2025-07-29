@@ -1,106 +1,117 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
-import 'edit_profile_page.dart';
 import '../dialogs/report_problem_dialog.dart';
+import 'edit_profile_page.dart';
 import 'admin/add_product_page.dart';
 import 'admin/bulk_import_page.dart';
 import 'admin/user_management_page.dart';
+import '../utils/locale_notifier.dart';
+import '../l10n/app_localizations.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
   @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
+    final localeNotifierState = LocaleNotifier.of(context);
+    
+    // Force rebuild when locale changes
+    final currentLocale = localeNotifierState?.localeNotifier.locale ?? const Locale('en');
     
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
+        title: const Text('Settings'),
         backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Settings',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
       ),
-      body: ListView(
-        children: [
-          const SizedBox(height: 16),
-          _buildSection(
-            title: 'Account',
-            children: [
-              _SettingsTile(
-                icon: Icons.person_outline,
-                title: 'Profile',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const EditProfilePage(),
-                    ),
-                  );
-                },
-              ),
-              _SettingsTile(
-                icon: Icons.notifications_none,
-                title: 'Notifications',
-                onTap: () {
-                  // TODO: Implement notifications settings
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Coming soon!'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                },
-              ),
-              _SettingsTile(
-                icon: Icons.privacy_tip_outlined,
-                title: 'Privacy',
-                onTap: () {
-                  // TODO: Implement privacy settings
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Coming soon!'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _buildSection(
-            title: 'App Settings',
-            children: [
-              _SettingsTile(
-                icon: Icons.language,
-                title: 'Language',
-                subtitle: 'English',
-                onTap: () {
-                  // TODO: Implement language picker
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Coming soon!'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                },
-              ),
-              _SettingsTile(
-                icon: Icons.dark_mode_outlined,
-                title: 'Dark Mode',
-                trailing: Switch(
-                  value: false, // TODO: Implement dark mode
-                  onChanged: (value) {
-                    // TODO: Implement dark mode toggle
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 24),
+            _buildSection(
+              title: 'App Settings',
+              children: [
+                _SettingsTile(
+                  icon: Icons.language,
+                  title: 'Language',
+                  subtitle: _getLanguageName(context),
+                  onTap: () async {
+                    final selected = await showDialog<Locale>(
+                      context: context,
+                      builder: (context) => SimpleDialog(
+                        title: const Text('Select Language'),
+                        children: [
+                          SimpleDialogOption(
+                            onPressed: () {
+                              Navigator.pop(context, const Locale('en'));
+                            },
+                            child: const Text('English'),
+                          ),
+                          SimpleDialogOption(
+                            onPressed: () {
+                              Navigator.pop(context, const Locale('ar'));
+                            },
+                            child: const Text('العربية'),
+                          ),
+                          SimpleDialogOption(
+                            onPressed: () {
+                              Navigator.pop(context, const Locale('fr'));
+                            },
+                            child: const Text('Français'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (selected != null) {
+                      print('Language selected: ${selected.languageCode}');
+                      final localeNotifierState = LocaleNotifier.of(context);
+                      if (localeNotifierState != null) {
+                        localeNotifierState.changeLocale(selected);
+                        print('Locale changed to: ${selected.languageCode}');
+                      } else {
+                        print('ERROR: LocaleNotifier state is null!');
+                      }
+                    }
+                  },
+                ),
+                _SettingsTile(
+                  icon: Icons.dark_mode_outlined,
+                  title: 'Dark Mode',
+                  trailing: Switch(
+                    value: false, // TODO: Implement dark mode
+                    onChanged: (value) {
+                      // TODO: Implement dark mode toggle
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Coming soon!'),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                  ),
+                  onTap: () {}, // Empty onTap since we're using the switch
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _buildSection(
+              title: 'Support',
+              children: [
+                _SettingsTile(
+                  icon: Icons.help_outline,
+                  title: 'Help Center',
+                  onTap: () {
+                    // TODO: Implement help center
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Coming soon!'),
@@ -109,114 +120,113 @@ class SettingsPage extends StatelessWidget {
                     );
                   },
                 ),
-                onTap: () {}, // Empty onTap since we're using the switch
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _buildSection(
-            title: 'Support',
-            children: [
-              _SettingsTile(
-                icon: Icons.help_outline,
-                title: 'Help Center',
-                onTap: () {
-                  // TODO: Implement help center
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Coming soon!'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                },
-              ),
-              _SettingsTile(
-                icon: Icons.bug_report_outlined,
-                title: 'Report a Bug',
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => const ReportProblemDialog(),
-                  );
-                },
-              ),
-              _SettingsTile(
-                icon: Icons.star_border,
-                title: 'Rate the App',
-                onTap: () {
-                  // TODO: Implement app store link
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Coming soon!'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          if (authService.currentUser?.isAdmin ?? false) // Add admin check
-            _buildSection(
-              title: 'Admin Tools',
-              children: [
                 _SettingsTile(
-                  icon: Icons.add_shopping_cart,
-                  title: 'Add AliExpress Product',
+                  icon: Icons.bug_report_outlined,
+                  title: 'Report a Bug',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AddProductPage(),
-                      ),
+                    showDialog(
+                      context: context,
+                      builder: (context) => const ReportProblemDialog(),
                     );
                   },
                 ),
                 _SettingsTile(
-                  icon: Icons.upload_file,
-                  title: 'Bulk Import Products',
+                  icon: Icons.star_border,
+                  title: 'Rate the App',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BulkImportPage(),
-                      ),
-                    );
-                  },
-                ),
-                _SettingsTile(
-                  icon: Icons.manage_accounts,
-                  title: 'User Management',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const UserManagementPage(),
+                    // TODO: Implement app store link
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Coming soon!'),
+                        duration: Duration(seconds: 1),
                       ),
                     );
                   },
                 ),
               ],
             ),
-          const SizedBox(height: 24),
-          if (authService.isAuthenticated)
+            const SizedBox(height: 24),
+            if (authService.currentUser?.isAdmin ?? false) // Add admin check
+              _buildSection(
+                title: 'Admin Tools',
+                children: [
+                  _SettingsTile(
+                    icon: Icons.add_shopping_cart,
+                    title: 'Add AliExpress Product',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddProductPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _SettingsTile(
+                    icon: Icons.upload_file,
+                    title: 'Bulk Import Products',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BulkImportPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _SettingsTile(
+                    icon: Icons.manage_accounts,
+                    title: 'User Management',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const UserManagementPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            const SizedBox(height: 24),
+            if (authService.isAuthenticated)
+              _buildSection(
+                title: '',
+                children: [
+                  _SettingsTile(
+                    icon: Icons.logout,
+                    title: 'Sign Out',
+                    titleColor: Colors.red,
+                    onTap: () async {
+                      await authService.signOut();
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                  ),
+                ],
+              ),
+            const SizedBox(height: 24),
             _buildSection(
-              title: '',
+              title: 'Debug Info',
               children: [
                 _SettingsTile(
-                  icon: Icons.logout,
-                  title: 'Sign Out',
-                  titleColor: Colors.red,
-                  onTap: () async {
-                    await authService.signOut();
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
+                  icon: Icons.info_outline,
+                  title: 'Current Locale',
+                  subtitle: '${currentLocale.languageCode} (${currentLocale.countryCode ?? 'no country'})',
+                  onTap: () {},
+                ),
+                _SettingsTile(
+                  icon: Icons.translate,
+                  title: 'Localized Text Test',
+                  subtitle: AppLocalizations.of(context)?.myPets ?? 'My Pets (fallback)',
+                  onTap: () {},
                 ),
               ],
             ),
-        ],
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
@@ -301,5 +311,20 @@ class _SettingsTile extends StatelessWidget {
           ),
       onTap: onTap,
     );
+  }
+} 
+
+String _getLanguageName(BuildContext context) {
+  final localeNotifierState = LocaleNotifier.of(context);
+  final locale = localeNotifierState?.localeNotifier.locale ?? const Locale('en');
+  
+  switch (locale.languageCode) {
+    case 'ar':
+      return 'العربية';
+    case 'fr':
+      return 'Français';
+    case 'en':
+    default:
+      return 'English';
   }
 } 

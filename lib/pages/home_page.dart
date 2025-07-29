@@ -30,7 +30,10 @@ import 'package:latlong2/latlong.dart' as latlong;
 import 'package:flutter/animation.dart';
 import '../widgets/spinning_loader.dart';
 import '../widgets/ai_assistant_card.dart';
+import '../widgets/seller_dashboard_card.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
+import '../services/gift_notification_controller.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback onNavigateToMap;
@@ -52,6 +55,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   final ScrollController _storeScrollController = ScrollController();
   final ScrollController _mainScrollController = ScrollController();
   final DatabaseService _databaseService = DatabaseService();
+  GiftNotificationController? _giftNotificationController;
   
   // Add refresh controller
   late AnimationController _refreshController;
@@ -75,8 +79,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
       _lastBackPressTime = now;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Press back again to exit'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)?.proceed ?? 'Press back again to exit'),
           duration: Duration(seconds: 2),
           backgroundColor: Colors.black87,
         ),
@@ -126,25 +130,25 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
-        title: const Text(
-          'Report Found',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)?.reportFound ?? 'Report Found',
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
-        content: const Text(
-          'Are you sure you want to mark this pet as found? This will remove it from the lost pets list.',
-          style: TextStyle(
+        content: Text(
+          AppLocalizations.of(context)?.thisWillPostYourMissingPetReport ?? 'Are you sure you want to mark this pet as found? This will remove it from the lost pets list.',
+          style: const TextStyle(
             fontWeight: FontWeight.w500,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(
+            child: Text(
+              AppLocalizations.of(context)?.cancel ?? 'Cancel',
+              style: const TextStyle(
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -158,9 +162,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text(
-              'Report Found',
-              style: TextStyle(
+            child: Text(
+              AppLocalizations.of(context)?.reportFound ?? 'Report Found',
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -175,8 +179,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Pet marked as found successfully!'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)?.petMarkedAsFoundSuccessfully ?? 'Pet marked as found successfully!'),
               backgroundColor: Colors.green,
             ),
           );
@@ -185,7 +189,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error marking pet as found: $e'),
+              content: Text(AppLocalizations.of(context)?.errorMarkingPetAsFound(e) ?? 'Error marking pet as found: $e'),
               backgroundColor: Colors.red,
             ),
           );
@@ -208,6 +212,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
     
     _initializeLocationAndLoadPets();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final authService = Provider.of<AuthService>(context);
+    if (_giftNotificationController == null) {
+      _giftNotificationController =
+          GiftNotificationController(context, authService);
+    }
   }
 
   Position? _currentPosition;
@@ -315,6 +329,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _userLocationNotifier.dispose();
     _isLoadingLocationNotifier.dispose();
     _isRefreshingNotifier.dispose();
+    _giftNotificationController?.dispose();
     
     super.dispose();
   }
@@ -827,48 +842,57 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         return ValueListenableBuilder<latlong.LatLng?>(
           valueListenable: _userLocationNotifier,
           builder: (context, userLocation, child) {
-            return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-                const Text(
-          'Good afternoon, user!',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey,
-          ),
-        ),
-                if (isLoadingLocation)
-                  const Text(
-                    "Loading nearby pets...",
-                    style: TextStyle(
-                      fontFamily: 'Montserrat',
-                      fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -1.2,
+            return Consumer<AuthService>(
+              builder: (context, authService, child) {
+                final user = authService.currentUser;
+                final isStoreAccount = user?.accountType == 'store';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Good afternoon, user!',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                      ),
                     ),
-                  )
-                else if (userLocation != null)
-                  const Text(
-                    "Lost pets nearby",
-                    style: TextStyle(
-                      fontFamily: 'Montserrat',
-                      fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -1.2,
-                    ),
-                  )
-                else
-                  const Text(
-                    "Recent lost pets",
-          style: TextStyle(
-            fontFamily: 'Montserrat',
-            fontSize: 34,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1.2,
-          ),
-        ),
-      ],
+                    if (!isStoreAccount) ...[
+                      if (isLoadingLocation)
+                        const Text(
+                          "Loading nearby pets...",
+                          style: TextStyle(
+                            fontFamily: 'Montserrat',
+                            fontSize: 34,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1.2,
+                          ),
+                        )
+                      else if (userLocation != null)
+                        const Text(
+                          "Lost pets nearby",
+                          style: TextStyle(
+                            fontFamily: 'Montserrat',
+                            fontSize: 34,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1.2,
+                          ),
+                        )
+                      else
+                        const Text(
+                          "Recent lost pets",
+                          style: TextStyle(
+                            fontFamily: 'Montserrat',
+                            fontSize: 34,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1.2,
+                          ),
+                        ),
+                    ],
+                  ],
+                );
+              },
             );
           },
         );
@@ -877,312 +901,328 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   Widget _buildWhatsNewSlider() {
-    return ValueListenableBuilder<List<LostPet>>(
-      valueListenable: _lostPetsNotifier,
-      builder: (context, lostPets, child) {
-        if (lostPets.isEmpty) {
-          return ValueListenableBuilder<bool>(
-            valueListenable: _isLoadingLocationNotifier,
-            builder: (context, isLoadingLocation, child) {
-              return ValueListenableBuilder<latlong.LatLng?>(
-                valueListenable: _userLocationNotifier,
-                builder: (context, userLocation, child) {
-                  String message;
-                  if (isLoadingLocation) {
-                    message = 'Loading nearby pets...';
-                  } else if (userLocation != null) {
-                    message = 'No lost pets reported nearby (within 10km)';
-                  } else {
-                    message = 'No recent lost pets reported';
-                  }
-                  
-                  return Center(
-        child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          Text(
-                            message,
-                            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
-            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          if (userLocation == null && !isLoadingLocation) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              'Enable location to see pets in your area',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
+    return Consumer<AuthService>(
+      builder: (context, authService, child) {
+        final user = authService.currentUser;
+        final isStoreAccount = user?.accountType == 'store';
+
+        if (isStoreAccount) {
+          return const SellerDashboardCard();
+        }
+
+        return ValueListenableBuilder<List<LostPet>>(
+          valueListenable: _lostPetsNotifier,
+          builder: (context, lostPets, child) {
+            if (lostPets.isEmpty) {
+              return ValueListenableBuilder<bool>(
+                valueListenable: _isLoadingLocationNotifier,
+                builder: (context, isLoadingLocation, child) {
+                  return ValueListenableBuilder<latlong.LatLng?>(
+                    valueListenable: _userLocationNotifier,
+                    builder: (context, userLocation, child) {
+                      String message;
+                      if (isLoadingLocation) {
+                        message = 'Loading nearby pets...';
+                      } else if (userLocation != null) {
+                        message = 'No lost pets reported nearby (within 10km)';
+                      } else {
+                        message = 'No recent lost pets reported';
+                      }
+                      
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              Text(
+                                message,
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 16,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ],
-          ),
-        ),
+                              if (userLocation == null && !isLoadingLocation) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Enable location to see pets in your area',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 14,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               );
-            },
-      );
-    }
+            }
 
-    return Column(
-      children: [
-        SizedBox(
-          height: 220,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final containerWidth = constraints.maxWidth;
-              final itemWidth = MediaQuery.of(context).size.width * 0.85;
-                  final totalWidth = itemWidth * lostPets.length + 16.0 * (lostPets.length - 1);
+            return Column(
+              children: [
+                SizedBox(
+                  height: 220,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final containerWidth = constraints.maxWidth;
+                      final itemWidth = MediaQuery.of(context).size.width * 0.85;
+                      final totalWidth = itemWidth * lostPets.length + 16.0 * (lostPets.length - 1);
 
-              return ScrollableFadeContainer(
-                scrollController: _petsScrollController,
-                containerWidth: containerWidth,
-                contentWidth: totalWidth,
-                child: ListView.builder(
-                  controller: _petsScrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const PageScrollPhysics().applyTo(
-                    const BouncingScrollPhysics(),
-                  ),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: (MediaQuery.of(context).size.width - itemWidth) / 2,
-                  ),
-                      itemCount: lostPets.length,
-                  itemBuilder: (context, index) {
-                        final lostPet = lostPets[index];
-                    final width = MediaQuery.of(context).size.width * 0.85;
-                        return ValueListenableBuilder<int>(
-                          valueListenable: _currentPetPageNotifier,
-                          builder: (context, currentPage, child) {
-                    return AnimatedScale(
-                              scale: currentPage == index ? 1.0 : 0.92,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOutCubic,
-                      child: Container(
-                        width: width,
-                        margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 24.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(90),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                                child: Stack(
-                                  children: [
-                                    Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(50),
-                                child: lostPet.pet.imageUrls.isNotEmpty
-                                                ? CachedNetworkImage(
-                                                    imageUrl: lostPet.pet.imageUrls.first,
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-                                                    placeholder: (context, url) => const PlaceholderImage(
-                                          width: 100,
-                                          height: 100,
-                                          isCircular: true,
-                                        ),
-                                                    errorWidget: (context, url, error) => const PlaceholderImage(
-                                                      width: 100,
-                                                      height: 100,
-                                                      isCircular: true,
-                                                    ),
-                                                    fadeInDuration: const Duration(milliseconds: 300),
-                                      )
-                                    : const PlaceholderImage(
-                                        width: 100,
-                                        height: 100,
-                                        isCircular: true,
-                                      ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      lostPet.pet.name,
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        const Text(
-                                          'Last seen: ',
-                                          style: TextStyle(color: Colors.grey),
-                                        ),
-                                        Text(
-                                          timeago.format(lostPet.lastSeenDate),
-                                          style: TextStyle(
-                                            color: Colors.orange[700],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                                ValueListenableBuilder<latlong.LatLng?>(
-                                                  valueListenable: _userLocationNotifier,
-                                                  builder: (context, userLocation, child) {
-                                                    final distance = _calculateDistance(userLocation, lostPet.location);
-                                                    return Row(
-                                      children: [
-                                        const Text(
-                                          'Location: ',
-                                          style: TextStyle(color: Colors.grey),
-                                        ),
-                                        Expanded(
-                                          child: Text(
-                                            lostPet.address,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                                          ),
-                                                        ),
-                                                        if (distance.isNotEmpty) ...[
-                                                          const SizedBox(width: 8),
-                                                          Container(
-                                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.red[100],
-                                                              borderRadius: BorderRadius.circular(12),
-                                                            ),
-                                                            child: Text(
-                                                              distance,
-                                                              style: TextStyle(
-                                                                color: Colors.red[700],
-                                                                fontSize: 12,
-                                                                fontWeight: FontWeight.w600,
-                                                              ),
-                                          ),
-                                        ),
-                                      ],
-                                                      ],
-                                                    );
-                                                  },
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Consumer<AuthService>(
-                                      builder: (context, authService, child) {
-                                        final currentUser = authService.currentUser;
-                                        final isCurrentUserPet = currentUser?.id == lostPet.reportedByUserId;
-                                        
-                                        return ElevatedButton(
-                                          onPressed: isCurrentUserPet 
-                                              ? () => _reportFound(context, lostPet)
-                                              : widget.onNavigateToMap,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: isCurrentUserPet 
-                                                ? Colors.green 
-                                                : const Color(0xFFF59E0B),
-                                            foregroundColor: Colors.white,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(20),
-                                            ),
-                                            minimumSize: const Size(120, 36),
-                                            elevation: 4,
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                isCurrentUserPet ? Icons.check_circle : Icons.map, 
-                                                size: 18
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(isCurrentUserPet ? 'Report Found' : 'Open maps'),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                      return ScrollableFadeContainer(
+                        scrollController: _petsScrollController,
+                        containerWidth: containerWidth,
+                        contentWidth: totalWidth,
+                        child: ListView.builder(
+                          controller: _petsScrollController,
+                          scrollDirection: Axis.horizontal,
+                          physics: const PageScrollPhysics().applyTo(
+                            const BouncingScrollPhysics(),
                           ),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: (MediaQuery.of(context).size.width - itemWidth) / 2,
+                          ),
+                          itemCount: lostPets.length,
+                          itemBuilder: (context, index) {
+                            final lostPet = lostPets[index];
+                            return ValueListenableBuilder<int>(
+                              valueListenable: _currentPetPageNotifier,
+                              builder: (context, currentPage, child) {
+                                return AnimatedScale(
+                                  scale: currentPage == index ? 1.0 : 0.92,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOutCubic,
+                                  child: Container(
+                                    width: itemWidth,
+                                    margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 24.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(90),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.15),
+                                          blurRadius: 16,
+                                          offset: const Offset(0, 8),
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
                                     ),
-                                    // Range indicator
-                                    ValueListenableBuilder<latlong.LatLng?>(
-                                      valueListenable: _userLocationNotifier,
-                                      builder: (context, userLocation, child) {
-                                        if (_isWithinRange(userLocation, lostPet.location)) {
-                                          return Positioned(
-                                            top: 8,
-                                            right: 8,
-                                            child: Container(
-                                              width: 12,
-                                              height: 12,
-                                              decoration: BoxDecoration(
-                                                color: Colors.red,
-                                                shape: BoxShape.circle,
-                                                border: Border.all(color: Colors.white, width: 2),
+                                    child: _buildLostPetCard(lostPet, context),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ValueListenableBuilder<int>(
+                  valueListenable: _currentPetPageNotifier,
+                  builder: (context, currentPage, child) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        lostPets.length,
+                        (index) => Container(
+                          width: 8,
+                          height: 8,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: currentPage == index
+                                ? const Color(0xFFF59E0B)
+                                : Colors.grey[300],
+                          ),
                         ),
                       ),
                     );
-                                        }
-                                        return const SizedBox.shrink();
                   },
-                                    ),
-                                  ],
-                                ),
                 ),
-                            );
-                          },
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildLostPetCard(LostPet lostPet, BuildContext context) {
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(50),
+                child: lostPet.pet.imageUrls.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: lostPet.pet.imageUrls.first,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => const PlaceholderImage(
+                          width: 100,
+                          height: 100,
+                          isCircular: true,
+                        ),
+                        errorWidget: (context, url, error) => const PlaceholderImage(
+                          width: 100,
+                          height: 100,
+                          isCircular: true,
+                        ),
+                        fadeInDuration: const Duration(milliseconds: 300),
+                      )
+                    : const PlaceholderImage(
+                        width: 100,
+                        height: 100,
+                        isCircular: true,
+                      ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      lostPet.pet.name,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Text(
+                          'Last seen: ',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                        Text(
+                          timeago.format(lostPet.lastSeenDate),
+                          style: TextStyle(
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ValueListenableBuilder<latlong.LatLng?>(
+                      valueListenable: _userLocationNotifier,
+                      builder: (context, userLocation, child) {
+                        final distance = _calculateDistance(userLocation, lostPet.location);
+                        return Row(
+                          children: [
+                            const Text(
+                              'Location: ',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                            Expanded(
+                              child: Text(
+                                lostPet.address,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (distance.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red[100],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  distance,
+                                  style: TextStyle(
+                                    color: Colors.red[700],
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         );
                       },
                     ),
-              );
-            },
+                    const SizedBox(height: 8),
+                    Consumer<AuthService>(
+                      builder: (context, authService, child) {
+                        final currentUser = authService.currentUser;
+                        final isCurrentUserPet = currentUser?.id == lostPet.reportedByUserId;
+                        
+                        return ElevatedButton(
+                          onPressed: isCurrentUserPet 
+                              ? () => _reportFound(context, lostPet)
+                              : widget.onNavigateToMap,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isCurrentUserPet 
+                                ? Colors.green 
+                                : const Color(0xFFF59E0B),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            minimumSize: const Size(120, 36),
+                            elevation: 4,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isCurrentUserPet ? Icons.check_circle : Icons.map, 
+                                size: 18
+                              ),
+                              const SizedBox(width: 4),
+                              Text(isCurrentUserPet ? 
+                                AppLocalizations.of(context)?.reportFound ?? 'Report Found' : 
+                                AppLocalizations.of(context)?.openInMaps ?? 'Open maps'),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 16),
-            ValueListenableBuilder<int>(
-              valueListenable: _currentPetPageNotifier,
-              builder: (context, currentPage, child) {
-                return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-                    lostPets.length,
-            (index) => Container(
-              width: 8,
-              height: 8,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                        color: currentPage == index
-                    ? const Color(0xFFF59E0B)
-                    : Colors.grey[300],
-              ),
-            ),
-          ),
-                );
-              },
+        // Range indicator
+        ValueListenableBuilder<latlong.LatLng?>(
+          valueListenable: _userLocationNotifier,
+          builder: (context, userLocation, child) {
+            if (_isWithinRange(userLocation, lostPet.location)) {
+              return Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
         ),
       ],
-        );
-      },
     );
   }
 

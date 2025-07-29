@@ -103,10 +103,19 @@ class User {
       );
     }
 
+    // Handle displayName safely - convert empty strings to null
+    final rawDisplayName = data['displayName'];
+    final displayName = (rawDisplayName is String && rawDisplayName.trim().isEmpty) ? null : rawDisplayName;
+    
+    print('🔍 [User.fromFirestore] Raw displayName: "$rawDisplayName"');
+    print('🔍 [User.fromFirestore] Raw displayName type: ${rawDisplayName.runtimeType}');
+    print('🔍 [User.fromFirestore] Processed displayName: "$displayName"');
+    print('🔍 [User.fromFirestore] Processed displayName type: ${displayName.runtimeType}');
+
     return User(
       id: doc.id,
       email: data['email'] ?? '',
-      displayName: data['displayName'],
+      displayName: displayName,
       username: data['username'],
       photoURL: data['photoURL'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),

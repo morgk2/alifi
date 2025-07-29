@@ -8,6 +8,8 @@ import '../widgets/spinning_loader.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'user_profile_page.dart';
 import '../services/database_service.dart';
+import 'package:alifi/dialogs/gift_user_search_dialog.dart';
+import 'package:alifi/pages/store_chat_page.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final dynamic product;  // Can be either AliexpressProduct or StoreProduct
@@ -468,6 +470,30 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       height: 1.5,
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.card_giftcard),
+                      label: const Text('Buy as a Gift'),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) =>
+                              GiftUserSearchDialog(product: widget.product),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor:
+                            isStoreProduct ? Colors.green : Colors.orange,
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        textStyle: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                        shape: const StadiumBorder(),
+                      ),
+                    ),
+                  ),
                   if (!isStoreProduct) ...[
                     const SizedBox(height: 24),
                     // Transparency section for AliExpress products
@@ -582,8 +608,40 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           ),
           child: isStoreProduct
               ? ElevatedButton(
-                  onPressed: () {
-                    // TODO: Implement store product purchase
+                  onPressed: () async {
+                    // Get store user information and navigate to chat
+                    try {
+                      final storeUser = await DatabaseService().getUser(widget.product.storeId);
+                      if (storeUser != null) {
+                        Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) =>
+                                StoreChatPage(
+                                  product: widget.product,
+                                  storeUser: storeUser,
+                                ),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              return SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(1.0, 0.0),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              );
+                            },
+                            transitionDuration: const Duration(milliseconds: 300),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to open chat: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,

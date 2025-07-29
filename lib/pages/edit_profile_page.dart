@@ -1,3 +1,5 @@
+import 'package:alifi/pages/store_signup_page.dart';
+import 'package:alifi/pages/vet_signup_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
@@ -85,7 +87,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final updatedUser = user.copyWith(
       username: newUsername,
       displayName: _displayNameController.text.trim(),
-      basicInfo: user.accountType == 'vet' ? _basicInfoController.text.trim() : user.basicInfo,
+      basicInfo: ['vet', 'store'].contains(user.accountType) 
+        ? _basicInfoController.text.trim() 
+        : user.basicInfo,
     );
 
     _isSavingNotifier.value = true;
@@ -153,7 +157,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
       body: Consumer<AuthService>(
         builder: (context, authService, _) {
           final user = authService.currentUser;
-          final isVet = user?.accountType == 'vet';
+          if (user == null) {
+            // Handle the case where the user is not logged in, 
+            // for example, by showing a loading indicator or an error message.
+            return const Center(child: CircularProgressIndicator());
+          }
+          final isNormalUser = user.accountType == 'normal';
+          final isVetOrStore = ['vet', 'store'].contains(user.accountType);
 
           return Stack(
             children: [
@@ -264,7 +274,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 return null;
                               },
                             ),
-                            if (isVet) ...[
+                            if (isVetOrStore) ...[
                               const SizedBox(height: 20),
                               const Text(
                                 'Basic Info',
@@ -286,6 +296,38 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               ),
                             ],
                             const SizedBox(height: 32),
+                            if (isNormalUser) ...[
+                            const Text(
+                              'Account Type',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildLinkedAccountTile(
+                              'Request to be a Vet',
+                              AppIcons.petsIcon,
+                              false, // Not linked yet
+                              () {
+                                Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (context) => const VetSignUpPage(),
+                                ));
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _buildLinkedAccountTile(
+                              'Request to be a Store',
+                              AppIcons.storeIcon,
+                              false, // Not linked yet
+                              () {
+                                Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (context) => const StoreSignUpPage(),
+                                ));
+                              },
+                            ),
+                            const SizedBox(height: 40),
+                          ],
                             const Text(
                               'Linked Accounts',
                               style: TextStyle(

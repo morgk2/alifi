@@ -13,6 +13,9 @@ import '../models/marketplace_product.dart';
 import 'package:rxdart/rxdart.dart';
 import 'dart:convert'; // Added for json.decode
 import 'package:http/http.dart' as http; // Added for http.get
+import 'package:alifi/models/gift.dart';
+import '../models/chat_message.dart';
+import '../models/order.dart' as store_order;
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -26,6 +29,9 @@ class DatabaseService {
   CollectionReference get _storeProductsCollection => _db.collection('storeproducts');
   CollectionReference get _vetLocationsCollection => _db.collection('vet_locations');
   CollectionReference get _storeLocationsCollection => _db.collection('store_locations');
+  CollectionReference get _giftsCollection => _db.collection('gifts');
+  CollectionReference get _chatMessagesCollection => _db.collection('chatMessages');
+  CollectionReference get _ordersCollection => _db.collection('orders');
 
   // Single document for all locations in 'locations' collection
   DocumentReference get _vetLocationsDoc => _db.collection('locations').doc('vets');
@@ -294,8 +300,30 @@ class DatabaseService {
   }
 
   Future<User?> getUser(String userId) async {
-    final doc = await _usersCollection.doc(userId).get();
-    return doc.exists ? User.fromFirestore(doc) : null;
+    print('🔍 [DatabaseService] getUser called with userId: $userId');
+    try {
+      final doc = await _usersCollection.doc(userId).get();
+      print('🔍 [DatabaseService] getUser document exists: ${doc.exists}');
+      
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>?;
+        print('🔍 [DatabaseService] getUser document data: $data');
+        print('🔍 [DatabaseService] getUser displayName from data: ${data?['displayName']}');
+        print('🔍 [DatabaseService] getUser displayName type: ${data?['displayName'].runtimeType}');
+        
+        final user = User.fromFirestore(doc);
+        print('🔍 [DatabaseService] getUser created user: ${user.displayName}');
+        print('🔍 [DatabaseService] getUser user displayName type: ${user.displayName.runtimeType}');
+        return user;
+      } else {
+        print('🔍 [DatabaseService] getUser document does not exist');
+        return null;
+      }
+    } catch (e) {
+      print('🔍 [DatabaseService] getUser ERROR: $e');
+      print('🔍 [DatabaseService] getUser ERROR stack trace: ${StackTrace.current}');
+      return null;
+    }
   }
 
   // User Search Operations
@@ -1283,6 +1311,77 @@ class DatabaseService {
     );
   }
 
+  // Gift Operations
+  Future<String> sendGift(Gift gift) async {
+    final docRef = await _giftsCollection.add(gift.toFirestore());
+    return docRef.id;
+  }
+
+  Future<void> updateGiftStatus(String giftId, String status) async {
+    await _giftsCollection.doc(giftId).update({
+      'status': status,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<List<Gift>> getPendingGifts(String userId) {
+    return _giftsCollection
+        .where('gifteeId', isEqualTo: userId)
+        .where('status', isEqualTo: 'pending')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Gift.fromFirestore(doc)).toList());
+  }
+
+  Stream<List<Gift>> getSentGifts(String userId) {
+    return _giftsCollection
+        .where('gifterId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Gift.fromFirestore(doc)).toList());
+  }
+
+  Stream<List<Map<String, dynamic>>> getStoreDashboardStats(String storeId) {
+    return _storeProductsCollection
+        .where('storeId', isEqualTo: storeId)
+        .snapshots()
+        .map((snapshot) {
+      double totalSales = 0;
+      int ordersCount = 0;
+      int activeOrders = 0;
+      int engagementCount = 0;
+
+      for (var doc in snapshot.docs) {
+        final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        totalSales += ((data['price'] ?? 0) as num) * ((data['totalOrders'] ?? 0) as num);
+        ordersCount += (data['totalOrders'] ?? 0) as int;
+        activeOrders += (data['activeOrders'] ?? 0) as int;
+        engagementCount += (data['viewCount'] ?? 0) as int;
+        engagementCount += (data['favoriteCount'] ?? 0) as int;
+      }
+
+      return [
+        {
+          'totalSales': totalSales,
+          'ordersCount': ordersCount,
+          'activeOrders': activeOrders,
+          'engagementCount': engagementCount,
+        }
+      ];
+    });
+  }
+
+  Stream<List<StoreProduct>> getProductsByStore(String storeId) {
+    return _storeProductsCollection
+        .where('storeId', isEqualTo: storeId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => StoreProduct.fromFirestore(doc))
+            .toList());
+  }
+
   // Vet and Store Location Operations
   Future<void> saveVetLocation(String placeId, double lat, double lng) async {
     try {
@@ -1426,5 +1525,279 @@ class DatabaseService {
       print('Error getting all store locations: $e');
       return {};
     }
+  }
+
+  // Chat methods
+  Future<String> sendChatMessage(String senderId, String receiverId, String message, {Map<String, dynamic>? productAttachment}) async {
+    try {
+      final docRef = await _chatMessagesCollection.add({
+        'senderId': senderId,
+        'receiverId': receiverId,
+        'message': message,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+        'productAttachment': productAttachment,
+      });
+      return docRef.id;
+    } catch (e) {
+      print('Error sending chat message: $e');
+      throw e;
+    }
+  }
+
+  Stream<List<ChatMessage>> getChatMessages(String userId1, String userId2) {
+    // Create a compound query to get messages between these two specific users
+    // We need to check both directions: user1->user2 and user2->user1
+    return _chatMessagesCollection
+        .where('senderId', whereIn: [userId1, userId2])
+        .where('receiverId', whereIn: [userId1, userId2])
+        .orderBy('timestamp', descending: false)
+        .snapshots()
+        .map((snapshot) {
+          // Filter to only include messages between these two specific users
+          return snapshot.docs
+              .map((doc) => ChatMessage.fromFirestore(doc))
+              .where((message) => 
+                  (message.senderId == userId1 && message.receiverId == userId2) ||
+                  (message.senderId == userId2 && message.receiverId == userId1))
+              .toList();
+        });
+  }
+
+  Stream<List<ChatMessage>> getIncomingMessagesForStore(String storeId) {
+    return _chatMessagesCollection
+        .where('receiverId', isEqualTo: storeId)
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => ChatMessage.fromFirestore(doc)).toList();
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> getStoreConversations(String storeId) {
+    return _chatMessagesCollection
+        .where('receiverId', isEqualTo: storeId)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      // Group messages by sender to get unique conversations
+      Map<String, ChatMessage> conversations = {};
+      for (var doc in snapshot.docs) {
+        final message = ChatMessage.fromFirestore(doc);
+        if (!conversations.containsKey(message.senderId)) {
+          conversations[message.senderId] = message;
+        }
+      }
+      
+      return conversations.values.map((message) => {
+        'senderId': message.senderId,
+        'lastMessage': message.message,
+        'timestamp': message.timestamp,
+        'messageId': message.id,
+      }).toList();
+    });
+  }
+
+  Future<void> markMessageAsRead(String messageId) async {
+    try {
+      await _chatMessagesCollection.doc(messageId).update({
+        'isRead': true,
+      });
+    } catch (e) {
+      print('Error marking message as read: $e');
+      throw e;
+    }
+  }
+
+  Future<void> updateChatMessageAttachment(String messageId, Map<String, dynamic> attachment) async {
+    try {
+      await _chatMessagesCollection.doc(messageId).update({
+        'productAttachment': attachment,
+      });
+    } catch (e) {
+      print('Error updating chat message attachment: $e');
+      throw e;
+    }
+  }
+
+  // Order Operations
+  Future<String> createOrder(store_order.StoreOrder order) async {
+    try {
+      final docRef = await _ordersCollection.add(order.toFirestore());
+      return docRef.id;
+    } catch (e) {
+      print('Error creating order: $e');
+      throw e;
+    }
+  }
+
+  Future<void> updateOrderStatus(String orderId, String status) async {
+    try {
+      await _ordersCollection.doc(orderId).update({
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error updating order status: $e');
+      throw e;
+    }
+  }
+
+  Stream<List<store_order.StoreOrder>> getStoreOrders(String storeId) {
+    print('🔍 [DatabaseService] getStoreOrders called with storeId: $storeId');
+    try {
+      return _ordersCollection
+          .where('storeId', isEqualTo: storeId)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+            print('🔍 [DatabaseService] Firestore snapshot received');
+            print('🔍 [DatabaseService] Snapshot docs count: ${snapshot.docs.length}');
+            print('🔍 [DatabaseService] Snapshot metadata: ${snapshot.metadata}');
+            
+            final orders = snapshot.docs.map((doc) {
+              try {
+                final order = store_order.StoreOrder.fromFirestore(doc);
+                print('🔍 [DatabaseService] Successfully parsed order: ${order.id} - ${order.productName} (${order.status})');
+                return order;
+              } catch (e) {
+                print('🔍 [DatabaseService] Error parsing order document ${doc.id}: $e');
+                print('🔍 [DatabaseService] Document data: ${doc.data()}');
+                throw e;
+              }
+            }).toList();
+            
+            print('🔍 [DatabaseService] Successfully parsed ${orders.length} orders');
+            return orders;
+          }).handleError((error) {
+            print('🔍 [DatabaseService] Error in getStoreOrders stream: $error');
+            print('🔍 [DatabaseService] Error type: ${error.runtimeType}');
+            throw error;
+          });
+    } catch (e) {
+      print('🔍 [DatabaseService] Error setting up getStoreOrders query: $e');
+      rethrow;
+    }
+  }
+
+  Stream<List<store_order.StoreOrder>> getUserOrders(String userId) {
+    print('🔍 [DatabaseService] getUserOrders called with userId: $userId');
+    try {
+      return _ordersCollection
+          .where('customerId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+            print('🔍 [DatabaseService] getUserOrders Firestore snapshot received');
+            print('🔍 [DatabaseService] getUserOrders Snapshot docs count: ${snapshot.docs.length}');
+            print('🔍 [DatabaseService] getUserOrders Snapshot metadata: ${snapshot.metadata}');
+            
+            final orders = snapshot.docs.map((doc) {
+              try {
+                final order = store_order.StoreOrder.fromFirestore(doc);
+                print('🔍 [DatabaseService] getUserOrders Successfully parsed order: ${order.id} - ${order.productName} (${order.status})');
+                return order;
+              } catch (e) {
+                print('🔍 [DatabaseService] getUserOrders Error parsing order document ${doc.id}: $e');
+                print('🔍 [DatabaseService] getUserOrders Document data: ${doc.data()}');
+                throw e;
+              }
+            }).toList();
+            
+            print('🔍 [DatabaseService] getUserOrders Successfully parsed ${orders.length} orders');
+            return orders;
+          }).handleError((error) {
+            print('🔍 [DatabaseService] getUserOrders Error in stream: $error');
+            print('🔍 [DatabaseService] getUserOrders Error type: ${error.runtimeType}');
+            throw error;
+          });
+    } catch (e) {
+      print('🔍 [DatabaseService] getUserOrders Error setting up query: $e');
+      rethrow;
+    }
+  }
+
+  Stream<List<Map<String, dynamic>>> getUserConversations(String userId) {
+    print('🔍 [DatabaseService] getUserConversations called with userId: $userId');
+    try {
+      return _chatMessagesCollection
+          .where('senderId', isEqualTo: userId)
+          .orderBy('timestamp', descending: true)
+          .snapshots()
+          .map((snapshot) {
+            print('🔍 [DatabaseService] getUserConversations Firestore snapshot received');
+            print('🔍 [DatabaseService] getUserConversations Snapshot docs count: ${snapshot.docs.length}');
+            print('🔍 [DatabaseService] getUserConversations Snapshot metadata: ${snapshot.metadata}');
+            
+            final conversations = <Map<String, dynamic>>[];
+            final seenReceivers = <String>{};
+
+            for (final doc in snapshot.docs) {
+              try {
+                final data = doc.data() as Map<String, dynamic>?;
+                print('🔍 [DatabaseService] getUserConversations Processing doc ${doc.id}: $data');
+                print('🔍 [DatabaseService] getUserConversations Doc data type: ${data.runtimeType}');
+                print('🔍 [DatabaseService] getUserConversations Doc data keys: ${data?.keys.toList()}');
+                
+                final receiverId = data?['receiverId'] as String?;
+                final message = data?['message'] as String?;
+                final timestamp = data?['timestamp'] as Timestamp?;
+
+                print('🔍 [DatabaseService] getUserConversations Extracted: receiverId=$receiverId, message=$message, timestamp=$timestamp');
+                print('🔍 [DatabaseService] getUserConversations receiverId type: ${receiverId.runtimeType}');
+                print('🔍 [DatabaseService] getUserConversations message type: ${message.runtimeType}');
+                print('🔍 [DatabaseService] getUserConversations timestamp type: ${timestamp.runtimeType}');
+
+                if (receiverId != null && message != null && timestamp != null && !seenReceivers.contains(receiverId)) {
+                  seenReceivers.add(receiverId);
+                  conversations.add({
+                    'receiverId': receiverId,
+                    'lastMessage': message,
+                    'timestamp': timestamp.toDate(),
+                  });
+                  print('🔍 [DatabaseService] getUserConversations Added conversation with receiverId: $receiverId');
+                } else {
+                  print('🔍 [DatabaseService] getUserConversations Skipped doc ${doc.id}: receiverId=$receiverId, message=$message, timestamp=$timestamp, seenReceivers=$seenReceivers');
+                  print('🔍 [DatabaseService] getUserConversations Skip reason: receiverId null=${receiverId == null}, message null=${message == null}, timestamp null=${timestamp == null}, already seen=${seenReceivers.contains(receiverId)}');
+                }
+              } catch (e) {
+                print('🔍 [DatabaseService] getUserConversations Error processing doc ${doc.id}: $e');
+                print('🔍 [DatabaseService] getUserConversations Error stack trace: ${StackTrace.current}');
+                print('🔍 [DatabaseService] getUserConversations Document data: ${doc.data()}');
+              }
+            }
+
+            print('🔍 [DatabaseService] getUserConversations Final conversations count: ${conversations.length}');
+            print('🔍 [DatabaseService] getUserConversations Conversations: $conversations');
+            return conversations;
+          }).handleError((error) {
+            print('🔍 [DatabaseService] getUserConversations Error in stream: $error');
+            print('🔍 [DatabaseService] getUserConversations Error type: ${error.runtimeType}');
+            throw error;
+          });
+    } catch (e) {
+      print('🔍 [DatabaseService] getUserConversations Error setting up query: $e');
+      rethrow;
+    }
+  }
+
+  Stream<List<store_order.StoreOrder>> getCustomerOrders(String customerId) {
+    return _ordersCollection
+        .where('customerId', isEqualTo: customerId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => store_order.StoreOrder.fromFirestore(doc)).toList());
+  }
+
+  Stream<List<store_order.StoreOrder>> getActiveStoreOrders(String storeId) {
+    return _ordersCollection
+        .where('storeId', isEqualTo: storeId)
+        .where('status', whereIn: ['pending', 'confirmed', 'shipped'])
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => store_order.StoreOrder.fromFirestore(doc)).toList());
   }
 } 

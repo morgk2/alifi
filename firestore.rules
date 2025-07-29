@@ -37,6 +37,32 @@ service cloud.firestore {
         && (!('maximumOrder' in data) || data.maximumOrder is number);
     }
 
+    function isValidVetRequest(data) {
+      return data.firstName is string
+        && data.lastName is string
+        && data.clinicName is string
+        && data.clinicLocation is string
+        && data.city is string
+        && data.phone is string
+        && data.subscription is string
+        && data.price is string
+        && data.status == 'pending'
+        && data.timestamp is timestamp;
+    }
+
+    function isValidStoreRequest(data) {
+      return data.firstName is string
+        && data.lastName is string
+        && data.storeName is string
+        && data.storeLocation is string
+        && data.city is string
+        && data.phone is string
+        && data.subscription is string
+        && data.price is string
+        && data.status == 'pending'
+        && data.timestamp is timestamp;
+    }
+
     function isValidMarketplaceProductData(data) {
       return data.name is string 
         && data.name.size() > 0
@@ -221,6 +247,111 @@ service cloud.firestore {
       // Users can delete their own physical pet ID requests, admins can delete any
       allow delete: if isAuthenticated() && (
         resource.data.userId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // Vet requests collection
+    match /vet_requests/{requestId} {
+      allow create: if isValidVetRequest(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Store requests collection
+    match /store_requests/{requestId} {
+      allow create: if isValidStoreRequest(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Gifts collection
+    match /gifts/{giftId} {
+      // Allow user to create a gift
+      allow create: if isAuthenticated() && request.resource.data.gifterId == request.auth.uid;
+
+      // Allow giftee and gifter to read
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.gifteeId || request.auth.uid == resource.data.gifterId);
+
+      // Allow giftee to update the status (accept/reject)
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.gifteeId;
+
+      // No one can delete a gift for record-keeping
+      allow delete: if false;
+    }
+
+    // Chat messages collection
+    match /chatMessages/{messageId} {
+      // Allow authenticated users to create messages
+      allow create: if isAuthenticated() && 
+        request.resource.data.senderId == request.auth.uid;
+
+      // Allow sender and receiver to read messages
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.senderId || 
+        request.auth.uid == resource.data.receiverId
+      );
+
+      // Allow sender to update their own messages (e.g., for editing)
+      allow update: if isAuthenticated() && 
+        request.auth.uid == resource.data.senderId;
+
+      // Allow sender to delete their own messages
+      allow delete: if isAuthenticated() && 
+        request.auth.uid == resource.data.senderId;
+    }
+
+    // Orders collection
+    match /orders/{orderId} {
+      // Helper function to validate order data (very permissive)
+      function isValidOrderData(data) {
+        return data.customerId is string
+          && data.customerId.size() > 0
+          && data.storeId is string
+          && data.storeId.size() > 0
+          && data.productId is string
+          && data.productId.size() > 0
+          && data.price is number
+          && data.price >= 0
+          && data.quantity is number
+          && data.quantity > 0
+          && data.status is string
+          && data.status in ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
+          && data.createdAt is timestamp
+          && (!('chatMessageId' in data) || data.chatMessageId is string)
+          && (!('updatedAt' in data) || data.updatedAt is timestamp || data.updatedAt == null)
+          && (!('notes' in data) || data.notes is string || data.notes == null);
+      }
+
+      // Allow authenticated users to create orders (very permissive)
+      allow create: if isAuthenticated() 
+        && request.resource.data.customerId == request.auth.uid;
+
+      // Allow customers to read their own orders
+      // Allow store owners to read orders for their store
+      // Allow admins to read all orders
+      allow read: if isAuthenticated() && (
+        resource.data.customerId == request.auth.uid ||
+        resource.data.storeId == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Allow store owners to update order status for their store
+      // Allow customers to update their own orders (e.g., cancel)
+      // Allow admins to update any order
+      allow update: if isAuthenticated() && (
+        (resource.data.storeId == request.auth.uid && 
+         request.resource.data.status in ['confirmed', 'shipped', 'delivered']) ||
+        (resource.data.customerId == request.auth.uid && 
+         request.resource.data.status == 'cancelled' &&
+         resource.data.status == 'pending') ||
+        isAdmin()
+      );
+
+      // Allow customers to delete their own pending orders
+      // Allow store owners to delete orders for their store (with restrictions)
+      // Allow admins to delete any order
+      allow delete: if isAuthenticated() && (
+        (resource.data.customerId == request.auth.uid && resource.data.status == 'pending') ||
+        (resource.data.storeId == request.auth.uid && resource.data.status == 'pending') ||
+        isAdmin()
       );
     }
 

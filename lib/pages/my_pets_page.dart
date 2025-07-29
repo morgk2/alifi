@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -22,6 +23,7 @@ import 'package:sensors_plus/sensors_plus.dart' if (dart.library.html) '../noop.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:share_plus/share_plus.dart';
 import 'pet_health_page.dart';
+import '../l10n/app_localizations.dart';
 
 class MyPetsPage extends StatefulWidget {
   const MyPetsPage({super.key});
@@ -702,7 +704,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Edit Pets', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                              Text(AppLocalizations.of(context)?.editPet ?? 'Edit Pets', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                               TextButton(
                                 style: TextButton.styleFrom(
                                   backgroundColor: Colors.orange,
@@ -710,7 +712,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                 ),
                                 onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('Close'),
+                                child: Text(AppLocalizations.of(context)?.close ?? 'Close'),
                               ),
                             ],
                           ),
@@ -759,16 +761,16 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                                               final confirmed = await showDialog<bool>(
                                                 context: context,
                                                 builder: (context) => AlertDialog(
-                                                  title: const Text('Mark as Found?'),
-                                                  content: const Text('Are you sure you want to mark this pet as found?'),
+                                                  title: Text(AppLocalizations.of(context)?.reportFound ?? 'Mark as Found?'),
+                                                  content: Text(AppLocalizations.of(context)?.thisWillPostYourMissingPetReport ?? 'Are you sure you want to mark this pet as found?'),
                                                   actions: [
                                                     TextButton(
                                                       onPressed: () => Navigator.pop(context, false),
-                                                      child: const Text('Cancel'),
+                                                      child: Text(AppLocalizations.of(context)?.cancel ?? 'Cancel'),
                                                     ),
                                                     TextButton(
                                                       onPressed: () => Navigator.pop(context, true),
-                                                      child: const Text('Confirm'),
+                                                      child: Text(AppLocalizations.of(context)?.confirm ?? 'Confirm'),
                                                     ),
                                                   ],
                                                 ),
@@ -779,13 +781,13 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                                                   setDialogState(() {});
                                                   if (mounted) {
                                                     ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(content: Text('Pet marked as found!')),
+                                                      SnackBar(content: Text(AppLocalizations.of(context)?.petMarkedAsFoundSuccessfully ?? 'Pet marked as found!')),
                                                     );
                                                   }
                                                 } catch (e) {
                                                   if (mounted) {
                                                     ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(content: Text('Failed to mark as found: $e')),
+                                                      SnackBar(content: Text(AppLocalizations.of(context)?.errorMarkingPetAsFound(e) ?? 'Failed to mark as found: $e')),
                                                     );
                                                   }
                                                 }

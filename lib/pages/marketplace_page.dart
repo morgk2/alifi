@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'product_details_page.dart';
 import '../models/aliexpress_product.dart';
 import '../models/store_product.dart';
+import 'user_orders_page.dart';
 
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
@@ -208,6 +209,31 @@ class _MarketplacePageState extends State<MarketplacePage> {
             pinned: true,
             expandedHeight: 120,
             toolbarHeight: 60,
+            actions: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const UserOrdersPage(),
+                    ),
+                  );
+                },
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.shopping_bag_outlined,
+                    color: Colors.green[600],
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               title: const Text(
