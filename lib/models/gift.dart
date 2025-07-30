@@ -13,6 +13,7 @@ class Gift {
   final String status; // 'pending', 'accepted', 'rejected'
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final bool isRead;
 
   Gift({
     required this.id,
@@ -27,6 +28,7 @@ class Gift {
     required this.status,
     required this.createdAt,
     this.updatedAt,
+    this.isRead = false,
   });
 
   factory Gift.fromFirestore(DocumentSnapshot doc) {
@@ -44,6 +46,7 @@ class Gift {
       status: data['status'],
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      isRead: data['isRead'] ?? false,
     );
   }
 
@@ -60,6 +63,7 @@ class Gift {
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'isRead': isRead,
     };
   }
 } 

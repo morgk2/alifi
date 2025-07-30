@@ -18,6 +18,7 @@ class MarketplaceProduct {
   final String? storeId;  // null for AliExpress products
   final String? affiliateUrl;  // null for store products
   final String type;  // 'store' or 'aliexpress'
+  final DateTime createdAt;
 
   const MarketplaceProduct({
     required this.id,
@@ -36,6 +37,7 @@ class MarketplaceProduct {
     this.storeId,
     this.affiliateUrl,
     required this.type,
+    required this.createdAt,
   });
 
   factory MarketplaceProduct.fromAliexpress(AliexpressProduct product) {
@@ -55,6 +57,7 @@ class MarketplaceProduct {
       isActive: true,
       affiliateUrl: product.affiliateUrl,
       type: 'aliexpress',
+      createdAt: product.createdAt,
     );
   }
 
@@ -75,6 +78,7 @@ class MarketplaceProduct {
       isActive: product.isActive,
       storeId: product.storeId,
       type: 'store',
+      createdAt: product.createdAt,
     );
   }
 

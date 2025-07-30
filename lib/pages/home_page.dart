@@ -6,6 +6,7 @@ import 'package:timeago/timeago.dart' as timeago;
 import '../models/fundraising.dart';
 import '../models/lost_pet.dart';
 import '../models/store_item.dart';
+import '../models/store_product.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
 import '../icons.dart';
@@ -14,6 +15,7 @@ import '../widgets/scrollable_fade_container.dart';
 import '../widgets/fundraising_card.dart';
 import '../widgets/lost_pet_card.dart';
 import '../widgets/product_card.dart';
+import '../widgets/combined_recommendations_widget.dart';
 import '../models/aliexpress_product.dart';
 import 'notification_page.dart';
 import 'profile_page.dart';
@@ -500,7 +502,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     child: Column(
                       children: [
                         const SizedBox(height: 32),
-                        _buildStoreSection(),
+                        CombinedRecommendationsWidget(
+                          scrollController: _storeScrollController,
+                          limit: 10,
+                        ),
                         const SizedBox(height: 80),
                       ],
                     ),
@@ -1223,186 +1228,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           },
         ),
       ],
-    );
-  }
-
-  Widget _buildStoreSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            offset: const Offset(0, 8),
-            blurRadius: 16,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-            child: Row(
-              children: [
-                SvgPicture.string(
-                  AppIcons.storeIcon,
-                  width: 24,
-                  height: 24,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'You may be Interested',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MarketplacePage(),
-                      ),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      Text(
-                        'See all',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                Icon(Icons.arrow_forward, color: Colors.grey[600]),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            children: [
-              SizedBox(
-                height: 220,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final containerWidth = constraints.maxWidth;
-                    final itemWidth = MediaQuery.of(context).size.width * 0.6;
-
-                    return StreamBuilder<List<AliexpressProduct>>(
-                      stream: _databaseService.getRecommendedListings(),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) {
-                          print('Error loading recommended products: ${snapshot.error}');
-                          return Center(
-                            child: Text(
-                              'Error loading products',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            ),
-                          );
-                        }
-
-                        if (!snapshot.hasData) {
-                          return const Center(
-                            child: SpinningLoader(
-                              size: 40,
-                              color: Colors.orange,
-                            ),
-                          );
-                        }
-
-                        final products = snapshot.data!;
-                        if (products.isEmpty) {
-                          return Center(
-                            child: Text(
-                              'No products available',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            ),
-                          );
-                        }
-
-                        final totalWidth = itemWidth * products.length +
-                            16.0 * (products.length - 1);
-
-                    return ScrollableFadeContainer(
-                      scrollController: _storeScrollController,
-                      containerWidth: containerWidth,
-                      contentWidth: totalWidth,
-                      child: ListView.builder(
-                        controller: _storeScrollController,
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                            itemCount: products.length,
-                        itemBuilder: (context, index) {
-                              final product = products[index];
-                              print('Building recommended product card for: ${product.name}');
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                child: ProductCard(
-                                  product: product,
-                                  width: itemWidth,
-                                  height: 220,
-                                  showDetails: true,
-                                ),
-                              );
-                            },
-                          ),
-                          );
-                        },
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              ValueListenableBuilder<int>(
-                valueListenable: _currentStorePageNotifier,
-                builder: (context, currentPage, child) {
-                  return StreamBuilder<List<AliexpressProduct>>(
-                    stream: _databaseService.getRecommendedListings(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-                      
-                      return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                          snapshot.data!.length,
-                  (index) => Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                              color: currentPage == index
-                          ? const Color(0xFFF59E0B)
-                          : Colors.grey[300],
-                    ),
-                  ),
-                ),
-                      );
-                    },
-                  );
-                },
-              ),
-              const SizedBox(height: 24),
-              // Remove AI Assistant Card from here
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

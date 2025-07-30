@@ -212,7 +212,7 @@ class _StoreReceiverChatPageState extends State<StoreReceiverChatPage>
                         ),
                         if (message.productAttachment != null) ...[
                           const SizedBox(height: 8),
-                          _buildProductAttachment(message.productAttachment!),
+                          _buildProductAttachment(message.productAttachment!, message),
                         ],
                         const SizedBox(height: 16),
                       ],
@@ -349,73 +349,309 @@ class _StoreReceiverChatPageState extends State<StoreReceiverChatPage>
     );
   }
 
-  Widget _buildProductAttachment(Map<String, dynamic> productData) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: productData['productImageUrl'] ?? productData['imageUrl'] ?? '',
-                width: 50,
-                height: 50,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  width: 50,
-                  height: 50,
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: CircularProgressIndicator(),
+  Widget _buildProductAttachment(Map<String, dynamic> productData, ChatMessage message) {
+    // Check if this is an order attachment by looking at the message content
+    final isOrderAttachment = message.message.toLowerCase().contains('order') || 
+                             message.message.toLowerCase().contains('ordered') ||
+                             message.isOrderAttachment;
+    
+    if (isOrderAttachment) {
+      // Order attachment with dashed border
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.7,
+          ),
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          child: CustomPaint(
+            painter: _DashedBorderPainter(),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.grey.shade200,
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  width: 50,
-                  height: 50,
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.error),
-                ),
+                ],
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    productData['productName'] ?? productData['name'] ?? 'Product',
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      fontFamily: 'Inter',
+                  // Product Image
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: CachedNetworkImage(
+                      imageUrl: productData['productImageUrl'] ?? productData['imageUrl'] ?? '',
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        height: 200,
+                        color: Colors.grey[200],
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        height: 200,
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.error, size: 50, color: Colors.grey),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '\$${(productData['price'] ?? 0.0).toStringAsFixed(2)}',
-                    style: TextStyle(
-                      color: Colors.green[600],
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      fontFamily: 'Inter',
+                  // Product Information
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Product Name
+                        Text(
+                          productData['productName'] ?? productData['name'] ?? 'Product',
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Rating and Orders Row
+                        Row(
+                          children: [
+                            Text(
+                              '4.8',
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '30 orders',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Price and Ordered Button Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '\$${(productData['price'] ?? 0.0).toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 24,
+                                fontFamily: 'InterDisplay',
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                // Handle order action
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 10,
+                                ),
+                              ),
+                              child: const Text(
+                                'Ordered',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
-      ),
-    );
+      );
+    } else {
+      // Normal attachment - modern card design
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.7,
+          ),
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.grey.shade200,
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Product Image
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: CachedNetworkImage(
+                  imageUrl: productData['productImageUrl'] ?? productData['imageUrl'] ?? '',
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    height: 200,
+                    color: Colors.grey[200],
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    height: 200,
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.error, size: 50, color: Colors.grey),
+                  ),
+                ),
+              ),
+              // Product Information
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Product Name
+                    Text(
+                      productData['productName'] ?? productData['name'] ?? 'Product',
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Rating and Orders Row
+                    Row(
+                      children: [
+                        Text(
+                          '4.8',
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.star,
+                          color: Colors.amber,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '30 orders',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Price
+                    Text(
+                      '\$${(productData['price'] ?? 0.0).toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                        fontFamily: 'InterDisplay',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
-} 
+}
+
+// Custom painter for dashed border
+class _DashedBorderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.grey.shade400
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    const dashWidth = 8;
+    const dashSpace = 4;
+
+    // Draw dashed rectangle
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    final dashPath = Path();
+    double distance = 0;
+    bool draw = true;
+
+    final pathMetrics = path.computeMetrics();
+    for (final pathMetric in pathMetrics) {
+      while (distance < pathMetric.length) {
+        if (draw) {
+          dashPath.addPath(
+            pathMetric.extractPath(distance, distance + dashWidth),
+            Offset.zero,
+          );
+        }
+        distance += dashWidth + dashSpace;
+        draw = !draw;
+      }
+      distance = 0;
+    }
+
+    canvas.drawPath(dashPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}

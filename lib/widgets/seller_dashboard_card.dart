@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'spinning_loader.dart';
 
 class SellerDashboardCard extends StatelessWidget {
   const SellerDashboardCard({super.key});
@@ -66,8 +67,27 @@ class SellerDashboardCard extends StatelessWidget {
             stream: DatabaseService().getStoreDashboardStats(user!.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(),
+                return Container(
+                  height: 200, // Match the final content height
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SpinningLoader(
+                          size: 50,
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Loading dashboard...',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               }
 
@@ -142,7 +162,7 @@ class SellerDashboardCard extends StatelessWidget {
                           );
                         },
                         icon: const Icon(Icons.analytics),
-                        label: const Text('View Detailed Analytics'),
+                        label: const Text('View All Seller Tools'),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.green,
                           padding: const EdgeInsets.symmetric(vertical: 12),

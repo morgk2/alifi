@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/gift.dart';
 import '../services/database_service.dart';
 import '../dialogs/gift_received_dialog.dart';
+import '../widgets/gift_notification_banner.dart';
 import 'auth_service.dart';
 
 class GiftNotificationController {
@@ -11,6 +12,7 @@ class GiftNotificationController {
   StreamSubscription<List<Gift>>? _receivedGiftsSubscription;
   StreamSubscription<List<Gift>>? _sentGiftsSubscription;
   final Map<String, String> _processedGifts = {};
+  OverlayEntry? _currentNotification;
 
   GiftNotificationController(this.context, this.authService) {
     _init();
@@ -19,6 +21,44 @@ class GiftNotificationController {
   void _init() {
     authService.addListener(_onAuthStateChanged);
     _onAuthStateChanged();
+  }
+
+  Future<void> _markGiftAsRead(Gift gift) async {
+    try {
+      await DatabaseService().updateGiftIsRead(gift.id, true);
+    } catch (e) {
+      print('Error marking gift as read: $e');
+    }
+  }
+
+  void _showNotificationBanner(Gift gift) {
+    // Only show if isRead is false
+    if (gift.isRead == true) {
+      return;
+    }
+
+    // Mark as read in Firestore
+    _markGiftAsRead(gift);
+
+    // Remove any existing notification
+    _currentNotification?.remove();
+    
+    _currentNotification = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top,
+        left: 0,
+        right: 0,
+        child: GiftNotificationBanner(
+          gift: gift,
+          onDismiss: () {
+            _currentNotification?.remove();
+            _currentNotification = null;
+          },
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(_currentNotification!);
   }
 
   void _onAuthStateChanged() {
@@ -50,23 +90,17 @@ class GiftNotificationController {
             continue;
           }
 
-          if (gift.status == 'accepted' || gift.status == 'rejected') {
+          if ((gift.status == 'accepted' || gift.status == 'rejected') && gift.isRead == false) {
             _processedGifts[gift.id] = gift.status;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Your gift to ${gift.gifteeId} was ${gift.status}.',
-                ),
-                backgroundColor:
-                    gift.status == 'accepted' ? Colors.green : Colors.red,
-              ),
-            );
+            _showNotificationBanner(gift);
           }
         }
       });
     } else {
       _receivedGiftsSubscription?.cancel();
       _sentGiftsSubscription?.cancel();
+      _currentNotification?.remove();
+      _currentNotification = null;
     }
   }
 
@@ -74,5 +108,6 @@ class GiftNotificationController {
     authService.removeListener(_onAuthStateChanged);
     _receivedGiftsSubscription?.cancel();
     _sentGiftsSubscription?.cancel();
+    _currentNotification?.remove();
   }
 } 

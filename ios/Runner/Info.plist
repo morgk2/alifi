@@ -49,5 +49,14 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>We need to send you notifications about messages, orders, and updates.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>This app uses local network to discover nearby services.</string>
 </dict>
 </plist>

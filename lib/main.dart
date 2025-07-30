@@ -26,6 +26,7 @@ import 'services/database_service.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'services/places_service.dart';
+import 'services/push_notification_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
 import 'utils/locale_notifier.dart';
@@ -49,10 +50,20 @@ Future<void> main() async {
     );
     print('Supabase initialized successfully');
 
-    // Test Supabase storage connection
-    final storageService = StorageService(Supabase.instance.client);
-    final isConnected = await storageService.testConnection();
-    print('Supabase storage connection test: ${isConnected ? 'SUCCESS' : 'FAILED'}');
+    // Test Supabase storage connection (with timeout)
+    try {
+      final storageService = StorageService(Supabase.instance.client);
+      final isConnected = await storageService.testConnection().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          print('Supabase connection test timed out');
+          return false;
+        },
+      );
+      print('Supabase storage connection test: ${isConnected ? 'SUCCESS' : 'FAILED'}');
+    } catch (e) {
+      print('Error testing Supabase connection: $e');
+    }
     
     // Optimize for smoother rendering
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -81,13 +92,28 @@ Future<void> main() async {
         print('Firestore web persistence configured');
       }
 
-      // Run vet users migration
-      await DatabaseService().migrateVetUsers();
-      print('Vet users migration completed');
+      // Run vet users migration (non-blocking)
+      DatabaseService().migrateVetUsers().catchError((e) {
+        print('Error in vet users migration: $e');
+      });
+      print('Vet users migration started');
 
-      // Update all user follower/following counts
-      await DatabaseService().updateAllUserCounts();
-      print('User counts migration completed');
+      // Update all user follower/following counts (non-blocking)
+      DatabaseService().updateAllUserCounts().catchError((e) {
+        print('Error in user counts migration: $e');
+      });
+      print('User counts migration started');
+
+      // Initialize push notifications with delay and error handling
+      Future.delayed(const Duration(seconds: 2), () async {
+        try {
+          await PushNotificationService().initialize();
+          print('Push notifications initialized');
+        } catch (e) {
+          print('Error initializing push notifications: $e');
+          // Don't crash the app if push notifications fail
+        }
+      });
     } catch (e) {
       print('Error initializing Firebase: $e');
       // Continue anyway as the app should work in guest mode
@@ -106,9 +132,18 @@ Future<void> main() async {
       }
     }
 
-    // Initialize Places Service cache
-    await PlacesService.initialize();
-    print('Places Service cache initialized');
+    // Initialize Places Service cache (with timeout)
+    try {
+      await PlacesService.initialize().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () {
+          print('Places Service initialization timed out');
+        },
+      );
+      print('Places Service cache initialized');
+    } catch (e) {
+      print('Error initializing Places Service: $e');
+    }
 
     runApp(LocaleNotifierProvider(
       initialLocale: const Locale('en'),

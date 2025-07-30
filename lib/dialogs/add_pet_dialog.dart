@@ -343,7 +343,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         _weightNotifier.value == 0 || 
         _selectedImage == null) {
       _errorMessageNotifier.value = 'Please fill in all fields';
-      print('Validation failed: ${_errorMessageNotifier.value}');
+      print('Validation failed:  [31m [1m [4m${_errorMessageNotifier.value} [0m');
       return;
     }
 
@@ -376,10 +376,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
       final now = DateTime.now();
       final age = now.difference(_selectedDate!).inDays ~/ 365;
 
-      _loadingMessageNotifier.value = 'Creating pet profile...';
-      print('Creating pet object...');
+      final isEdit = widget.pet != null;
       final pet = Pet(
-        id: '',  // Will be set by Firestore
+        id: isEdit ? widget.pet!.id : '', // Use existing ID if editing
         name: _nameController.text,
         species: _selectedPetType!,
         breed: _breedController.text,
@@ -388,7 +387,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         gender: _selectedGender,
         imageUrls: [imageUrl], // Use the Supabase URL
         ownerId: authService.currentUser!.id,
-        createdAt: DateTime.now(),
+        createdAt: isEdit ? widget.pet!.createdAt : DateTime.now(),
         lastUpdatedAt: DateTime.now(),
         medicalInfo: {}, // Add medical info in future update
         dietaryInfo: {}, // Add dietary info in future update
@@ -397,14 +396,14 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         isActive: true,
       );
 
-      _loadingMessageNotifier.value = 'Saving to database...';
-      print('Saving pet to Firestore...');
-      // Save pet to Firestore
-      final petId = await DatabaseService().createPet(
-        pet,
-        isGuest: authService.isGuestMode,
-      );
-      print('Successfully saved pet with ID: $petId');
+      _loadingMessageNotifier.value = isEdit ? 'Saving changes...' : 'Saving to database...';
+      print(isEdit ? 'Updating pet in Firestore...' : 'Saving pet to Firestore...');
+      if (isEdit) {
+        await DatabaseService().updatePet(pet, isGuest: authService.isGuestMode);
+      } else {
+        await DatabaseService().createPet(pet, isGuest: authService.isGuestMode);
+      }
+      print('Successfully saved pet.');
 
       if (mounted) {
         print('Closing dialog...');
@@ -1533,27 +1532,32 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                       : const SizedBox(width: 100), // Empty space for alignment
                   
                   // Next/Add button
-                  ElevatedButton(
-                    onPressed: _isSavingNotifier.value ? null : _nextStep,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: Text(
-                      _currentStep == 6 ? 'Add Pet' : 'Next',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _isSavingNotifier,
+                    builder: (context, isSaving, _) {
+                      return ElevatedButton(
+                        onPressed: isSaving ? null : _savePet,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        child: Text(
+                          widget.pet != null ? 'Save Changes' : 'Add Pet',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
             ],
           ),
             ),

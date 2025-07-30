@@ -57,35 +57,93 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
             bottom: Radius.circular(24),
           ),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.green,
-          unselectedLabelColor: Colors.grey[600],
-          indicatorColor: Colors.green,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w600,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
-          ),
-          tabs: const [
-            Tab(icon: Icon(Icons.dashboard_rounded), text: 'Overview'),
-            Tab(icon: Icon(Icons.shopping_bag_rounded), text: 'Products'),
-            Tab(icon: Icon(Icons.receipt_long_rounded), text: 'Orders'),
-            Tab(icon: Icon(Icons.mail_rounded), text: 'Messages'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildOverviewTab(),
-          _buildProductsTab(),
-          _buildOrdersTab(),
-          _buildMessagesTab(),
+          // Floating pill-shaped TabBar
+          Container(
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.orange,
+              unselectedLabelColor: Colors.grey[600],
+              indicatorColor: Colors.transparent,
+              indicatorWeight: 0,
+              dividerColor: Colors.transparent,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+                color: Colors.orange.withOpacity(0.15),
+              ),
+              labelStyle: const TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w500,
+                fontSize: 12,
+              ),
+              tabs: [
+                Tab(
+                  icon: Image.asset(
+                    'assets/images/overview.png',
+                    width: 40,
+                    height: 40,
+                  ),
+                  text: 'Overview',
+                ),
+                Tab(
+                  icon: Image.asset(
+                    'assets/images/products.png',
+                    width: 40,
+                    height: 40,
+                  ),
+                  text: 'Products',
+                ),
+                Tab(
+                  icon: Image.asset(
+                    'assets/images/orders.png',
+                    width: 40,
+                    height: 40,
+                  ),
+                  text: 'Orders',
+                ),
+                Tab(
+                  icon: Image.asset(
+                    'assets/images/messages.png',
+                    width: 40,
+                    height: 40,
+                  ),
+                  text: 'Messages',
+                ),
+              ],
+            ),
+          ),
+          // TabBarView content
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildOverviewTab(),
+                _buildProductsTab(),
+                _buildOrdersTab(),
+                _buildMessagesTab(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -137,7 +195,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(25),
                       border: Border.all(color: Colors.green[200]!),
                     ),
                     child: Column(
@@ -167,9 +225,9 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                           '\$${analytics['todaySales'].toStringAsFixed(2)}',
                           style: TextStyle(
                             fontSize: 28,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.bold,
                             color: Colors.green[700],
-                            fontFamily: 'Inter',
+                            fontFamily: 'InterDisplay',
                           ),
                         ),
                       ],
@@ -184,7 +242,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.blue[50],
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(25),
                             border: Border.all(color: Colors.blue[200]!),
                           ),
                           child: Column(
@@ -214,9 +272,9 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                                 '\$${analytics['weekSales'].toStringAsFixed(2)}',
                                 style: TextStyle(
                                   fontSize: 20,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.bold,
                                   color: Colors.blue[700],
-                                  fontFamily: 'Inter',
+                                  fontFamily: 'InterDisplay',
                                 ),
                               ),
                             ],
@@ -229,7 +287,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.purple[50],
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(25),
                             border: Border.all(color: Colors.purple[200]!),
                           ),
                           child: Column(
@@ -259,9 +317,9 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                                 '\$${analytics['monthSales'].toStringAsFixed(2)}',
                                 style: TextStyle(
                                   fontSize: 20,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.bold,
                                   color: Colors.purple[700],
-                                  fontFamily: 'Inter',
+                                  fontFamily: 'InterDisplay',
                                 ),
                               ),
                             ],
@@ -442,52 +500,141 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
             itemCount: products.length,
             itemBuilder: (context, index) {
               final product = products[index];
-              return Card(
+              return Container(
                 margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 15,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                elevation: 4,
-                shadowColor: Colors.black.withOpacity(0.1),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: CachedNetworkImage(
-                      imageUrl: product.imageUrls.first,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  title: Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Text(
-                    '\$${product.price.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit_rounded, color: Colors.blue),
-                        onPressed: () {
-                          // TODO: Implement edit product
-                        },
+                      // Product Image
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: CachedNetworkImage(
+                          imageUrl: product.imageUrls.first,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(
+                              Icons.error,
+                              color: Colors.grey[400],
+                              size: 32,
+                            ),
+                          ),
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_rounded, color: Colors.red),
-                        onPressed: () {
-                          // TODO: Implement delete product
-                        },
+                      const SizedBox(width: 16),
+                      // Product Details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product.name,
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                color: Colors.black87,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Text(
+                                  '\$${product.price.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 18,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                if (product.totalOrders > 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${product.totalOrders} orders',
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Action Buttons
+                      Column(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.edit_rounded, color: Colors.blue, size: 20),
+                              onPressed: () {
+                                // TODO: Implement edit product
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.delete_rounded, color: Colors.red, size: 20),
+                              onPressed: () {
+                                // TODO: Implement delete product
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

@@ -27,20 +27,41 @@ class StoreOrdersTab extends StatelessWidget {
       length: 3,
       child: Column(
         children: [
+          // Modern iOS-style segmented control
           Container(
-            color: Colors.white,
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(50),
+            ),
             child: TabBar(
-              labelColor: Colors.green,
+              labelColor: Colors.white,
               unselectedLabelColor: Colors.grey[600],
-              indicatorColor: Colors.green,
-              indicatorWeight: 3,
+              indicatorColor: Colors.transparent,
+              indicatorWeight: 0,
+              dividerColor: Colors.transparent,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color: Colors.orange,
+                borderRadius: BorderRadius.circular(46),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.orange.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
               labelStyle: const TextStyle(
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w600,
+                fontSize: 14,
               ),
               unselectedLabelStyle: const TextStyle(
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w500,
+                fontSize: 14,
               ),
               tabs: const [
                 Tab(text: 'Active'),
@@ -202,41 +223,103 @@ class StoreOrdersTab extends StatelessWidget {
   }
 
   Widget _buildOrderCard(BuildContext context, store_order.StoreOrder order) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header with status badge
             Row(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: order.productImageUrl,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      width: 60,
-                      height: 60,
-                      color: Colors.grey[200],
-                      child: const Center(child: CircularProgressIndicator()),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(order.status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _getStatusColor(order.status).withOpacity(0.3),
+                      width: 1,
                     ),
-                    errorWidget: (context, url, error) => Container(
-                      width: 60,
-                      height: 60,
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.error),
+                  ),
+                  child: Text(
+                    order.status.toUpperCase(),
+                    style: TextStyle(
+                      color: _getStatusColor(order.status),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'Inter',
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const Spacer(),
+                Text(
+                  _formatDate(order.createdAt),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Product details
+            Row(
+              children: [
+                // Product Image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: CachedNetworkImage(
+                    imageUrl: order.productImageUrl,
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        Icons.error,
+                        color: Colors.grey[400],
+                        size: 32,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Product info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,142 +327,116 @@ class StoreOrdersTab extends StatelessWidget {
                       Text(
                         order.productName,
                         style: const TextStyle(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                           fontSize: 16,
                           fontFamily: 'Inter',
+                          color: Colors.black87,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            order.customerName,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        'Customer: ${order.customerName}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Qty: ${order.quantity}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          fontFamily: 'Inter',
-                        ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.shopping_bag_outlined,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Qty: ${order.quantity}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
+                // Price
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       '\$${order.price.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.green[600],
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                        color: Colors.green,
                         fontFamily: 'Inter',
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(order.status),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        order.status.toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Inter',
-                        ),
                       ),
                     ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.access_time,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  _formatDate(order.createdAt),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontFamily: 'Inter',
+            const SizedBox(height: 20),
+            // Action button
+            if (order.status == 'pending' || order.status == 'confirmed' || order.status == 'shipped')
+              Container(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    String newStatus = '';
+                    switch (order.status) {
+                      case 'pending':
+                        newStatus = 'confirmed';
+                        break;
+                      case 'confirmed':
+                        newStatus = 'shipped';
+                        break;
+                      case 'shipped':
+                        newStatus = 'delivered';
+                        break;
+                    }
+                    _updateOrderStatus(context, order.id, newStatus);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _getStatusColor(order.status),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    order.status == 'pending' ? 'Confirm Order' :
+                    order.status == 'confirmed' ? 'Ship Order' :
+                    order.status == 'shipped' ? 'Mark as Delivered' : '',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
+                    ),
                   ),
                 ),
-                const Spacer(),
-                if (order.status == 'pending')
-                  ElevatedButton(
-                    onPressed: () => _updateOrderStatus(context, order.id, 'confirmed'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text(
-                      'Confirm',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ),
-                if (order.status == 'confirmed')
-                  ElevatedButton(
-                    onPressed: () => _updateOrderStatus(context, order.id, 'shipped'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text(
-                      'Ship',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ),
-                if (order.status == 'shipped')
-                  ElevatedButton(
-                    onPressed: () => _updateOrderStatus(context, order.id, 'delivered'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text(
-                      'Deliver',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+              ),
           ],
         ),
       ),
@@ -426,6 +483,7 @@ class StoreOrdersTab extends StatelessWidget {
       case 'confirmed':
         confirmed = await showDialog<bool>(
           context: context,
+          barrierDismissible: false, // Prevent accidental dismissal
           builder: (context) => OrderActionDialog.confirmOrder(
             productName: 'this product',
             onConfirm: () {
@@ -437,6 +495,7 @@ class StoreOrdersTab extends StatelessWidget {
       case 'shipped':
         confirmed = await showDialog<bool>(
           context: context,
+          barrierDismissible: false, // Prevent accidental dismissal
           builder: (context) => OrderActionDialog.shipOrder(
             productName: 'this product',
             onConfirm: () {
@@ -448,6 +507,7 @@ class StoreOrdersTab extends StatelessWidget {
       case 'delivered':
         confirmed = await showDialog<bool>(
           context: context,
+          barrierDismissible: false, // Prevent accidental dismissal
           builder: (context) => OrderActionDialog.deliverOrder(
             productName: 'this product',
             onConfirm: () {
@@ -465,18 +525,41 @@ class StoreOrdersTab extends StatelessWidget {
     }
 
     try {
+      // Check if context is still valid before proceeding
+      if (!context.mounted) {
+        print('Context is no longer mounted, aborting order status update');
+        return;
+      }
+
       await DatabaseService().updateOrderStatus(orderId, newStatus);
+      
+      // Check if context is still valid before showing snackbar
+      if (!context.mounted) {
+        print('Context is no longer mounted, cannot show success message');
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Order status updated to $newStatus'),
           backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
+      // Check if context is still valid before showing error message
+      if (!context.mounted) {
+        print('Context is no longer mounted, cannot show error message');
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to update order status: $e'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }

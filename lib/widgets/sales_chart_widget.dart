@@ -273,6 +273,8 @@ class _SalesChartWidgetState extends State<SalesChartWidget>
                       LineChartBarData(
                         spots: _getSpots(),
                         isCurved: true,
+                        curveSmoothness: 0.3,
+                        preventCurveOverShooting: true,
                         gradient: LinearGradient(
                           colors: [
                             primaryColor,
@@ -361,17 +363,19 @@ class _SalesChartWidgetState extends State<SalesChartWidget>
   }
 
   List<FlSpot> _getSpots() {
-    return currentData.asMap().entries.map((entry) {
-      final index = entry.key;
-      final data = entry.value;
+    final spots = <FlSpot>[];
+    
+    for (int i = 0; i < currentData.length; i++) {
+      final data = currentData[i];
       final sales = (data['sales'] as num).toDouble();
       // Ensure sales is never negative and apply animation
       final animatedSales = (sales >= 0 ? sales : 0) * _animation.value;
-      return FlSpot(
-        index.toDouble(),
-        animatedSales,
-      );
-    }).toList();
+      
+      // Add the spot
+      spots.add(FlSpot(i.toDouble(), animatedSales));
+    }
+    
+    return spots;
   }
 
   double _getMaxSales() {

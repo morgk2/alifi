@@ -8,6 +8,7 @@ class ChatMessage {
   final DateTime timestamp;
   final bool isRead;
   final Map<String, dynamic>? productAttachment;
+  final bool isOrderAttachment;
 
   ChatMessage({
     required this.id,
@@ -17,6 +18,7 @@ class ChatMessage {
     required this.timestamp,
     this.isRead = false,
     this.productAttachment,
+    this.isOrderAttachment = false,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -27,6 +29,7 @@ class ChatMessage {
       'timestamp': Timestamp.fromDate(timestamp),
       'isRead': isRead,
       'productAttachment': productAttachment,
+      'isOrderAttachment': isOrderAttachment,
     };
   }
 
@@ -40,6 +43,7 @@ class ChatMessage {
       timestamp: (data['timestamp'] as Timestamp).toDate(),
       isRead: data['isRead'] ?? false,
       productAttachment: data['productAttachment'],
+      isOrderAttachment: data['isOrderAttachment'] ?? false,
     );
   }
 } 

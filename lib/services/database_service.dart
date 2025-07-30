@@ -16,6 +16,8 @@ import 'package:http/http.dart' as http; // Added for http.get
 import 'package:alifi/models/gift.dart';
 import '../models/chat_message.dart';
 import '../models/order.dart' as store_order;
+import 'notification_service.dart';
+import '../models/notification.dart';
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -243,34 +245,46 @@ class DatabaseService {
   }
 
   Future<void> updateAllUserCounts() async {
-    print('Starting user counts migration...');
-    // Get all users
-    final snapshot = await _usersCollection.get();
-    
-    for (var doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+    try {
+      print('Starting user counts migration...');
       
-      // Get the actual arrays
-      final followers = List<String>.from(data['followers'] ?? []);
-      final following = List<String>.from(data['following'] ?? []);
+      // Limit to recent users to avoid timeout
+      final snapshot = await _usersCollection
+          .orderBy('lastLoginAt', descending: true)
+          .limit(100) // Only process recent 100 users
+          .get();
       
-      // Get the current counts
-      final currentFollowersCount = data['followersCount'] ?? 0;
-      final currentFollowingCount = data['followingCount'] ?? 0;
-      
-      // Check if counts need updating
-      if (currentFollowersCount != followers.length || currentFollowingCount != following.length) {
-        print('Updating counts for user ${doc.id}:');
-        print('- Followers: $currentFollowersCount -> ${followers.length}');
-        print('- Following: $currentFollowingCount -> ${following.length}');
-        
-        await doc.reference.update({
-          'followersCount': followers.length,
-          'followingCount': following.length,
-        });
+      int processedCount = 0;
+      for (var doc in snapshot.docs) {
+        try {
+          final data = doc.data() as Map<String, dynamic>;
+          
+          // Get the actual arrays
+          final followers = List<String>.from(data['followers'] ?? []);
+          final following = List<String>.from(data['following'] ?? []);
+          
+          // Get the current counts
+          final currentFollowersCount = data['followersCount'] ?? 0;
+          final currentFollowingCount = data['followingCount'] ?? 0;
+          
+          // Check if counts need updating
+          if (currentFollowersCount != followers.length || currentFollowingCount != following.length) {
+            await doc.reference.update({
+              'followersCount': followers.length,
+              'followingCount': following.length,
+            });
+            processedCount++;
+          }
+        } catch (e) {
+          print('Error updating counts for user ${doc.id}: $e');
+          // Continue with next user
+        }
       }
+      print('User counts migration completed. Updated $processedCount users.');
+    } catch (e) {
+      print('Error in updateAllUserCounts: $e');
+      // Don't rethrow - we don't want to crash the app
     }
-    print('User counts migration completed');
   }
 
   Future<void> updateUserVerificationStatus(String userId, bool isVerified) async {
@@ -1252,14 +1266,8 @@ class DatabaseService {
           ...aliProducts.map(MarketplaceProduct.fromAliexpress),
           ...storeProducts.map(MarketplaceProduct.fromStore),
         ];
-        
-        // Sort by rating and orders
-        products.sort((a, b) {
-          final ratingCompare = b.rating.compareTo(a.rating);
-          if (ratingCompare != 0) return ratingCompare;
-          return b.totalOrders.compareTo(a.totalOrders);
-        });
-        
+        // Sort by totalOrders descending (most popular first)
+        products.sort((a, b) => b.totalOrders.compareTo(a.totalOrders));
         return products;
       },
     );
@@ -1298,14 +1306,8 @@ class DatabaseService {
           ...aliProducts.map(MarketplaceProduct.fromAliexpress),
           ...storeProducts.map(MarketplaceProduct.fromStore),
         ];
-        
-        // Sort by rating and orders
-        products.sort((a, b) {
-          final ratingCompare = b.rating.compareTo(a.rating);
-          if (ratingCompare != 0) return ratingCompare;
-          return b.totalOrders.compareTo(a.totalOrders);
-        });
-        
+        // Sort by createdAt descending (newest first)
+        products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         return products;
       },
     );
@@ -1637,9 +1639,9 @@ class DatabaseService {
           placeId: {
             'location': GeoPoint(lat, lng),
             'createdAt': FieldValue.serverTimestamp(),
-            'name': details['name'] ?? 'Unknown Store',
-            'vicinity': details['vicinity'] ?? 'Location unavailable',
-            'openingHours': details['opening_hours'],
+            'name': details?['name'] ?? 'Unknown Store',
+            'vicinity': details?['vicinity'] ?? 'Location unavailable',
+            'openingHours': details?['opening_hours'],
           }
         }
       }, SetOptions(merge: true));
@@ -1742,7 +1744,7 @@ class DatabaseService {
   }
 
   // Chat methods
-  Future<String> sendChatMessage(String senderId, String receiverId, String message, {Map<String, dynamic>? productAttachment}) async {
+  Future<String> sendChatMessage(String senderId, String receiverId, String message, {Map<String, dynamic>? productAttachment, bool isOrderAttachment = false}) async {
     try {
       final docRef = await _chatMessagesCollection.add({
         'senderId': senderId,
@@ -1751,11 +1753,36 @@ class DatabaseService {
         'timestamp': FieldValue.serverTimestamp(),
         'isRead': false,
         'productAttachment': productAttachment,
+        'isOrderAttachment': isOrderAttachment,
       });
+
+      // Send notification for chat message
+      _sendChatNotification(senderId, receiverId, message);
+
       return docRef.id;
     } catch (e) {
       print('Error sending chat message: $e');
       throw e;
+    }
+  }
+
+  // Helper method to send chat notifications
+  Future<void> _sendChatNotification(String senderId, String receiverId, String message) async {
+    try {
+      final notificationService = NotificationService();
+      
+      // Get sender info
+      final senderInfo = await _getUserInfo(senderId);
+      
+      await notificationService.sendChatMessageNotification(
+        recipientId: receiverId,
+        senderId: senderId,
+        senderName: senderInfo?['name'],
+        senderPhotoUrl: senderInfo?['photoUrl'],
+        message: message,
+      );
+    } catch (e) {
+      print('Error sending chat notification: $e');
     }
   }
 
@@ -1839,10 +1866,62 @@ class DatabaseService {
   Future<String> createOrder(store_order.StoreOrder order) async {
     try {
       final docRef = await _ordersCollection.add(order.toFirestore());
+      // Increment totalOrders for the store product if this is a store product order
+      if (order.productId.isNotEmpty) {
+        final productDoc = await _storeProductsCollection.doc(order.productId).get();
+        if (productDoc.exists) {
+          await productDoc.reference.update({
+            'totalOrders': FieldValue.increment(1),
+          });
+        }
+      }
+
+      // Send order placed notification to store owner
+      _sendOrderPlacedNotification(order);
+
       return docRef.id;
     } catch (e) {
       print('Error creating order: $e');
       throw e;
+    }
+  }
+
+  // Helper method to send order placed notification
+  Future<void> _sendOrderPlacedNotification(store_order.StoreOrder order) async {
+    try {
+      final notificationService = NotificationService();
+      
+      // Get buyer info
+      final buyerInfo = await _getUserInfo(order.customerId);
+      
+      await notificationService.sendOrderPlacedNotification(
+        recipientId: order.storeId,
+        senderId: order.customerId,
+        senderName: buyerInfo?['name'],
+        senderPhotoUrl: buyerInfo?['photoUrl'],
+        productName: order.productName,
+        orderId: order.id,
+      );
+    } catch (e) {
+      print('Error sending order placed notification: $e');
+    }
+  }
+
+  // Helper method to get user info
+  Future<Map<String, dynamic>?> _getUserInfo(String userId) async {
+    try {
+      final doc = await _usersCollection.doc(userId).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'name': data['displayName'] ?? 'User',
+          'photoUrl': data['photoURL'],
+        };
+      }
+      return null;
+    } catch (e) {
+      print('Error getting user info: $e');
+      return null;
     }
   }
 
@@ -1852,9 +1931,62 @@ class DatabaseService {
         'status': status,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // Send order status notification
+      _sendOrderStatusNotification(orderId, status);
     } catch (e) {
       print('Error updating order status: $e');
       throw e;
+    }
+  }
+
+  // Helper method to send order status notifications
+  Future<void> _sendOrderStatusNotification(String orderId, String status) async {
+    try {
+      final notificationService = NotificationService();
+      
+      // Get order details
+      final orderDoc = await _ordersCollection.doc(orderId).get();
+      if (!orderDoc.exists) return;
+      
+      final orderData = orderDoc.data() as Map<String, dynamic>;
+      final customerId = orderData['customerId'] as String;
+      final storeId = orderData['storeId'] as String;
+      final productName = orderData['productName'] as String;
+      
+      // Get store info (sender)
+      final storeInfo = await _getUserInfo(storeId);
+      
+      // Determine notification type
+      NotificationType notificationType;
+      switch (status) {
+        case 'confirmed':
+          notificationType = NotificationType.orderConfirmed;
+          break;
+        case 'shipped':
+          notificationType = NotificationType.orderShipped;
+          break;
+        case 'delivered':
+          notificationType = NotificationType.orderDelivered;
+          break;
+        case 'cancelled':
+          notificationType = NotificationType.orderCancelled;
+          break;
+        default:
+          return; // Don't send notification for other statuses
+      }
+      
+      await notificationService.sendOrderStatusNotification(
+        recipientId: customerId,
+        senderId: storeId,
+        senderName: storeInfo?['name'],
+        senderPhotoUrl: storeInfo?['photoUrl'],
+        statusType: notificationType,
+        productName: productName,
+        orderId: orderId,
+      );
+    } catch (e) {
+      print('Error sending order status notification: $e');
     }
   }
 
@@ -2013,5 +2145,92 @@ class DatabaseService {
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => store_order.StoreOrder.fromFirestore(doc)).toList());
+  }
+
+  Future<void> updateGiftIsRead(String giftId, bool isRead) async {
+    try {
+      await _db.collection('gifts').doc(giftId).update({'isRead': isRead});
+    } catch (e) {
+      print('Error updating gift isRead: $e');
+      rethrow;
+    }
+  }
+
+  /// Returns the number of completed (delivered) orders for a given store product.
+  Future<int> getStoreProductOrderCount(String productId) async {
+    final snapshot = await _ordersCollection
+        .where('productId', isEqualTo: productId)
+        .where('status', isEqualTo: 'delivered')
+        .get();
+    return snapshot.docs.length;
+  }
+
+  /// Updates the totalOrders field for all store products to match the real order count from the orders collection.
+  Future<void> syncAllStoreProductOrderCounts() async {
+    final productsSnapshot = await _storeProductsCollection.get();
+    for (final doc in productsSnapshot.docs) {
+      final productId = doc.id;
+      final realOrderCount = await getStoreProductOrderCount(productId);
+      await doc.reference.update({'totalOrders': realOrderCount});
+    }
+  }
+
+  /// Search marketplace products by query string
+  Stream<List<MarketplaceProduct>> searchMarketplaceProducts({
+    required String query,
+    String? category,
+    bool? freeShippingOnly,
+    String sortBy = 'orders', // 'orders', 'price_low', 'price_high', 'newest'
+    int limit = 50,
+  }) {
+    if (query.trim().isEmpty) {
+      return Stream.value([]);
+    }
+
+    final searchQuery = query.toLowerCase().trim();
+
+    return CombineLatestStream.combine2(
+      getAliexpressListings(limit: limit),
+      getStoreProducts(limit: limit),
+      (List<AliexpressProduct> aliProducts, List<StoreProduct> storeProducts) {
+        final products = [
+          ...aliProducts.map(MarketplaceProduct.fromAliexpress),
+          ...storeProducts.map(MarketplaceProduct.fromStore),
+        ];
+
+        // Filter by search query
+        final filteredProducts = products.where((product) {
+          final name = product.name.toLowerCase();
+          final description = product.description.toLowerCase();
+          final matchesQuery = name.contains(searchQuery) || description.contains(searchQuery);
+          
+          // Filter by category if specified
+          final matchesCategory = category == null || product.category.toLowerCase() == category.toLowerCase();
+          
+          // Filter by free shipping if specified
+          final matchesShipping = freeShippingOnly == null || !freeShippingOnly || product.isFreeShipping;
+          
+          return matchesQuery && matchesCategory && matchesShipping;
+        }).toList();
+
+        // Sort products
+        switch (sortBy) {
+          case 'orders':
+            filteredProducts.sort((a, b) => b.totalOrders.compareTo(a.totalOrders));
+            break;
+          case 'price_low':
+            filteredProducts.sort((a, b) => a.price.compareTo(b.price));
+            break;
+          case 'price_high':
+            filteredProducts.sort((a, b) => b.price.compareTo(a.price));
+            break;
+          case 'newest':
+            filteredProducts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            break;
+        }
+
+        return filteredProducts.take(limit).toList();
+      },
+    );
   }
 } 

@@ -86,15 +86,15 @@ class StoreMessagesTab extends StatelessWidget {
         final customer = snapshot.data;
         
         return Container(
-          margin: const EdgeInsets.only(bottom: 16),
+          margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(25),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
                 spreadRadius: 0,
               ),
             ],
@@ -102,14 +102,14 @@ class StoreMessagesTab extends StatelessWidget {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(25),
               onTap: () {
                 if (customer != null) {
                   _openChat(context, customer);
                 }
               },
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
                     // Avatar
@@ -118,14 +118,14 @@ class StoreMessagesTab extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
                           ),
                         ],
                       ),
                       child: CircleAvatar(
-                        radius: 28,
+                        radius: 20,
                         backgroundColor: Colors.grey[100],
                         backgroundImage: customer?.photoURL != null
                             ? CachedNetworkImageProvider(customer!.photoURL!)
@@ -136,13 +136,13 @@ class StoreMessagesTab extends StatelessWidget {
                                 style: const TextStyle(
                                   color: Colors.grey,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 18,
+                                  fontSize: 14,
                                 ),
                               )
                             : null,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     // Content
                     Expanded(
                       child: Column(
@@ -154,43 +154,43 @@ class StoreMessagesTab extends StatelessWidget {
                                 child: Text(
                                   customer?.displayName ?? 'Customer',
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
                                     fontFamily: 'Inter',
                                     color: Colors.black87,
                                   ),
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: Colors.green,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(
                                   Icons.reply,
                                   color: Colors.white,
-                                  size: 14,
+                                  size: 12,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           Text(
                             conversation['lastMessage'],
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 13,
                               color: Colors.grey[600],
                               fontFamily: 'Inter',
                             ),
-                            maxLines: 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 2),
                           Text(
                             _formatTimestamp(conversation['timestamp']),
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 11,
                               color: Colors.grey[500],
                               fontFamily: 'Inter',
                             ),
