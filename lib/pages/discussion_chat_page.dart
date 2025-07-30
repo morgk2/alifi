@@ -401,19 +401,19 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
     
     if (isOrderAttachment) {
       // Order attachment with dashed border
-      return Align(
-        alignment: Alignment.centerRight,
-        child: Container(
-          constraints: BoxConstraints(
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.7,
           ),
           margin: const EdgeInsets.symmetric(vertical: 8),
           child: CustomPaint(
             painter: _DashedBorderPainter(),
             child: Container(
-              decoration: BoxDecoration(
+        decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: Colors.grey.shade200,
                   width: 1,
@@ -428,43 +428,43 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          children: [
                   // Product Image
-                  ClipRRect(
+            ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: CachedNetworkImage(
-                      imageUrl: productData['productImageUrl'] ?? productData['imageUrl'] ?? '',
+              child: CachedNetworkImage(
+                imageUrl: productData['productImageUrl'] ?? productData['imageUrl'] ?? '',
                       height: 200,
                       width: double.infinity,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
                         height: 200,
-                        color: Colors.grey[200],
+                  color: Colors.grey[200],
                         child: const Center(child: CircularProgressIndicator()),
-                      ),
-                      errorWidget: (context, url, error) => Container(
+                ),
+                errorWidget: (context, url, error) => Container(
                         height: 200,
-                        color: Colors.grey[200],
+                  color: Colors.grey[200],
                         child: const Icon(Icons.error, size: 50, color: Colors.grey),
-                      ),
-                    ),
-                  ),
+                ),
+              ),
+            ),
                   // Product Information
                   Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                         // Product Name
-                        Text(
-                          productData['productName'] ?? productData['name'] ?? 'Product',
-                          style: const TextStyle(
+                  Text(
+                    productData['productName'] ?? productData['name'] ?? 'Product',
+                    style: const TextStyle(
                             color: Colors.black87,
-                            fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.bold,
                             fontSize: 18,
-                            fontFamily: 'Inter',
-                          ),
-                        ),
+                      fontFamily: 'Inter',
+                    ),
+                  ),
                         const SizedBox(height: 8),
                         // Rating and Orders Row
                         Row(
@@ -498,9 +498,9 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              '\$${(productData['price'] ?? 0.0).toStringAsFixed(2)}',
-                              style: const TextStyle(
+                  Text(
+                    '\$${(productData['price'] ?? 0.0).toStringAsFixed(2)}',
+                    style: const TextStyle(
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 24,
@@ -525,7 +525,7 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                               child: const Text(
                                 'Ordered',
                                 style: TextStyle(
-                                  fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.bold,
                                   fontSize: 14,
                                 ),
                               ),
@@ -647,9 +647,9 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                 ),
               ),
             ],
-          ),
         ),
-      );
+      ),
+    );
     }
   }
 

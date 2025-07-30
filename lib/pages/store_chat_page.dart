@@ -542,20 +542,20 @@ class _StoreChatPageState extends State<StoreChatPage>
     
     if (isOrderAttachment) {
       // Order attachment with dashed border
-      return Align(
-        alignment: Alignment.centerRight,
-        child: Container(
-          constraints: BoxConstraints(
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.7,
-          ),
-          margin: const EdgeInsets.symmetric(vertical: 8),
+        ),
+        margin: const EdgeInsets.symmetric(vertical: 8),
           child: CustomPaint(
             painter: _DashedBorderPainter(),
             child: Container(
-              decoration: BoxDecoration(
+        decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
+          border: Border.all(
                   color: Colors.grey.shade200,
                   width: 1,
                 ),
@@ -749,9 +749,9 @@ class _StoreChatPageState extends State<StoreChatPage>
                     // Rating and Orders Row
                     Row(
                       children: [
-                        Text(
+                    Text(
                           '4.8',
-                          style: const TextStyle(
+                      style: const TextStyle(
                             color: Colors.black87,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -788,13 +788,13 @@ class _StoreChatPageState extends State<StoreChatPage>
                 ),
               ),
             ],
-          ),
         ),
-      );
-    }
+      ),
+    );
+  }
   }
 
-}
+} 
 
 // Custom painter for dashed border
 class _DashedBorderPainter extends CustomPainter {
