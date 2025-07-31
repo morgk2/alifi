@@ -36,14 +36,13 @@ class NotificationCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
           borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar
+                // Avatar/Icon
                 _buildAvatar(),
                 const SizedBox(width: 12),
                 // Content
@@ -57,14 +56,11 @@ class NotificationCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               notification.title,
-                              style: TextStyle(
-                                fontWeight: notification.isRead 
-                                    ? FontWeight.w500 
-                                    : FontWeight.bold,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                                 fontSize: 16,
-                                color: notification.isRead 
-                                    ? Colors.black87 
-                                    : Colors.black,
+                                color: Colors.black,
+                                fontFamily: 'Inter',
                               ),
                             ),
                           ),
@@ -73,6 +69,7 @@ class NotificationCard extends StatelessWidget {
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 12,
+                              fontFamily: 'Inter',
                             ),
                           ),
                         ],
@@ -82,8 +79,9 @@ class NotificationCard extends StatelessWidget {
                       Text(
                         notification.body,
                         style: TextStyle(
-                          color: Colors.grey[700],
+                          color: notification.isRead ? Colors.grey[600] : Colors.grey[700],
                           fontSize: 14,
+                          fontFamily: 'Inter',
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,

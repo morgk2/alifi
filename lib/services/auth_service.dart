@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide OAuthProvider, User;
@@ -11,6 +12,7 @@ import 'database_service.dart';
 import 'dart:math';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'push_notification_service.dart';
 
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -25,6 +27,7 @@ class AuthService extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final LocalStorageService _localStorage = LocalStorageService();
   final SupabaseClient _supabase = Supabase.instance.client;
+  final PushNotificationService _pushNotificationService = PushNotificationService();
   models.User? _currentUser;
   SharedPreferences? _prefs;
   bool _initialized = false;
@@ -122,6 +125,10 @@ class AuthService extends ChangeNotifier {
             } else {
               print('AuthService: User data loaded successfully from Firestore');
             }
+            
+            // Update FCM token for the user
+            await _updateFCMTokenForUser(firebaseUser.uid);
+            
           } catch (e) {
             print('AuthService: Error loading user data: $e');
             // Fallback if anything fails
@@ -135,6 +142,9 @@ class AuthService extends ChangeNotifier {
               linkedAccounts: {'google': true},
             );
             await _prefs?.setString('user_id', firebaseUser.uid);
+            
+            // Still try to update FCM token
+            await _updateFCMTokenForUser(firebaseUser.uid);
           }
           _isLoadingUser = false;
           print('AuthService: Notifying listeners (user loaded)');
@@ -185,6 +195,26 @@ class AuthService extends ChangeNotifier {
       }
     } catch (e) {
       print('Error loading user data: $e');
+    }
+  }
+
+  Future<void> _updateFCMTokenForUser(String uid) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await _firestore
+            .collection('users')
+            .doc(uid)
+            .update({
+              'fcmToken': token,
+              'lastTokenUpdate': FieldValue.serverTimestamp(),
+            });
+        print('FCM token updated for user $uid: $token');
+      } else {
+        print('FCM token is null for user $uid. No update needed.');
+      }
+    } catch (e) {
+      print('Error updating FCM token for user $uid: $e');
     }
   }
 

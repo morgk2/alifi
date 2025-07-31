@@ -16,21 +16,8 @@ class UserOrdersPage extends StatefulWidget {
   State<UserOrdersPage> createState() => _UserOrdersPageState();
 }
 
-class _UserOrdersPageState extends State<UserOrdersPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+class _UserOrdersPageState extends State<UserOrdersPage> {
+  int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -44,39 +31,123 @@ class _UserOrdersPageState extends State<UserOrdersPage>
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'My Orders & Discussions',
+          'Orders & Messages',
           style: TextStyle(
             color: Colors.black,
-            fontSize: 20,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
-            fontFamily: 'Inter',
+            fontFamily: 'Montserrat',
           ),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.green,
-          unselectedLabelColor: Colors.grey[600],
-          indicatorColor: Colors.green,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w600,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w500,
-          ),
-          tabs: const [
-            Tab(text: 'Orders'),
-            Tab(text: 'Discussions'),
-          ],
-        ),
+        centerTitle: true,
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildOrdersTab(),
-          _buildDiscussionsTab(),
+          // Pill-shaped navigation panel
+          Container(
+            margin: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedIndex = 0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: _selectedIndex == 0 ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(26),
+                        boxShadow: _selectedIndex == 0
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.shopping_bag_outlined,
+                            size: 20,
+                            color: _selectedIndex == 0 ? Colors.green[600] : Colors.grey[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Orders',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              color: _selectedIndex == 0 ? Colors.green[600] : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedIndex = 1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: _selectedIndex == 1 ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(26),
+                        boxShadow: _selectedIndex == 1
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: 20,
+                            color: _selectedIndex == 1 ? Colors.green[600] : Colors.grey[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Messages',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              color: _selectedIndex == 1 ? Colors.green[600] : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Content area
+          Expanded(
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: [
+                _buildOrdersTab(),
+                _buildDiscussionsTab(),
+              ],
+            ),
+          ),
         ],
       ),
     );

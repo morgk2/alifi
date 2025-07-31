@@ -540,13 +540,14 @@ class DatabaseService {
       final following = List<String>.from(currentUserData['following'] ?? []);
       final followers = List<String>.from(targetUserData['followers'] ?? []);
       
+      // Check if already following
+      if (following.contains(targetUserId)) {
+        return; // Already following, no need to do anything
+      }
+      
       // Add to arrays if not already present
-      if (!following.contains(targetUserId)) {
-        following.add(targetUserId);
-      }
-      if (!followers.contains(currentUserId)) {
-        followers.add(currentUserId);
-      }
+      following.add(targetUserId);
+      followers.add(currentUserId);
       
       // Update both documents atomically
       transaction.update(_usersCollection.doc(currentUserId), {
@@ -559,6 +560,27 @@ class DatabaseService {
         'followersCount': followers.length,
       });
     });
+    
+    // Send follow notification after successful transaction
+    try {
+      final notificationService = NotificationService();
+      final currentUser = await getUser(currentUserId);
+      final targetUser = await getUser(targetUserId);
+      
+      if (currentUser != null && targetUser != null) {
+        await notificationService.sendFollowNotification(
+          recipientId: targetUserId,
+          senderId: currentUserId,
+          senderName: currentUser.displayName,
+          senderPhotoUrl: currentUser.photoURL,
+          isFollowing: true,
+        );
+        print('🔔 [DatabaseService] Follow notification sent from ${currentUser.displayName} to ${targetUser.displayName}');
+      }
+    } catch (e) {
+      print('🔔 [DatabaseService] Error sending follow notification: $e');
+      // Don't throw - we don't want to fail the follow operation if notification fails
+    }
   }
 
   Future<void> unfollowUser(String currentUserId, String targetUserId) async {
@@ -578,6 +600,11 @@ class DatabaseService {
       final following = List<String>.from(currentUserData['following'] ?? []);
       final followers = List<String>.from(targetUserData['followers'] ?? []);
       
+      // Check if not following
+      if (!following.contains(targetUserId)) {
+        return; // Not following, no need to do anything
+      }
+      
       // Remove from arrays
       following.remove(targetUserId);
       followers.remove(currentUserId);
@@ -593,6 +620,8 @@ class DatabaseService {
         'followersCount': followers.length,
       });
     });
+    
+    // No notification for unfollow - removed as requested
   }
 
   Future<bool> isFollowing(String currentUserId, String targetUserId) async {
@@ -1476,6 +1505,32 @@ class DatabaseService {
         'totalSales': 0.0,
         'orderCount': 0,
       };
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> getVetDashboardStats(String vetId) {
+    print('🔍 [DatabaseService] getVetDashboardStats called for vetId: $vetId');
+    
+    // For now, return mock data since vet appointments collection doesn't exist yet
+    // TODO: Implement actual vet appointments collection and logic
+    return Stream.value([
+      {
+        'nextAppointment': 'Tomorrow',
+        'patientsCount': 45,
+        'appointmentsToday': 8,
+        'revenueToday': 1250.00,
+      }
+    ]).asBroadcastStream().handleError((error) {
+      print('🔍 [DatabaseService] getVetDashboardStats error: $error');
+      // Return default stats on error
+      return [
+        {
+          'nextAppointment': 'No upcoming',
+          'patientsCount': 0,
+          'appointmentsToday': 0,
+          'revenueToday': 0.0,
+        }
+      ];
     });
   }
 

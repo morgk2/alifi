@@ -17,7 +17,7 @@ import '../widgets/lost_pet_card.dart';
 import '../widgets/product_card.dart';
 import '../widgets/combined_recommendations_widget.dart';
 import '../models/aliexpress_product.dart';
-import 'notification_page.dart';
+import 'notifications_page.dart';
 import 'profile_page.dart';
 import 'settings_page.dart';
 import 'leaderboard_page.dart';
@@ -33,9 +33,13 @@ import 'package:flutter/animation.dart';
 import '../widgets/spinning_loader.dart';
 import '../widgets/ai_assistant_card.dart';
 import '../widgets/seller_dashboard_card.dart';
+import '../widgets/vet_dashboard_card.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/gift_notification_controller.dart';
+import '../services/notification_service.dart';
+import '../models/user.dart';
+import '../widgets/notification_badge.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback onNavigateToMap;
@@ -337,7 +341,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   Future<void> _handleRefresh() async {
-    if (_isRefreshingNotifier.value) {
+    if (_isRefreshingNotifier.value && mounted) {
       _refreshController.repeat();
       
       try {
@@ -357,7 +361,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   void _onPetScroll() {
-    if (!_petsScrollController.hasClients) return;
+    if (!_petsScrollController.hasClients || !mounted) return;
     
     final double offset = _petsScrollController.offset;
     final double itemWidth = MediaQuery.of(context).size.width * 0.85 + 16.0; // Width + horizontal margin
@@ -379,7 +383,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   void _onStoreScroll() {
-    if (!_storeScrollController.hasClients) return;
+    if (!_storeScrollController.hasClients || !mounted) return;
     final double offset = _storeScrollController.offset;
     final double itemWidth = MediaQuery.of(context).size.width * 0.6;
     final int page = (offset / itemWidth).round();
@@ -389,7 +393,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   void _onMainScroll() {
-    if (!_mainScrollController.hasClients) return;
+    if (!_mainScrollController.hasClients || !mounted) return;
     
     // Show header when scrolling up, hide when scrolling down
     if (_mainScrollController.position.userScrollDirection == ScrollDirection.reverse && _mainScrollController.offset > 100) {
@@ -401,9 +405,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         _showHeaderNotifier.value = true;
       }
     }
-
-    // Check if we're at the top of the scroll
-    final bool isAtTop = _mainScrollController.offset < 5;
+    
+    // Track if we're at the top
+    final isAtTop = _mainScrollController.offset <= 0;
     if (isAtTop != _isAtTopNotifier.value) {
       _isAtTopNotifier.value = isAtTop;
     }
@@ -680,12 +684,34 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                               ),
                               Row(
                                 children: [
-                                  _buildHeaderButton(
-                                    icon: AppIcons.bellIcon,
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => const NotificationPage(),
+                                  Consumer<AuthService>(
+                                    builder: (context, authService, child) {
+                                      return NotificationBadge(
+                                        onTap: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) => const NotificationsPage(),
+                                            ),
+                                          );
+                                        },
+                                        child: Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Center(
+                                            child: SvgPicture.string(
+                                              AppIcons.bellIcon,
+                                              width: 20,
+                                              height: 20,
+                                              colorFilter: const ColorFilter.mode(
+                                                Colors.black,
+                                                BlendMode.srcIn,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       );
                                     },
@@ -774,12 +800,34 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               ),
               Row(
                 children: [
-                  _buildHeaderButton(
-                    icon: AppIcons.bellIcon,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationPage(),
+                  Consumer<AuthService>(
+                    builder: (context, authService, child) {
+                      return NotificationBadge(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationsPage(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Center(
+                            child: SvgPicture.string(
+                              AppIcons.bellIcon,
+                              width: 20,
+                              height: 20,
+                              colorFilter: const ColorFilter.mode(
+                                Colors.black,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -851,6 +899,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               builder: (context, authService, child) {
                 final user = authService.currentUser;
                 final isStoreAccount = user?.accountType == 'store';
+                final isVetAccount = user?.accountType == 'vet';
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -863,7 +912,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         color: Colors.grey,
                       ),
                     ),
-                    if (!isStoreAccount) ...[
+                    if (!isStoreAccount && !isVetAccount) ...[
                       if (isLoadingLocation)
                         const Text(
                           "Loading nearby pets...",
@@ -910,9 +959,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       builder: (context, authService, child) {
         final user = authService.currentUser;
         final isStoreAccount = user?.accountType == 'store';
+        final isVetAccount = user?.accountType == 'vet';
 
         if (isStoreAccount) {
           return const SellerDashboardCard();
+        }
+
+        if (isVetAccount) {
+          return const VetDashboardCard();
         }
 
         return ValueListenableBuilder<List<LostPet>>(

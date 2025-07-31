@@ -4,6 +4,11 @@ import '../models/notification.dart';
 import '../services/notification_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/notification_card.dart';
+import 'discussion_chat_page.dart';
+import 'detailed_seller_dashboard_page.dart';
+import 'user_orders_page.dart';
+import 'user_profile_page.dart';
+import '../services/database_service.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -30,20 +35,22 @@ class _NotificationsPageState extends State<NotificationsPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text(
           'Notifications',
           style: TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'Montserrat',
             fontWeight: FontWeight.bold,
+            fontSize: 24,
+            color: Colors.black,
           ),
         ),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black),
-        titleTextStyle: const TextStyle(
-          color: Colors.black,
-          fontSize: 20,
-        ),
+        centerTitle: true,
         actions: [
           StreamBuilder<int>(
             stream: _notificationService.getUnreadNotificationsCount(currentUser.id),
@@ -52,7 +59,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
               if (unreadCount == 0) return const SizedBox.shrink();
               
               return Container(
-                margin: const EdgeInsets.only(right: 16),
+                margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.red,
@@ -69,93 +76,175 @@ class _NotificationsPageState extends State<NotificationsPage> {
               );
             },
           ),
-          IconButton(
-            onPressed: () => _markAllAsRead(currentUser.id),
-            icon: const Icon(Icons.done_all),
-            tooltip: 'Mark all as read',
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              onPressed: () => _markAllAsRead(currentUser.id),
+              icon: const Icon(Icons.done_all, color: Colors.grey),
+              tooltip: 'Mark all as read',
+            ),
           ),
         ],
       ),
-      body: StreamBuilder<List<AppNotification>>(
-        stream: _notificationService.getUserNotifications(currentUser.id),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error loading notifications',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final notifications = snapshot.data ?? [];
-
-          if (notifications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.notifications_none,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No notifications yet',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'You\'ll see notifications here when you receive messages, orders, or follows',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: notifications.length,
-            itemBuilder: (context, index) {
-              final notification = notifications[index];
-              return NotificationCard(
-                notification: notification,
-                onTap: () => _handleNotificationTap(notification),
-                onDelete: () => _deleteNotification(notification.id),
-              );
-            },
-          );
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // Force refresh by rebuilding the stream
+          setState(() {});
         },
+        child: StreamBuilder<List<AppNotification>>(
+          stream: _notificationService.getUserNotifications(currentUser.id),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+
+            if (snapshot.hasError) {
+              print('🔍 [NotificationsPage] Error loading notifications: ${snapshot.error}');
+              print('🔍 [NotificationsPage] Error stack trace: ${snapshot.stackTrace}');
+              
+              // Extract and log the Firestore index creation link
+              final errorString = snapshot.error.toString();
+              if (errorString.contains('failed-precondition') && errorString.contains('create_composite')) {
+                final startIndex = errorString.indexOf('https://');
+                if (startIndex != -1) {
+                  final endIndex = errorString.indexOf('"', startIndex);
+                  final link = endIndex != -1 
+                      ? errorString.substring(startIndex, endIndex)
+                      : errorString.substring(startIndex);
+                  
+                  print('🔗 [NotificationsPage] FIREBASE INDEX CREATION LINK:');
+                  print('🔗 [NotificationsPage] $link');
+                  print('🔗 [NotificationsPage] Copy this link to create the required Firestore index');
+                }
+              }
+              
+              return ListView(
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.3,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error loading notifications',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Error: ${snapshot.error}',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                // Force rebuild to retry
+                              });
+                            },
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            final notifications = snapshot.data ?? [];
+
+            if (notifications.isEmpty) {
+              return ListView(
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.6,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.notifications_none,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No notifications yet',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'You\'ll see notifications here when you receive messages, orders, or follows',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: notifications.length,
+              itemBuilder: (context, index) {
+                final notification = notifications[index];
+                return NotificationCard(
+                  notification: notification,
+                  onTap: () => _handleNotificationTap(notification),
+                  onDelete: () => _deleteNotification(notification.id),
+                );
+              },
+            );
+          },
+        ),
+      ),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: IconButton(
+          onPressed: () => _sendTestNotification(currentUser.id),
+          icon: const Icon(Icons.bug_report, color: Colors.grey, size: 24),
+          tooltip: 'Send test notification',
+        ),
       ),
     );
   }
@@ -167,7 +256,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     // Navigate based on notification type
     switch (notification.type) {
       case NotificationType.chatMessage:
-        // Navigate to chat
+        // Navigate to chat with the sender
         _navigateToChat(notification);
         break;
       case NotificationType.orderPlaced:
@@ -179,44 +268,147 @@ class _NotificationsPageState extends State<NotificationsPage> {
         _navigateToOrder(notification);
         break;
       case NotificationType.follow:
+        // Navigate to follower's profile
+        _navigateToUserProfile(notification);
+        break;
       case NotificationType.unfollow:
-        // Navigate to user profile
+        // Navigate to user's profile (who unfollowed)
         _navigateToUserProfile(notification);
         break;
     }
   }
 
-  void _navigateToChat(AppNotification notification) {
-    // TODO: Navigate to chat with the sender
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Opening chat with ${notification.senderName ?? 'user'}'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  void _navigateToOrder(AppNotification notification) {
-    // TODO: Navigate to order details
-    final orderId = notification.relatedId;
-    if (orderId != null) {
+  void _navigateToChat(AppNotification notification) async {
+    // Navigate to chat with the sender
+    if (notification.senderId != null) {
+      final currentUser = context.read<AuthService>().currentUser;
+      if (currentUser != null) {
+        // Check if user is a seller (store account)
+        if (currentUser.accountType == 'store') {
+          // Navigate to seller dashboard for store users
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const DetailedSellerDashboardPage(),
+            ),
+          );
+        } else {
+          // Navigate to chat with the sender for regular users
+          try {
+            final senderUser = await DatabaseService().getUser(notification.senderId!);
+            if (senderUser != null && mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => DiscussionChatPage(
+                    storeUser: senderUser,
+                  ),
+                ),
+              );
+            } else {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Unable to open chat - user not found'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error opening chat: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        }
+      }
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Opening order details'),
-          duration: const Duration(seconds: 2),
+        const SnackBar(
+          content: Text('Unable to open chat - sender information missing'),
+          backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  void _navigateToUserProfile(AppNotification notification) {
-    // TODO: Navigate to user profile
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Opening ${notification.senderName ?? 'user'}\'s profile'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  void _navigateToOrder(AppNotification notification) {
+    // Navigate to order details based on user role
+    final orderId = notification.relatedId;
+    if (orderId != null) {
+      final currentUser = context.read<AuthService>().currentUser;
+      if (currentUser != null) {
+        // Check if user is a seller (has store) or buyer
+        if (currentUser.accountType == 'store') {
+          // Navigate to seller's order management page
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const DetailedSellerDashboardPage(),
+            ),
+          );
+        } else {
+          // Navigate to buyer's orders page
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const UserOrdersPage(),
+            ),
+          );
+        }
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to open order - order information missing'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _navigateToUserProfile(AppNotification notification) async {
+    // Navigate to the user's profile (sender for follow/unfollow notifications)
+    if (notification.senderId != null) {
+      try {
+        final user = await DatabaseService().getUser(notification.senderId!);
+        if (user != null && mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => UserProfilePage(
+                user: user,
+              ),
+            ),
+          );
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Unable to open profile - user not found'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error opening profile: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to open profile - user information missing'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _deleteNotification(String notificationId) async {
@@ -251,6 +443,25 @@ class _NotificationsPageState extends State<NotificationsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error marking notifications as read: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _sendTestNotification(String userId) async {
+    try {
+      await _notificationService.sendTestNotification(userId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Test notification sent'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error sending test notification: $e'),
           backgroundColor: Colors.red,
         ),
       );

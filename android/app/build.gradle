@@ -30,6 +30,7 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
@@ -102,4 +103,6 @@ dependencies {
     implementation 'com.google.android.gms:play-services-auth:21.0.0'
     // Update Google Sign-In
     implementation 'com.google.android.gms:play-services-identity:18.0.1'
+    // Core library desugaring for flutter_local_notifications
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 }

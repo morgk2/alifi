@@ -2,10 +2,12 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification.dart';
+import 'auth_service.dart';
 
 class PushNotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
   // Initialize push notifications
   Future<void> initialize() async {
@@ -81,12 +83,42 @@ class PushNotificationService {
 
   // Store FCM token in Firestore
   Future<void> _storeFCMToken(String token) async {
-    // TODO: Get current user ID and store token
-    // This should be called when user logs in
-    // await FirebaseFirestore.instance
-    //     .collection('users')
-    //     .doc(currentUserId)
-    //     .update({'fcmToken': token});
+    try {
+      // Get current user ID from AuthService
+      final authService = AuthService();
+      final currentUser = authService.currentUser;
+      
+      if (currentUser != null) {
+        await _firestore
+            .collection('users')
+            .doc(currentUser.id)
+            .update({
+              'fcmToken': token,
+              'lastTokenUpdate': FieldValue.serverTimestamp(),
+            });
+        print('FCM token stored for user: ${currentUser.id}');
+      } else {
+        print('No current user found, cannot store FCM token');
+      }
+    } catch (e) {
+      print('Error storing FCM token: $e');
+    }
+  }
+
+  // Update FCM token for a specific user
+  Future<void> updateFCMTokenForUser(String userId, String token) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .update({
+            'fcmToken': token,
+            'lastTokenUpdate': FieldValue.serverTimestamp(),
+          });
+      print('FCM token updated for user: $userId');
+    } catch (e) {
+      print('Error updating FCM token for user $userId: $e');
+    }
   }
 
   // Initialize local notifications
@@ -202,7 +234,7 @@ class PushNotificationService {
   }) async {
     try {
       // Get recipient's FCM token from Firestore
-      final userDoc = await FirebaseFirestore.instance
+      final userDoc = await _firestore
           .collection('users')
           .doc(recipientUserId)
           .get();
