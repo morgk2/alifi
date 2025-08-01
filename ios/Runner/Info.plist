@@ -8,6 +8,12 @@
 	<string>We need your location to show you nearby pet services and help locate lost pets.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>We need your location to show you nearby pet services and help locate lost pets even when the app is in background.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access to take photos of your pets and upload them to your profile.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need photo library access to select images of your pets for your profile.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need microphone access for voice messages and calls.</string>
 	<key>CFBundleDisplayName</key>
 	<string>Alifi</string>
 	<key>CFBundleExecutable</key>

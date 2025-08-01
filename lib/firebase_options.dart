@@ -53,12 +53,12 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'your-ios-api-key',  // Keep this for now, we'll update it with iOS values
-    appId: 'your-ios-app-id',
+    apiKey: 'AIzaSyDK5PPrAoHfW-Q25xSle6u83CDPzbMq_lM',
+    appId: '1:261633708467:ios:dc6f5038b839dd87497bc6',
     messagingSenderId: '261633708467',
     projectId: 'alifi-924c1',
     storageBucket: 'alifi-924c1.firebasestorage.app',
-    iosClientId: 'your-ios-client-id',
+    iosClientId: '261633708467-abcdefghijklmnop.apps.googleusercontent.com',
     iosBundleId: 'com.example.alifi',
   );
 } 
