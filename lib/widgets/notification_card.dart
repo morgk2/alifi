@@ -164,6 +164,18 @@ class NotificationCard extends StatelessWidget {
         iconData = Icons.person_remove_outlined;
         iconColor = Colors.grey;
         break;
+      case NotificationType.appointmentRequest:
+        iconData = Icons.calendar_today;
+        iconColor = Colors.blue;
+        break;
+      case NotificationType.appointmentUpdate:
+        iconData = Icons.update;
+        iconColor = Colors.orange;
+        break;
+      case NotificationType.appointmentReminder:
+        iconData = Icons.alarm;
+        iconColor = Colors.green;
+        break;
     }
 
     return Container(

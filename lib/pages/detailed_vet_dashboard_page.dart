@@ -4,7 +4,10 @@ import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../widgets/spinning_loader.dart';
 import '../models/user.dart';
-import 'package:intl/intl.dart';
+import '../models/appointment.dart';
+import '../models/pet.dart'; // Added import for Pet model
+
+import 'vet_schedule_page.dart';
 
 class DetailedVetDashboardPage extends StatefulWidget {
   const DetailedVetDashboardPage({super.key});
@@ -17,6 +20,34 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final DatabaseService _databaseService = DatabaseService();
+
+  final List<String> _filters = ['All', 'Today', 'Tomorrow', 'This Week'];
+  int _selectedFilterIndex = 0; // Start with 'All' to show all appointments
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.blue,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _addPatientToVet(String vetId, String petId) async {
+    final vet = await DatabaseService().getUser(vetId);
+    if (vet != null) {
+      final List<String> patients = List<String>.from(vet.patients ?? []);
+      if (!patients.contains(petId)) {
+        patients.add(petId);
+        await DatabaseService().updateUserPatients(vetId, patients);
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -73,26 +104,36 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       ),
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.schedule, color: Colors.black),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const VetSchedulePage(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
-                         // Pill-shaped tab bar with extra spacing
-             Container(
-               margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-               decoration: BoxDecoration(
-                 color: Colors.grey[200],
-                 borderRadius: BorderRadius.circular(25),
-               ),
-                               child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.grey[600],
-                  dividerColor: Colors.transparent,
+            // Pill-shaped tab bar with extra spacing
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.grey[600],
+                dividerColor: Colors.transparent,
                 tabs: const [
                   Tab(
                     icon: Icon(Icons.dashboard),
@@ -128,7 +169,6 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
           ],
         ),
       ),
-
     );
   }
 
@@ -157,14 +197,14 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                 children: [
                   Row(
                     children: [
-                                             Expanded(
-                         child: _buildOverviewCard(
-                           'Today\'s Appoint.',
-                           stats['appointmentsToday'].toString(),
-                           Icons.medical_services,
-                           Colors.blue,
-                         ),
-                       ),
+                      Expanded(
+                        child: _buildOverviewCard(
+                          'Today\'s Appoint.',
+                          stats['appointmentsToday'].toString(),
+                          Icons.medical_services,
+                          Colors.blue,
+                        ),
+                      ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: _buildOverviewCard(
@@ -188,14 +228,14 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                         ),
                       ),
                       const SizedBox(width: 16),
-                                             Expanded(
-                         child: _buildOverviewCard(
-                           'Next Appoint.',
-                           stats['nextAppointment'] ?? 'No upcoming',
-                           Icons.calendar_today,
-                           Colors.purple,
-                         ),
-                       ),
+                      Expanded(
+                        child: _buildOverviewCard(
+                          'Next Appoint.',
+                          stats['nextAppointment'] ?? 'No upcoming',
+                          Icons.calendar_today,
+                          Colors.purple,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -274,19 +314,14 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
         children: [
           // Appointment Filters
           Row(
-            children: [
-              Expanded(
-                child: _buildFilterChip('Today', true),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildFilterChip('Tomorrow', false),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildFilterChip('This Week', false),
-              ),
-            ],
+            children: List.generate(_filters.length, (index) {
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: index < _filters.length - 1 ? 8 : 0),
+                  child: _buildFilterChip(_filters[index], _selectedFilterIndex == index, index),
+                ),
+              );
+            }),
           ),
           const SizedBox(height: 24),
 
@@ -307,162 +342,531 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
   }
 
   Widget _buildPatientsTab(User user) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Search Bar
-          TextField(
-            decoration: InputDecoration(
-              hintText: 'Search patients...',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Patient Categories
-          Row(
+    return StreamBuilder<List<Appointment>>(
+      stream: DatabaseService().getVetAppointments(user.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: SpinningLoader());
+        }
+        final appointments = snapshot.data ?? [];
+        // Only consider confirmed or completed appointments
+        final filtered = appointments.where((a) => a.status == AppointmentStatus.confirmed || a.status == AppointmentStatus.completed).toList();
+        // Map petId to all their appointments
+        final Map<String, List<Appointment>> petAppointments = {};
+        for (final apt in filtered) {
+          petAppointments.putIfAbsent(apt.petId, () => []).add(apt);
+        }
+        // Active patients: unique petIds
+        final int activePatients = petAppointments.length;
+        // New this month: unique petIds whose first confirmed appointment is in this month
+        final now = DateTime.now();
+        final int newThisMonth = petAppointments.values.where((apts) {
+          final first = apts.map((a) => a.createdAt).reduce((a, b) => a.isBefore(b) ? a : b);
+          return first.year == now.year && first.month == now.month;
+        }).length;
+        // Recent patients: unique pets, ordered by most recent appointment
+        final List<MapEntry<String, List<Appointment>>> recentPetEntries = petAppointments.entries.toList()
+          ..sort((a, b) => b.value.map((a) => a.createdAt).reduce((a1, a2) => a1.isAfter(a2) ? a1 : a2)
+            .compareTo(a.value.map((a) => a.createdAt).reduce((a1, a2) => a1.isAfter(a2) ? a1 : a2)));
+        final List<String> orderedPetIds = recentPetEntries.map((e) => e.key).toList();
+        
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildPatientCategoryCard(
-                  'Active Patients',
-                  '45',
-                  Icons.people,
-                  Colors.blue,
+              // Search Bar
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search patients...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildPatientCategoryCard(
-                  'New This Month',
-                  '12',
-                  Icons.person_add,
-                  Colors.green,
+              const SizedBox(height: 24),
+              // Patient Categories
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildPatientCategoryCard(
+                      'Active Patients',
+                      activePatients.toString(),
+                      Icons.people,
+                      Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildPatientCategoryCard(
+                      'New This Month',
+                      newThisMonth.toString(),
+                      Icons.person_add,
+                      Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'My Patients',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Montserrat',
                 ),
               ),
+              const SizedBox(height: 16),
+              // Show real recent patients ordered by most recent
+              if (orderedPetIds.isEmpty)
+                const Center(child: Text('No patients found'))
+              else
+                FutureBuilder<List<Pet>>(
+                  future: DatabaseService().getPets(orderedPetIds),
+                  builder: (context, petSnap) {
+                    if (petSnap.connectionState == ConnectionState.waiting) {
+                      return const Center(child: SpinningLoader());
+                    }
+                    if (!petSnap.hasData || petSnap.data!.isEmpty) {
+                      return const Center(child: Text('No patients found'));
+                    }
+                    final pets = petSnap.data!;
+                    // Order pets by orderedPetIds
+                    final petMap = {for (var pet in pets) pet.id: pet};
+                    return Column(
+                      children: orderedPetIds.map((petId) {
+                        final pet = petMap[petId];
+                        if (pet == null) return const SizedBox.shrink();
+                        return ListTile(
+                          leading: CircleAvatar(child: Text(pet.name.isNotEmpty ? pet.name[0] : '?')),
+                          title: Text(pet.name),
+                          subtitle: Text(pet.species),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
             ],
           ),
-          const SizedBox(height: 24),
-
-          // Patients List
-          const Text(
-            'Recent Patients',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Montserrat',
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildPatientsList(),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildAnalyticsTab(User user) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Revenue Chart
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Revenue This Week',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 200,
-                  child: _buildRevenueChart(),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
+    print('🔍 [AnalyticsTab] Building analytics tab for user: ${user.id}');
+    print('🔍 [AnalyticsTab] User account type: ${user.accountType}');
+    
+    return StreamBuilder<Map<String, dynamic>>(
+      stream: DatabaseService().getVetAnalytics(user.id),
+      builder: (context, snapshot) {
+        print('🔍 [AnalyticsTab] StreamBuilder state: ${snapshot.connectionState}');
+        print('🔍 [AnalyticsTab] Has data: ${snapshot.hasData}');
+        print('🔍 [AnalyticsTab] Has error: ${snapshot.hasError}');
+        
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          print('🔍 [AnalyticsTab] Showing loading indicator');
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          // Performance Metrics
-          Row(
+        if (snapshot.hasError) {
+          print('🔍 [AnalyticsTab] Error occurred: ${snapshot.error}');
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final analytics = snapshot.data ?? {};
+        
+        print('🔍 [AnalyticsTab] Received analytics data: $analytics');
+        print('🔍 [AnalyticsTab] Analytics data type: ${analytics.runtimeType}');
+        print('🔍 [AnalyticsTab] Analytics keys: ${analytics.keys.toList()}');
+        print('🔍 [AnalyticsTab] Total appointments: ${analytics['thisMonthAppointments']}');
+        print('🔍 [AnalyticsTab] New patients: ${analytics['newPatientsThisMonth']}');
+        print('🔍 [AnalyticsTab] Revenue: ${analytics['thisMonthRevenue']}');
+        print('🔍 [AnalyticsTab] Emergency cases: ${analytics['emergencyCases']}');
+        print('🔍 [AnalyticsTab] Average duration: ${analytics['averageDuration']}');
+        print('🔍 [AnalyticsTab] Patient satisfaction: ${analytics['patientSatisfaction']}');
+        print('🔍 [AnalyticsTab] This week revenue: ${analytics['thisWeekRevenue']}');
+        print('🔍 [AnalyticsTab] Last week revenue: ${analytics['lastWeekRevenue']}');
+        print('🔍 [AnalyticsTab] Completed appointments: ${analytics['completedAppointments']}');
+        print('🔍 [AnalyticsTab] Pending appointments: ${analytics['pendingAppointments']}');
+        print('🔍 [AnalyticsTab] Confirmed appointments: ${analytics['confirmedAppointments']}');
+        
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildMetricCard(
-                  'Avg. Appointment Duration',
-                  '45 min',
-                  Icons.timer,
-                  Colors.blue,
+              // Revenue Chart
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Revenue This Week',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Montserrat',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 200,
+                      child: _buildRevenueChart(analytics),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildMetricCard(
-                  'Patient Satisfaction',
-                  '4.8/5',
-                  Icons.star,
-                  Colors.orange,
+              const SizedBox(height: 24),
+
+              // Performance Metrics
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Avg. Appointment Duration',
+                      '${analytics['averageDuration'] ?? 45} min',
+                      Icons.timer,
+                      Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Patient Satisfaction',
+                      '${analytics['patientSatisfaction'] ?? 4.8}/5',
+                      Icons.star,
+                      Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Monthly Stats
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'This Month',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Montserrat',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildMonthlyStats(analytics),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Appointment Status Breakdown
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Appointment Status',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Montserrat',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildStatusBreakdown(analytics),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+        );
+      },
+    );
+  }
 
-          // Monthly Stats
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
+  Widget _buildAppointmentsList() {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final currentUser = authService.currentUser;
+    
+    if (currentUser == null) {
+      return const Center(child: Text('No user logged in'));
+    }
+
+    return StreamBuilder<List<Appointment>>(
+      stream: DatabaseService().getVetAppointmentsForDashboard(currentUser.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        
+        final appointments = snapshot.data ?? [];
+        print('🔍 [VetDashboard] Received ${appointments.length} appointments from database');
+        for (final apt in appointments) {
+          print('🔍 [VetDashboard] Appointment: ${apt.petName} on ${apt.appointmentDate} - Status: ${apt.status}');
+        }
+        
+        List<Appointment> filteredAppointments = appointments;
+        final now = DateTime.now();
+        print('🔍 [VetDashboard] Current filter: ${_filters[_selectedFilterIndex]}');
+        print('🔍 [VetDashboard] Current date: $now');
+        
+        if (_filters[_selectedFilterIndex] == 'Today') {
+          filteredAppointments = appointments.where((apt) =>
+            apt.appointmentDate.year == now.year &&
+            apt.appointmentDate.month == now.month &&
+            apt.appointmentDate.day == now.day
+          ).toList();
+          print('🔍 [VetDashboard] Filtered to today: ${filteredAppointments.length} appointments');
+        } else if (_filters[_selectedFilterIndex] == 'Tomorrow') {
+          final tomorrow = now.add(Duration(days: 1));
+          filteredAppointments = appointments.where((apt) =>
+            apt.appointmentDate.year == tomorrow.year &&
+            apt.appointmentDate.month == tomorrow.month &&
+            apt.appointmentDate.day == tomorrow.day
+          ).toList();
+          print('🔍 [VetDashboard] Filtered to tomorrow: ${filteredAppointments.length} appointments');
+        } else if (_filters[_selectedFilterIndex] == 'This Week') {
+          final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+          final endOfWeek = startOfWeek.add(Duration(days: 6));
+          filteredAppointments = appointments.where((apt) {
+            final date = apt.appointmentDate;
+            return date.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
+                   date.isBefore(endOfWeek.add(const Duration(days: 1)));
+          }).toList();
+          print('🔍 [VetDashboard] Filtered to this week: ${filteredAppointments.length} appointments');
+        } else {
+          print('🔍 [VetDashboard] No date filtering applied: ${filteredAppointments.length} appointments');
+        }
+
+        if (filteredAppointments.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(24),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'This Month',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
-                  ),
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 48,
+                  color: Colors.grey[400],
                 ),
                 const SizedBox(height: 16),
-                _buildMonthlyStats(),
+                Text(
+                  'No appointments today',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Your schedule is clear for today',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
+          );
+        }
+
+        return Column(
+          children: filteredAppointments.map((appointment) {
+            Color statusColor = Colors.blue;
+            switch (appointment.status) {
+              case AppointmentStatus.confirmed:
+                statusColor = Colors.green;
+                break;
+              case AppointmentStatus.pending:
+                statusColor = Colors.orange;
+                break;
+              case AppointmentStatus.completed:
+                statusColor = Colors.purple;
+                break;
+              case AppointmentStatus.cancelled:
+                statusColor = Colors.red;
+                break;
+              default:
+                statusColor = Colors.blue;
+            }
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.schedule, color: statusColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _filters[_selectedFilterIndex] == 'Today'
+                            ? appointment.formattedTime
+                            : '${_formatDate(appointment.appointmentDate)} ${appointment.formattedTime}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          '${appointment.petName} • ${appointment.typeDisplayName}',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (appointment.reason != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            appointment.reason!,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          appointment.statusDisplayName,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (appointment.status == AppointmentStatus.pending)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12.0),
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                await DatabaseService().updateAppointmentStatus(appointment.id, AppointmentStatus.confirmed);
+                                await _addPatientToVet(appointment.vetId, appointment.petId);
+                                setState(() {}); // Refresh UI
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(120, 40),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Confirm'),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterChip(String label, bool isSelected, int index) {
+    return FilterChip(
+      avatar: label == 'All' ? Icon(Icons.list, color: isSelected ? Colors.blue : Colors.grey) : null,
+      label: Text(
+        label,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? Colors.blue : Colors.black,
+        ),
       ),
+      selected: isSelected,
+      onSelected: (bool selected) {
+        setState(() {
+          _selectedFilterIndex = index;
+        });
+      },
+      backgroundColor: Colors.white,
+      selectedColor: Colors.blue.withOpacity(0.2),
+      checkmarkColor: Colors.blue,
+      elevation: isSelected ? 4 : 0,
+      side: BorderSide(color: isSelected ? Colors.blue : Colors.grey[300]!),
     );
   }
 
@@ -547,98 +951,6 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
     );
   }
 
-  Widget _buildFilterChip(String label, bool isSelected) {
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (bool selected) {
-        // Handle filter selection
-      },
-      backgroundColor: Colors.white,
-      selectedColor: Colors.blue.withOpacity(0.2),
-      checkmarkColor: Colors.blue,
-    );
-  }
-
-  Widget _buildAppointmentsList() {
-    // Mock appointments data
-    final appointments = [
-      {'time': '9:00 AM', 'patient': 'Max (Golden Retriever)', 'type': 'Check-up'},
-      {'time': '10:30 AM', 'patient': 'Luna (Cat)', 'type': 'Vaccination'},
-      {'time': '2:00 PM', 'patient': 'Buddy (Labrador)', 'type': 'Surgery'},
-      {'time': '4:30 PM', 'patient': 'Bella (Poodle)', 'type': 'Follow-up'},
-    ];
-
-    return Column(
-      children: appointments.map((appointment) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.schedule, color: Colors.blue, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      appointment['time']!,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      appointment['patient']!,
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  appointment['type']!,
-                  style: const TextStyle(
-                    color: Colors.orange,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   Widget _buildPatientCategoryCard(String title, String count, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -678,94 +990,57 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
     );
   }
 
-  Widget _buildPatientsList() {
-    // Mock patients data
-    final patients = [
-      {'name': 'Max', 'species': 'Golden Retriever', 'owner': 'John Smith', 'lastVisit': '2 days ago'},
-      {'name': 'Luna', 'species': 'Cat', 'owner': 'Sarah Johnson', 'lastVisit': '1 week ago'},
-      {'name': 'Buddy', 'species': 'Labrador', 'owner': 'Mike Wilson', 'lastVisit': '3 days ago'},
-      {'name': 'Bella', 'species': 'Poodle', 'owner': 'Emily Davis', 'lastVisit': '5 days ago'},
-    ];
-
-    return Column(
-      children: patients.map((patient) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.blue.withOpacity(0.1),
-                child: Text(
-                  patient['name']![0],
-                  style: const TextStyle(
-                    color: Colors.blue,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      patient['name']!,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      '${patient['species']!} • ${patient['owner']!}',
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                patient['lastVisit']!,
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildRevenueChart() {
-    // Mock chart data
+  Widget _buildRevenueChart(Map<String, dynamic> analytics) {
+    print('🔍 [RevenueChart] Building revenue chart with analytics: $analytics');
+    final thisWeekRevenue = analytics['thisWeekRevenue'] ?? 0.0;
+    final lastWeekRevenue = analytics['lastWeekRevenue'] ?? 0.0;
+    print('🔍 [RevenueChart] This week revenue: $thisWeekRevenue');
+    print('🔍 [RevenueChart] Last week revenue: $lastWeekRevenue');
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[100],
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Center(
-        child: Text(
-          'Revenue Chart\n(Coming Soon)',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.grey,
-            fontSize: 16,
-          ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This Week: \$${thisWeekRevenue.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Last Week: \$${lastWeekRevenue.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: Text(
+                  'Revenue Chart\n(Coming Soon)',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -810,13 +1085,24 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
     );
   }
 
-  Widget _buildMonthlyStats() {
+  Widget _buildMonthlyStats(Map<String, dynamic> analytics) {
+    print('🔍 [MonthlyStats] Building monthly stats with analytics: $analytics');
+    final totalAppointments = analytics['thisMonthAppointments'] ?? 0;
+    final newPatients = analytics['newPatientsThisMonth'] ?? 0;
+    final revenue = analytics['thisMonthRevenue'] ?? 0.0;
+    final emergencyCases = analytics['emergencyCases'] ?? 0;
+    
+    print('🔍 [MonthlyStats] Total appointments: $totalAppointments');
+    print('🔍 [MonthlyStats] New patients: $newPatients');
+    print('🔍 [MonthlyStats] Revenue: $revenue');
+    print('🔍 [MonthlyStats] Emergency cases: $emergencyCases');
+    
     return Column(
       children: [
-        _buildStatRow('Total Appointments', '156'),
-        _buildStatRow('New Patients', '23'),
-        _buildStatRow('Revenue', '\$12,450'),
-        _buildStatRow('Emergency Cases', '8'),
+        _buildStatRow('Total Appointments', totalAppointments.toString()),
+        _buildStatRow('New Patients', newPatients.toString()),
+        _buildStatRow('Revenue', '\$${revenue.toStringAsFixed(2)}'),
+        _buildStatRow('Emergency Cases', emergencyCases.toString()),
       ],
     );
   }
@@ -839,6 +1125,74 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBreakdown(Map<String, dynamic> analytics) {
+    print('🔍 [StatusBreakdown] Building status breakdown with analytics: $analytics');
+    final completed = analytics['completedAppointments'] ?? 0;
+    final pending = analytics['pendingAppointments'] ?? 0;
+    final confirmed = analytics['confirmedAppointments'] ?? 0;
+    final total = completed + pending + confirmed;
+    
+    print('🔍 [StatusBreakdown] Completed: $completed');
+    print('🔍 [StatusBreakdown] Pending: $pending');
+    print('🔍 [StatusBreakdown] Confirmed: $confirmed');
+    print('🔍 [StatusBreakdown] Total: $total');
+    
+    if (total == 0) {
+      print('🔍 [StatusBreakdown] No appointments found, showing empty state');
+      return const Text(
+        'No appointments yet',
+        style: TextStyle(
+          color: Colors.grey,
+          fontSize: 14,
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        _buildStatusRow('Completed', completed, total, Colors.green),
+        _buildStatusRow('Confirmed', confirmed, total, Colors.blue),
+        _buildStatusRow('Pending', pending, total, Colors.orange),
+      ],
+    );
+  }
+
+  Widget _buildStatusRow(String status, int count, int total, Color color) {
+    final percentage = total > 0 ? (count / total * 100).round() : 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              status,
+              style: const TextStyle(
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Text(
+            '$count ($percentage%)',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ],
@@ -914,16 +1268,6 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
           ),
         );
       }).toList(),
-    );
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.blue,
-        behavior: SnackBarBehavior.floating,
-      ),
     );
   }
 } 

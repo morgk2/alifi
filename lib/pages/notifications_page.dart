@@ -275,6 +275,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
         // Navigate to user's profile (who unfollowed)
         _navigateToUserProfile(notification);
         break;
+      case NotificationType.appointmentRequest:
+      case NotificationType.appointmentUpdate:
+      case NotificationType.appointmentReminder:
+        // Navigate to appointment details or vet dashboard
+        _navigateToAppointment(notification);
+        break;
     }
   }
 
@@ -409,6 +415,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ),
       );
     }
+  }
+
+  void _navigateToAppointment(AppNotification notification) async {
+    // For now, just show a message. In the future, you can navigate to appointment details
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Appointment notification - navigation to be implemented'),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   void _deleteNotification(String notificationId) async {

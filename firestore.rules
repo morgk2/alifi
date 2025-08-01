@@ -394,6 +394,17 @@ service cloud.firestore {
       // );
     }
 
+    // Vet schedules collection
+    match /vetSchedules/{vetId} {
+      // TEMPORARY: Allow all authenticated users to read and write vet schedules for debugging
+      allow read, write: if isAuthenticated();
+    }
+
+    // Appointments collection
+    match /appointments/{appointmentId} {
+      allow read, write: if isAuthenticated();
+    }
+
     // Default deny for unspecified paths
     match /{document=**} {
       allow read: if true;  // Public read access for all collections

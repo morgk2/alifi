@@ -9,6 +9,9 @@ enum NotificationType {
   orderCancelled,
   follow,
   unfollow,
+  appointmentRequest,
+  appointmentUpdate,
+  appointmentReminder,
 }
 
 class AppNotification {

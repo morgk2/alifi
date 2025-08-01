@@ -447,40 +447,7 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (isVet && user != null) ...[
-                    // Patients section for vets
-                    Container(
-                        width: double.infinity,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                                              ),
-                                            ],
-                                          ),
-                                            child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                          const Text(
-                            'Patients',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          if (user.patients != null && user.patients!.isNotEmpty)
-                            _buildPatientsList(user.patients!),
-                        ],
-                      ),
-                    ),
-                  ] else if (isStore) ...[
+                  if (isStore) ...[
                     // Basic Info section for stores
                   Container(
                     width: double.infinity,

@@ -1,4 +1,3 @@
-import 'dart:math' show pi, cos;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:latlong2/latlong.dart' as latlong;
 import '../models/user.dart';
@@ -18,6 +17,8 @@ import '../models/chat_message.dart';
 import '../models/order.dart' as store_order;
 import 'notification_service.dart';
 import '../models/notification.dart';
+import '../models/appointment.dart';
+import '../models/time_slot.dart';
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -29,11 +30,11 @@ class DatabaseService {
   CollectionReference get _petsCollection => _db.collection('pets');
   CollectionReference get _lostPetsCollection => _db.collection('lost_pets');
   CollectionReference get _storeProductsCollection => _db.collection('storeproducts');
-  CollectionReference get _vetLocationsCollection => _db.collection('vet_locations');
-  CollectionReference get _storeLocationsCollection => _db.collection('store_locations');
   CollectionReference get _giftsCollection => _db.collection('gifts');
   CollectionReference get _chatMessagesCollection => _db.collection('chatMessages');
   CollectionReference get _ordersCollection => _db.collection('orders');
+  CollectionReference get _appointmentsCollection => _db.collection('appointments');
+  CollectionReference get _vetSchedulesCollection => _db.collection('vetSchedules');
 
   // Single document for all locations in 'locations' collection
   DocumentReference get _vetLocationsDoc => _db.collection('locations').doc('vets');
@@ -45,7 +46,7 @@ class DatabaseService {
       print('Starting location migration...');
       
       // Create batch for atomic operations
-      var batch = _db.batch();
+      final batch = _db.batch();
       int operationCount = 0;
       
       // Create the locations document references
@@ -59,9 +60,9 @@ class DatabaseService {
       
       // Extract existing locations
       Map<String, dynamic> existingVetLocations = 
-        (existingVetsDoc.data()?['locations'] as Map<String, dynamic>?) ?? {};
+        existingVetsDoc.data()?['locations'] ?? {};
       Map<String, dynamic> existingStoreLocations = 
-        (existingStoresDoc.data()?['locations'] as Map<String, dynamic>?) ?? {};
+        existingStoresDoc.data()?['locations'] ?? {};
       
       print('Found ${existingVetLocations.length} existing vet locations');
       print('Found ${existingStoreLocations.length} existing store locations');
@@ -1508,31 +1509,7 @@ class DatabaseService {
     });
   }
 
-  Stream<List<Map<String, dynamic>>> getVetDashboardStats(String vetId) {
-    print('🔍 [DatabaseService] getVetDashboardStats called for vetId: $vetId');
-    
-    // For now, return mock data since vet appointments collection doesn't exist yet
-    // TODO: Implement actual vet appointments collection and logic
-    return Stream.value([
-      {
-        'nextAppointment': 'Tomorrow',
-        'patientsCount': 45,
-        'appointmentsToday': 8,
-        'revenueToday': 1250.00,
-      }
-    ]).asBroadcastStream().handleError((error) {
-      print('🔍 [DatabaseService] getVetDashboardStats error: $error');
-      // Return default stats on error
-      return [
-        {
-          'nextAppointment': 'No upcoming',
-          'patientsCount': 0,
-          'appointmentsToday': 0,
-          'revenueToday': 0.0,
-        }
-      ];
-    });
-  }
+
 
   Stream<Map<String, List<Map<String, dynamic>>>> getStoreSalesChartData(String storeId) {
     print('🔍 [DatabaseService] getStoreSalesChartData called for storeId: $storeId');
@@ -2287,5 +2264,589 @@ class DatabaseService {
         return filteredProducts.take(limit).toList();
       },
     );
+  }
+
+  // ==================== APPOINTMENT METHODS ====================
+
+    // Create a new appointment
+  Future<String> createAppointment(Appointment appointment) async {
+    try {
+      print('🔍 [DatabaseService] Creating appointment for ${appointment.petName} on ${appointment.appointmentDate}');
+      print('🔍 [DatabaseService] VetId: ${appointment.vetId}, UserId: ${appointment.userId}, PetId: ${appointment.petId}');
+      
+      final appointmentData = appointment.toFirestore();
+      print('🔍 [DatabaseService] Appointment data: $appointmentData');
+      
+      final docRef = await _appointmentsCollection.add(appointmentData);
+      print('🔍 [DatabaseService] Appointment created with ID: ${docRef.id}');
+      
+      // Send notification to vet
+      final notification = AppNotification(
+        id: '',
+        recipientId: appointment.vetId,
+        senderId: appointment.userId,
+        type: NotificationType.appointmentRequest,
+        title: 'New Appointment Request',
+        body: 'New appointment request for ${appointment.petName} on ${_formatDate(appointment.appointmentDate)}',
+        data: {
+          'appointmentId': docRef.id,
+          'userId': appointment.userId,
+          'petName': appointment.petName,
+        },
+        createdAt: DateTime.now(),
+        relatedId: docRef.id,
+      );
+      await NotificationService().sendNotification(notification);
+      print('🔍 [DatabaseService] Notification sent to vet');
+      
+      return docRef.id;
+    } catch (e) {
+      print('Error creating appointment: $e');
+      rethrow;
+    }
+  }
+
+  // Get appointments for a vet
+  Stream<List<Appointment>> getVetAppointments(String vetId, {AppointmentStatus? status}) {
+    Query query = _appointmentsCollection
+        .where('vetId', isEqualTo: vetId)
+        .orderBy('appointmentDate', descending: false);
+    
+    if (status != null) {
+      query = query.where('status', isEqualTo: status.name);
+    }
+
+    return query.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        try {
+          return Appointment.fromFirestore(doc);
+        } catch (e) {
+          print('Error parsing appointment ${doc.id}: $e');
+          return null;
+        }
+      }).where((appointment) => appointment != null).cast<Appointment>().toList();
+    });
+  }
+
+  // Get appointments for a user
+  Stream<List<Appointment>> getUserAppointments(String userId, {AppointmentStatus? status}) {
+    Query query = _appointmentsCollection
+        .where('userId', isEqualTo: userId)
+        .orderBy('appointmentDate', descending: false);
+    
+    if (status != null) {
+      query = query.where('status', isEqualTo: status.name);
+    }
+
+    return query.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        try {
+          return Appointment.fromFirestore(doc);
+        } catch (e) {
+          print('Error parsing appointment ${doc.id}: $e');
+          return null;
+        }
+      }).where((appointment) => appointment != null).cast<Appointment>().toList();
+    });
+  }
+
+  // Update appointment status
+  Future<void> updateAppointmentStatus(String appointmentId, AppointmentStatus status, {String? vetNotes}) async {
+    try {
+      final updateData = {
+        'status': status.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      
+      if (vetNotes != null) {
+        updateData['vetNotes'] = vetNotes;
+      }
+
+      await _appointmentsCollection.doc(appointmentId).update(updateData);
+
+      // Get appointment details for notification
+      final appointmentDoc = await _appointmentsCollection.doc(appointmentId).get();
+      if (appointmentDoc.exists) {
+        final appointment = Appointment.fromFirestore(appointmentDoc);
+        
+        // Send notification to user
+        String title = '';
+        String body = '';
+        
+        switch (status) {
+          case AppointmentStatus.confirmed:
+            title = 'Appointment Confirmed';
+            body = 'Your appointment for ${appointment.petName} has been confirmed';
+            break;
+          case AppointmentStatus.cancelled:
+            title = 'Appointment Cancelled';
+            body = 'Your appointment for ${appointment.petName} has been cancelled';
+            break;
+          case AppointmentStatus.completed:
+            title = 'Appointment Completed';
+            body = 'Your appointment for ${appointment.petName} has been completed';
+            break;
+          default:
+            break;
+        }
+
+        if (title.isNotEmpty) {
+          final notification = AppNotification(
+            id: '',
+            recipientId: appointment.userId,
+            senderId: appointment.vetId,
+            type: NotificationType.appointmentUpdate,
+            title: title,
+            body: body,
+            data: {
+              'appointmentId': appointmentId,
+              'status': status.name,
+            },
+            createdAt: DateTime.now(),
+            relatedId: appointmentId,
+          );
+          await NotificationService().sendNotification(notification);
+        }
+      }
+    } catch (e) {
+      print('Error updating appointment status: $e');
+      rethrow;
+    }
+  }
+
+  // Get available time slots for a vet on a specific date
+  Future<List<TimeSlot>> getAvailableTimeSlots(String vetId, DateTime date) async {
+    try {
+      // Get vet's schedule
+      final scheduleDoc = await _vetSchedulesCollection.doc(vetId).get();
+      VetSchedule schedule;
+      
+      if (scheduleDoc.exists) {
+        schedule = VetSchedule.fromFirestore(scheduleDoc);
+      } else {
+        // Create default schedule for new vet
+        schedule = VetSchedule.createDefault(vetId);
+        await _vetSchedulesCollection.doc(vetId).set(schedule.toFirestore());
+      }
+
+      // Check if date is blocked
+      if (schedule.isDateBlocked(date)) {
+        return [];
+      }
+
+      // Get time slots for the day
+      final dayTimeSlots = schedule.getTimeSlotsForDate(date);
+      
+      // Get existing appointments for this date
+      final existingAppointments = await _appointmentsCollection
+          .where('vetId', isEqualTo: vetId)
+          .where('appointmentDate', isEqualTo: Timestamp.fromDate(DateTime(date.year, date.month, date.day)))
+          .where('status', whereIn: [AppointmentStatus.pending.name, AppointmentStatus.confirmed.name])
+          .get();
+
+      final bookedTimeSlots = existingAppointments.docs
+          .map((doc) => (doc.data() as Map<String, dynamic>)['timeSlot'] as String)
+          .toSet();
+
+      // Create available time slots
+      final availableSlots = <TimeSlot>[];
+      for (final timeSlot in dayTimeSlots) {
+        final endTime = _calculateEndTime(timeSlot, schedule.appointmentDuration);
+        final slot = TimeSlot(
+          id: '${vetId}_${date.millisecondsSinceEpoch}_$timeSlot',
+          vetId: vetId,
+          date: date,
+          startTime: timeSlot,
+          endTime: endTime,
+          isAvailable: !bookedTimeSlots.contains('$timeSlot-$endTime'),
+          duration: schedule.appointmentDuration,
+        );
+        
+        // Only include future time slots
+        if (!slot.isPast) {
+          availableSlots.add(slot);
+        }
+      }
+
+      return availableSlots;
+    } catch (e) {
+      print('Error getting available time slots: $e');
+      return [];
+    }
+  }
+
+  // Get or create vet schedule
+  Future<VetSchedule> getVetSchedule(String vetId) async {
+    try {
+      final doc = await _vetSchedulesCollection.doc(vetId).get();
+      if (doc.exists) {
+        return VetSchedule.fromFirestore(doc);
+      } else {
+        // Create default schedule
+        final defaultSchedule = VetSchedule.createDefault(vetId);
+        await _vetSchedulesCollection.doc(vetId).set(defaultSchedule.toFirestore());
+        return defaultSchedule;
+      }
+    } catch (e) {
+      print('Error getting vet schedule: $e');
+      return VetSchedule.createDefault(vetId);
+    }
+  }
+
+  // Update vet schedule
+  Future<void> updateVetSchedule(VetSchedule schedule) async {
+    try {
+      await _vetSchedulesCollection.doc(schedule.vetId).set(schedule.toFirestore());
+      
+      // Get all appointments for this vet
+      final appointments = await _appointmentsCollection
+          .where('vetId', isEqualTo: schedule.vetId)
+          .where('status', whereIn: ['pending', 'confirmed'])
+          .get();
+
+      // Check each appointment against the new schedule
+      for (final doc in appointments.docs) {
+        final appointment = Appointment.fromFirestore(doc);
+        final dayName = _getDayName(appointment.appointmentDate.weekday);
+        final availableSlots = schedule.weeklySchedule[dayName] ?? [];
+
+        // If the appointment time is no longer in available slots, cancel it
+        if (!availableSlots.contains(appointment.timeSlot.split('-')[0])) {
+          await cancelAppointment(
+            doc.id,
+            'Appointment cancelled due to schedule change',
+            isVetCancellation: true,
+          );
+        }
+      }
+    } catch (e) {
+      print('Error updating vet schedule: $e');
+      rethrow;
+    }
+  }
+
+
+
+  // Get vet dashboard stats with real appointment data
+  Stream<List<Map<String, dynamic>>> getVetDashboardStats(String vetId) {
+    print('🔍 [DatabaseService] getVetDashboardStats called for vetId: $vetId');
+    
+    return _appointmentsCollection
+        .where('vetId', isEqualTo: vetId)
+        .snapshots()
+        .map((snapshot) {
+      try {
+        final appointments = snapshot.docs.map((doc) {
+          try {
+            return Appointment.fromFirestore(doc);
+          } catch (e) {
+            print('Error parsing appointment: $e');
+            return null;
+          }
+        }).where((apt) => apt != null).cast<Appointment>().toList();
+
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final tomorrow = today.add(const Duration(days: 1));
+
+        // Count appointments for today
+        final appointmentsToday = appointments.where((apt) {
+          final aptDate = DateTime(apt.appointmentDate.year, apt.appointmentDate.month, apt.appointmentDate.day);
+          return aptDate.isAtSameMomentAs(today) && 
+                 (apt.status == AppointmentStatus.pending || apt.status == AppointmentStatus.confirmed);
+        }).length;
+
+        // Find next appointment
+        final upcomingAppointments = appointments.where((apt) => apt.isUpcoming).toList();
+        upcomingAppointments.sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+        
+        String nextAppointment = 'No upcoming';
+        if (upcomingAppointments.isNotEmpty) {
+          final next = upcomingAppointments.first;
+          final nextDate = DateTime(next.appointmentDate.year, next.appointmentDate.month, next.appointmentDate.day);
+          if (nextDate.isAtSameMomentAs(today)) {
+            nextAppointment = 'Today at ${next.formattedTime}';
+          } else if (nextDate.isAtSameMomentAs(tomorrow)) {
+            nextAppointment = 'Tomorrow at ${next.formattedTime}';
+          } else {
+            nextAppointment = '${_formatDate(next.appointmentDate)} at ${next.formattedTime}';
+          }
+        }
+
+        // Count total patients (unique pet IDs)
+        final uniquePetIds = appointments.map((apt) => apt.petId).toSet();
+        final patientsCount = uniquePetIds.length;
+
+        // Calculate revenue for today (completed appointments)
+        final revenueToday = appointments.where((apt) {
+          final aptDate = DateTime(apt.appointmentDate.year, apt.appointmentDate.month, apt.appointmentDate.day);
+          return aptDate.isAtSameMomentAs(today) && 
+                 apt.status == AppointmentStatus.completed && 
+                 apt.price != null;
+        }).fold(0.0, (sum, apt) => sum + (apt.price ?? 0.0));
+
+        return [
+          {
+            'nextAppointment': nextAppointment,
+            'patientsCount': patientsCount,
+            'appointmentsToday': appointmentsToday,
+            'revenueToday': revenueToday,
+          }
+        ];
+      } catch (e) {
+        print('🔍 [DatabaseService] getVetDashboardStats error: $e');
+        return [
+          {
+            'nextAppointment': 'No upcoming',
+            'patientsCount': 0,
+            'appointmentsToday': 0,
+            'revenueToday': 0.0,
+          }
+        ];
+      }
+    }).handleError((error) {
+      if (error.toString().contains('indexes?create_composite=')) {
+        print('\n🔍 [DatabaseService] Index creation URL:');
+        print('https://console.firebase.google.com/v1/r/${error.toString().split('indexes?create_composite=')[1].split("'")[0]}');
+      }
+      print('🔍 [DatabaseService] getVetDashboardStats stream error: $error');
+      return [
+        {
+          'nextAppointment': 'No upcoming',
+          'patientsCount': 0,
+          'appointmentsToday': 0,
+          'revenueToday': 0.0,
+        }
+      ];
+    });
+  }
+
+  // Helper methods
+  String _calculateEndTime(String startTime, int durationMinutes) {
+    final parts = startTime.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+    
+    final startDateTime = DateTime(2024, 1, 1, hour, minute);
+    final endDateTime = startDateTime.add(Duration(minutes: durationMinutes));
+    
+    return '${endDateTime.hour.toString().padLeft(2, '0')}:${endDateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _formatDate(DateTime date) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day}';
+  }
+
+  // Get appointments for vet dashboard (all appointments, filtered by UI)
+  Stream<List<Appointment>> getVetAppointmentsForDashboard(String vetId) {
+    print('🔍 [DatabaseService] getVetAppointments called for vetId: $vetId');
+
+    return _appointmentsCollection
+        .where('vetId', isEqualTo: vetId)
+        .orderBy('appointmentDate', descending: false)
+        .snapshots()
+        .handleError((error) {
+          if (error.toString().contains('indexes?create_composite=')) {
+            print('\n🔍 [DatabaseService] Index creation URL:');
+            print('https://console.firebase.google.com/v1/r/${error.toString().split('indexes?create_composite=')[1].split("'")[0]}');
+          }
+          print('🔍 [DatabaseService] getVetAppointments error: $error');
+          throw error;
+        })
+        .map((snapshot) {
+          print('🔍 [DatabaseService] Found ${snapshot.docs.length} appointments for vet');
+          final appointments = snapshot.docs.map((doc) {
+            try {
+              final appointment = Appointment.fromFirestore(doc);
+              print('🔍 [DatabaseService] Appointment: ${appointment.petName} on ${appointment.appointmentDate} - Status: ${appointment.status}');
+              return appointment;
+            } catch (e) {
+              print('Error parsing appointment ${doc.id}: $e');
+              return null;
+            }
+          }).where((apt) => apt != null).cast<Appointment>().toList();
+          
+          print('🔍 [DatabaseService] Returning ${appointments.length} valid appointments');
+          return appointments;
+        });
+  }
+
+  // Cancel appointment
+  Future<void> cancelAppointment(String appointmentId, String reason, {bool isVetCancellation = false}) async {
+    try {
+      await _appointmentsCollection.doc(appointmentId).update({
+        'status': AppointmentStatus.cancelled.name,
+        'vetNotes': reason,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Get appointment details for notification
+      final appointmentDoc = await _appointmentsCollection.doc(appointmentId).get();
+      if (appointmentDoc.exists) {
+        final appointment = Appointment.fromFirestore(appointmentDoc);
+        
+        // Send notification to the other party
+        final recipientId = isVetCancellation ? appointment.userId : appointment.vetId;
+        final title = isVetCancellation ? 'Appointment Cancelled by Vet' : 'Appointment Cancelled';
+        final body = 'Appointment for ${appointment.petName} on ${_formatDate(appointment.appointmentDate)} has been cancelled';
+        
+        final notification = AppNotification(
+          id: '',
+          recipientId: recipientId,
+          senderId: isVetCancellation ? appointment.vetId : appointment.userId,
+          type: NotificationType.appointmentUpdate,
+          title: title,
+          body: body,
+          data: {
+            'appointmentId': appointmentId,
+            'reason': reason,
+          },
+          createdAt: DateTime.now(),
+          relatedId: appointmentId,
+        );
+        await NotificationService().sendNotification(notification);
+      }
+    } catch (e) {
+      print('Error cancelling appointment: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateUserPatients(String userId, List<String> patients) async {
+    await _usersCollection.doc(userId).update({'patients': patients});
+  }
+
+  // Get vet analytics data
+  Stream<Map<String, dynamic>> getVetAnalytics(String vetId) {
+    print('🔍 [DatabaseService] getVetAnalytics called for vetId: $vetId');
+    
+    return _appointmentsCollection
+        .where('vetId', isEqualTo: vetId)
+        .orderBy('appointmentDate', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          final appointments = snapshot.docs.map((doc) {
+            try {
+              return Appointment.fromFirestore(doc);
+            } catch (e) {
+              print('Error parsing appointment ${doc.id}: $e');
+              return null;
+            }
+          }).where((apt) => apt != null).cast<Appointment>().toList();
+
+          print('🔍 [DatabaseService] Found ${appointments.length} appointments for analytics');
+          
+          // Debug: Show first few appointments
+          for (int i = 0; i < appointments.length && i < 5; i++) {
+            final apt = appointments[i];
+            print('🔍 [DatabaseService] Appointment $i: ${apt.petName} on ${apt.appointmentDate} - Status: ${apt.status} - Type: ${apt.type}');
+          }
+
+          final now = DateTime.now();
+          final thisMonth = DateTime(now.year, now.month, 1);
+          final lastMonth = DateTime(now.year, now.month - 1, 1);
+          final thisWeek = now.subtract(Duration(days: now.weekday - 1));
+          final lastWeek = thisWeek.subtract(const Duration(days: 7));
+
+          // Filter appointments by time periods
+          final thisMonthAppointments = appointments.where((apt) => 
+            apt.appointmentDate.year == now.year && apt.appointmentDate.month == now.month
+          ).toList();
+
+          final lastMonthAppointments = appointments.where((apt) => 
+            (apt.appointmentDate.year == now.year && apt.appointmentDate.month == now.month - 1) ||
+            (now.month == 1 && apt.appointmentDate.year == now.year - 1 && apt.appointmentDate.month == 12)
+          ).toList();
+
+          final thisWeekAppointments = appointments.where((apt) => 
+            apt.appointmentDate.isAfter(thisWeek.subtract(const Duration(days: 1)))
+          ).toList();
+
+          final lastWeekAppointments = appointments.where((apt) => 
+            apt.appointmentDate.isAfter(lastWeek.subtract(const Duration(days: 1))) &&
+            apt.appointmentDate.isBefore(thisWeek)
+          ).toList();
+
+          print('🔍 [DatabaseService] This month appointments found: ${thisMonthAppointments.length}');
+          print('🔍 [DatabaseService] Last month appointments found: ${lastMonthAppointments.length}');
+          print('🔍 [DatabaseService] This week appointments found: ${thisWeekAppointments.length}');
+          print('🔍 [DatabaseService] Last week appointments found: ${lastWeekAppointments.length}');
+
+          // Calculate metrics
+          final totalAppointments = appointments.length;
+          final completedAppointments = appointments.where((apt) => 
+            apt.status == AppointmentStatus.completed
+          ).length;
+          final pendingAppointments = appointments.where((apt) => 
+            apt.status == AppointmentStatus.pending
+          ).length;
+          final confirmedAppointments = appointments.where((apt) => 
+            apt.status == AppointmentStatus.confirmed
+          ).length;
+
+          // Calculate unique patients (by petId)
+          final uniquePetIds = appointments.map((apt) => apt.petId).toSet();
+          final totalPatients = uniquePetIds.length;
+
+          // Calculate new patients this month (pets with first appointment this month)
+          final newPatientsThisMonth = uniquePetIds.where((petId) {
+            final petAppointments = appointments.where((apt) => apt.petId == petId).toList();
+            final firstAppointment = petAppointments.reduce((a, b) => 
+              a.appointmentDate.isBefore(b.appointmentDate) ? a : b
+            );
+            return firstAppointment.appointmentDate.year == now.year && 
+                   firstAppointment.appointmentDate.month == now.month;
+          }).length;
+
+          print('🔍 [DatabaseService] Total unique pets: ${uniquePetIds.length}');
+          print('🔍 [DatabaseService] New patients this month: $newPatientsThisMonth');
+
+          // Calculate revenue (assuming average appointment cost of $50)
+          const averageAppointmentCost = 50.0;
+          final thisMonthRevenue = thisMonthAppointments.length * averageAppointmentCost;
+          final lastMonthRevenue = lastMonthAppointments.length * averageAppointmentCost;
+          final thisWeekRevenue = thisWeekAppointments.length * averageAppointmentCost;
+          final lastWeekRevenue = lastWeekAppointments.length * averageAppointmentCost;
+
+          // Calculate emergency cases (appointments with emergency type)
+          final emergencyCases = appointments.where((apt) => 
+            apt.type == AppointmentType.emergency
+          ).length;
+
+          // Calculate average appointment duration (mock data for now)
+          const averageDuration = 45;
+
+          // Calculate patient satisfaction (mock data for now)
+          const patientSatisfaction = 4.8;
+
+          final analytics = {
+            'totalAppointments': totalAppointments,
+            'completedAppointments': completedAppointments,
+            'pendingAppointments': pendingAppointments,
+            'confirmedAppointments': confirmedAppointments,
+            'totalPatients': totalPatients,
+            'newPatientsThisMonth': newPatientsThisMonth,
+            'thisMonthRevenue': thisMonthRevenue,
+            'lastMonthRevenue': lastMonthRevenue,
+            'thisWeekRevenue': thisWeekRevenue,
+            'lastWeekRevenue': lastWeekRevenue,
+            'emergencyCases': emergencyCases,
+            'averageDuration': averageDuration,
+            'patientSatisfaction': patientSatisfaction,
+            'thisMonthAppointments': thisMonthAppointments.length,
+            'lastMonthAppointments': lastMonthAppointments.length,
+            'thisWeekAppointments': thisWeekAppointments.length,
+            'lastWeekAppointments': lastWeekAppointments.length,
+          };
+
+          print('🔍 [DatabaseService] Analytics calculated: $analytics');
+          print('🔍 [DatabaseService] This month appointments: ${analytics['thisMonthAppointments']}');
+          print('🔍 [DatabaseService] New patients this month: ${analytics['newPatientsThisMonth']}');
+          print('🔍 [DatabaseService] This month revenue: ${analytics['thisMonthRevenue']}');
+          print('🔍 [DatabaseService] Emergency cases: ${analytics['emergencyCases']}');
+          return analytics;
+        });
   }
 } 

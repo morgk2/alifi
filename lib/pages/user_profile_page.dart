@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../widgets/spinning_loader.dart';
 import '../widgets/verification_badge.dart';
 import 'store/manage_store_products_page.dart';
+import 'vet_chat_page.dart';
 
 class UserProfilePage extends StatefulWidget {
   final User user;
@@ -512,38 +513,77 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                      if (!isCurrentUser)
-                    OutlinedButton(
-                        onPressed: _isLoadingFollow ? null : _toggleFollow,
-                      style: OutlinedButton.styleFrom(
+                  if (!isCurrentUser) ...[
+                    // Action buttons row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Follow button
+                        OutlinedButton(
+                          onPressed: _isLoadingFollow ? null : _toggleFollow,
+                          style: OutlinedButton.styleFrom(
                             backgroundColor: _isFollowing ? Colors.white : buttonColor,
                             foregroundColor: _isFollowing ? buttonColor : Colors.white,
                             side: BorderSide(
                               color: _isFollowing ? buttonColor : Colors.transparent,
                               width: 2,
                             ),
-                          shape: RoundedRectangleBorder(
+                            shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25),
-                          ),
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                             elevation: 0,
-                        ),
-                        child: _isLoadingFollow
+                          ),
+                          child: _isLoadingFollow
                               ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       _isFollowing ? buttonColor : Colors.white,
                                     ),
+                                  ),
+                                )
+                              : Text(
+                                  _isFollowing ? 'Following' : 'Follow',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                              )
-                            : Text(
-                                _isFollowing ? 'Following' : 'Follow',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        // Contact button for vets
+                        if (isVet) ...[
+                          const SizedBox(width: 12),
+                          OutlinedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => VetChatPage(vetUser: user),
+                                ),
+                              );
+                            },
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.grey[700],
+                              side: BorderSide(
+                                color: Colors.grey[300]!,
+                                width: 1,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                              elevation: 0,
                             ),
+                            child: const Text(
+                              'Contact',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
+                  ],
                 ],
               ),
             ),
