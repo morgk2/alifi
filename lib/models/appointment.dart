@@ -175,32 +175,98 @@ class Appointment {
   }
 
   String get formattedTime {
-    final parts = timeSlot.split('-');
-    return parts.isNotEmpty ? parts[0] : timeSlot;
+    try {
+      final parts = timeSlot.split('-');
+      if (parts.isNotEmpty) {
+        return parts[0];
+      }
+      return timeSlot;
+    } catch (e) {
+      print('🔍 [Appointment] Error formatting time for appointment $id: $e');
+      return timeSlot;
+    }
   }
 
   bool get isUpcoming {
-    final now = DateTime.now();
-    final appointmentDateTime = DateTime(
-      appointmentDate.year,
-      appointmentDate.month,
-      appointmentDate.day,
-      int.parse(timeSlot.split(':')[0]),
-      int.parse(timeSlot.split(':')[1].split('-')[0]),
-    );
-    return appointmentDateTime.isAfter(now) && 
-           (status == AppointmentStatus.pending || status == AppointmentStatus.confirmed);
+    try {
+      final now = DateTime.now();
+      final parts = timeSlot.split('-');
+      if (parts.isEmpty) {
+        print('🔍 [Appointment] Invalid timeSlot format: $timeSlot');
+        return false;
+      }
+      
+      final timePart = parts[0];
+      final timeComponents = timePart.split(':');
+      if (timeComponents.length < 2) {
+        print('🔍 [Appointment] Invalid time format in timeSlot: $timeSlot');
+        return false;
+      }
+      
+      final hour = int.tryParse(timeComponents[0]);
+      final minute = int.tryParse(timeComponents[1]);
+      
+      if (hour == null || minute == null) {
+        print('🔍 [Appointment] Invalid hour/minute in timeSlot: $timeSlot');
+        return false;
+      }
+      
+      final appointmentDateTime = DateTime(
+        appointmentDate.year,
+        appointmentDate.month,
+        appointmentDate.day,
+        hour,
+        minute,
+      );
+      
+      final isAfterNow = appointmentDateTime.isAfter(now);
+      final isValidStatus = status == AppointmentStatus.pending || status == AppointmentStatus.confirmed;
+      
+      print('🔍 [Appointment] ${id}: appointmentDateTime=$appointmentDateTime, now=$now, isAfterNow=$isAfterNow, status=${status.name}, isValidStatus=$isValidStatus');
+      
+      return isAfterNow && isValidStatus;
+    } catch (e) {
+      print('🔍 [Appointment] Error calculating isUpcoming for appointment $id: $e');
+      return false;
+    }
   }
 
   bool get isPast {
-    final now = DateTime.now();
-    final appointmentDateTime = DateTime(
-      appointmentDate.year,
-      appointmentDate.month,
-      appointmentDate.day,
-      int.parse(timeSlot.split(':')[0]),
-      int.parse(timeSlot.split(':')[1].split('-')[0]),
-    );
-    return appointmentDateTime.isBefore(now);
+    try {
+      final now = DateTime.now();
+      final parts = timeSlot.split('-');
+      if (parts.isEmpty) {
+        print('🔍 [Appointment] Invalid timeSlot format for isPast: $timeSlot');
+        return false;
+      }
+      
+      final timePart = parts[0];
+      final timeComponents = timePart.split(':');
+      if (timeComponents.length < 2) {
+        print('🔍 [Appointment] Invalid time format in timeSlot for isPast: $timeSlot');
+        return false;
+      }
+      
+      final hour = int.tryParse(timeComponents[0]);
+      final minute = int.tryParse(timeComponents[1]);
+      
+      if (hour == null || minute == null) {
+        print('🔍 [Appointment] Invalid hour/minute in timeSlot for isPast: $timeSlot');
+        return false;
+      }
+      
+      final appointmentDateTime = DateTime(
+        appointmentDate.year,
+        appointmentDate.month,
+        appointmentDate.day,
+        hour,
+        minute,
+      );
+      
+      return appointmentDateTime.isBefore(now);
+    } catch (e) {
+      print('🔍 [Appointment] Error calculating isPast for appointment $id: $e');
+      return false;
+    }
   }
 }

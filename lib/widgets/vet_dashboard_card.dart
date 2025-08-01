@@ -91,16 +91,61 @@ class VetDashboardCard extends StatelessWidget {
                 );
               }
 
+              if (snapshot.hasError) {
+                print('🔍 [VetDashboardCard] Error: ${snapshot.error}');
+                return Container(
+                  height: 200,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red, size: 40),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Error loading dashboard',
+                          style: TextStyle(color: Colors.red, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text('No vet data available'),
+                print('🔍 [VetDashboardCard] No data available');
+                return Container(
+                  height: 200,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.grey, size: 40),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No dashboard data available',
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }
 
               final stats = snapshot.data!.first;
+              print('🔍 [VetDashboardCard] Stats received: $stats');
+              
+              // Safely extract values with proper type conversion
+              final nextAppointment = stats['nextAppointment']?.toString() ?? 'No upcoming';
+              final patientsCount = (stats['patientsCount'] ?? 0).toString();
+              final appointmentsToday = (stats['appointmentsToday'] ?? 0).toString();
+              final revenueToday = (stats['revenueToday'] ?? 0.0) as double;
+              
+              print('🔍 [VetDashboardCard] Parsed values:');
+              print('  - nextAppointment: $nextAppointment');
+              print('  - patientsCount: $patientsCount');
+              print('  - appointmentsToday: $appointmentsToday');
+              print('  - revenueToday: $revenueToday');
+
               return Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                 child: Column(
@@ -110,7 +155,7 @@ class VetDashboardCard extends StatelessWidget {
                         Expanded(
                           child: _buildStatCard(
                             'Next Appoint.',
-                            stats['nextAppointment'] ?? 'No upcoming',
+                            nextAppointment,
                             Icons.calendar_today,
                             Colors.blue,
                           ),
@@ -119,7 +164,7 @@ class VetDashboardCard extends StatelessWidget {
                         Expanded(
                           child: _buildStatCard(
                             'Patients',
-                            stats['patientsCount'].toString(),
+                            patientsCount,
                             Icons.people,
                             Colors.green,
                           ),
@@ -132,7 +177,7 @@ class VetDashboardCard extends StatelessWidget {
                         Expanded(
                           child: _buildStatCard(
                             'Today\'s Appoint.',
-                            stats['appointmentsToday'].toString(),
+                            appointmentsToday,
                             Icons.medical_services,
                             Colors.orange,
                           ),
@@ -141,7 +186,7 @@ class VetDashboardCard extends StatelessWidget {
                         Expanded(
                           child: _buildStatCard(
                             'Revenue Today',
-                            '\$${(stats['revenueToday'] as num).toStringAsFixed(2)}',
+                            '\$${revenueToday.toStringAsFixed(2)}',
                             Icons.attach_money,
                             Colors.purple,
                           ),

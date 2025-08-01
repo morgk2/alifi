@@ -75,7 +75,7 @@ class SellerDashboardCard extends StatelessWidget {
                       children: [
                         const SpinningLoader(
                           size: 50,
-                          color: Colors.orange,
+                          color: Colors.green,
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -91,16 +91,61 @@ class SellerDashboardCard extends StatelessWidget {
                 );
               }
 
+              if (snapshot.hasError) {
+                print('🔍 [SellerDashboardCard] Error: ${snapshot.error}');
+                return Container(
+                  height: 200,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red, size: 40),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Error loading dashboard',
+                          style: TextStyle(color: Colors.red, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Text('No store data available'),
+                print('🔍 [SellerDashboardCard] No data available');
+                return Container(
+                  height: 200,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.grey, size: 40),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No dashboard data available',
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }
 
               final stats = snapshot.data!.first;
+              print('🔍 [SellerDashboardCard] Stats received: $stats');
+              
+              // Safely extract values with proper type conversion
+              final totalSales = (stats['totalSales'] ?? 0.0) as double;
+              final engagementCount = (stats['engagementCount'] ?? 0).toString();
+              final ordersCount = (stats['ordersCount'] ?? 0).toString();
+              final activeOrders = (stats['activeOrders'] ?? 0).toString();
+              
+              print('🔍 [SellerDashboardCard] Parsed values:');
+              print('  - totalSales: $totalSales');
+              print('  - engagementCount: $engagementCount');
+              print('  - ordersCount: $ordersCount');
+              print('  - activeOrders: $activeOrders');
+
               return Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                 child: Column(
@@ -110,7 +155,7 @@ class SellerDashboardCard extends StatelessWidget {
                         Expanded(
                           child: _buildStatCard(
                             'Total Sales',
-                            '\$${(stats['totalSales'] as num).toStringAsFixed(2)}',
+                            '\$${totalSales.toStringAsFixed(2)}',
                             Icons.attach_money,
                             Colors.green,
                           ),
@@ -119,7 +164,7 @@ class SellerDashboardCard extends StatelessWidget {
                         Expanded(
                           child: _buildStatCard(
                             'Engagement',
-                            stats['engagementCount'].toString(),
+                            engagementCount,
                             Icons.people,
                             Colors.blue,
                           ),
@@ -132,7 +177,7 @@ class SellerDashboardCard extends StatelessWidget {
                         Expanded(
                           child: _buildStatCard(
                             'Total Orders',
-                            stats['ordersCount'].toString(),
+                            ordersCount,
                             Icons.shopping_bag,
                             Colors.orange,
                           ),
@@ -141,7 +186,7 @@ class SellerDashboardCard extends StatelessWidget {
                         Expanded(
                           child: _buildStatCard(
                             'Active Orders',
-                            stats['activeOrders'].toString(),
+                            activeOrders,
                             Icons.local_shipping,
                             Colors.purple,
                           ),

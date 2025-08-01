@@ -2319,12 +2319,16 @@ class DatabaseService {
     return query.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         try {
-          return Appointment.fromFirestore(doc);
+          final data = doc.data() as Map<String, dynamic>;
+          print('🔍 [DatabaseService] Raw appointment data for ${doc.id}: $data');
+          final appointment = Appointment.fromFirestore(doc);
+          print('🔍 [DatabaseService] Parsed appointment: ${appointment.id} - ${appointment.status.name} - ${appointment.appointmentDate} - ${appointment.timeSlot}');
+          return appointment;
         } catch (e) {
-          print('Error parsing appointment ${doc.id}: $e');
+          print('🔍 [DatabaseService] Error parsing appointment ${doc.id}: $e');
           return null;
         }
-      }).where((appointment) => appointment != null).cast<Appointment>().toList();
+      }).where((apt) => apt != null).cast<Appointment>().toList();
     });
   }
 
@@ -2341,12 +2345,16 @@ class DatabaseService {
     return query.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         try {
-          return Appointment.fromFirestore(doc);
+          final data = doc.data() as Map<String, dynamic>;
+          print('🔍 [DatabaseService] Raw appointment data for ${doc.id}: $data');
+          final appointment = Appointment.fromFirestore(doc);
+          print('🔍 [DatabaseService] Parsed appointment: ${appointment.id} - ${appointment.status.name} - ${appointment.appointmentDate} - ${appointment.timeSlot}');
+          return appointment;
         } catch (e) {
-          print('Error parsing appointment ${doc.id}: $e');
+          print('🔍 [DatabaseService] Error parsing appointment ${doc.id}: $e');
           return null;
         }
-      }).where((appointment) => appointment != null).cast<Appointment>().toList();
+      }).where((apt) => apt != null).cast<Appointment>().toList();
     });
   }
 
@@ -2529,8 +2537,6 @@ class DatabaseService {
 
   // Get vet dashboard stats with real appointment data
   Stream<List<Map<String, dynamic>>> getVetDashboardStats(String vetId) {
-    print('🔍 [DatabaseService] getVetDashboardStats called for vetId: $vetId');
-    
     return _appointmentsCollection
         .where('vetId', isEqualTo: vetId)
         .snapshots()
@@ -2538,54 +2544,83 @@ class DatabaseService {
       try {
         final appointments = snapshot.docs.map((doc) {
           try {
-            return Appointment.fromFirestore(doc);
+            final appointment = Appointment.fromFirestore(doc);
+            return appointment;
           } catch (e) {
-            print('Error parsing appointment: $e');
+            print('🔍 [DatabaseService] Error parsing appointment ${doc.id}: $e');
             return null;
           }
         }).where((apt) => apt != null).cast<Appointment>().toList();
+
+        // Filter appointments for this specific vet
+        final vetAppointments = appointments.where((apt) => apt.vetId == vetId).toList();
 
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
         final tomorrow = today.add(const Duration(days: 1));
 
         // Count appointments for today
-        final appointmentsToday = appointments.where((apt) {
-          final aptDate = DateTime(apt.appointmentDate.year, apt.appointmentDate.month, apt.appointmentDate.day);
-          return aptDate.isAtSameMomentAs(today) && 
-                 (apt.status == AppointmentStatus.pending || apt.status == AppointmentStatus.confirmed);
+        final appointmentsToday = vetAppointments.where((apt) {
+          try {
+            final aptDate = DateTime(apt.appointmentDate.year, apt.appointmentDate.month, apt.appointmentDate.day);
+            final isToday = aptDate.isAtSameMomentAs(today);
+            final isValidStatus = apt.status == AppointmentStatus.pending || apt.status == AppointmentStatus.confirmed;
+            return isToday && isValidStatus;
+          } catch (e) {
+            print('🔍 [DatabaseService] Error checking appointment ${apt.id}: $e');
+            return false;
+          }
         }).length;
 
         // Find next appointment
-        final upcomingAppointments = appointments.where((apt) => apt.isUpcoming).toList();
+        final upcomingAppointments = vetAppointments.where((apt) {
+          try {
+            final isUpcoming = apt.isUpcoming;
+            return isUpcoming;
+          } catch (e) {
+            print('🔍 [DatabaseService] Error checking if appointment ${apt.id} is upcoming: $e');
+            return false;
+          }
+        }).toList();
+        
         upcomingAppointments.sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
         
         String nextAppointment = 'No upcoming';
         if (upcomingAppointments.isNotEmpty) {
-          final next = upcomingAppointments.first;
-          final nextDate = DateTime(next.appointmentDate.year, next.appointmentDate.month, next.appointmentDate.day);
-          if (nextDate.isAtSameMomentAs(today)) {
-            nextAppointment = 'Today at ${next.formattedTime}';
-          } else if (nextDate.isAtSameMomentAs(tomorrow)) {
-            nextAppointment = 'Tomorrow at ${next.formattedTime}';
-          } else {
-            nextAppointment = '${_formatDate(next.appointmentDate)} at ${next.formattedTime}';
+          try {
+            final next = upcomingAppointments.first;
+            final nextDate = DateTime(next.appointmentDate.year, next.appointmentDate.month, next.appointmentDate.day);
+            if (nextDate.isAtSameMomentAs(today)) {
+              nextAppointment = 'Today at ${next.formattedTime}';
+            } else if (nextDate.isAtSameMomentAs(tomorrow)) {
+              nextAppointment = 'Tomorrow at ${next.formattedTime}';
+            } else {
+              nextAppointment = '${_formatDate(next.appointmentDate)} at ${next.formattedTime}';
+            }
+          } catch (e) {
+            print('🔍 [DatabaseService] Error formatting next appointment: $e');
+            nextAppointment = 'No upcoming';
           }
         }
 
         // Count total patients (unique pet IDs)
-        final uniquePetIds = appointments.map((apt) => apt.petId).toSet();
+        final uniquePetIds = vetAppointments.map((apt) => apt.petId).where((id) => id.isNotEmpty).toSet();
         final patientsCount = uniquePetIds.length;
 
-        // Calculate revenue for today (completed appointments)
-        final revenueToday = appointments.where((apt) {
-          final aptDate = DateTime(apt.appointmentDate.year, apt.appointmentDate.month, apt.appointmentDate.day);
-          return aptDate.isAtSameMomentAs(today) && 
-                 apt.status == AppointmentStatus.completed && 
-                 apt.price != null;
+        // Calculate revenue for today from completed appointments (real-time)
+        final revenueToday = vetAppointments.where((apt) {
+          try {
+            final aptDate = DateTime(apt.appointmentDate.year, apt.appointmentDate.month, apt.appointmentDate.day);
+            final isToday = aptDate.isAtSameMomentAs(today);
+            final isCompleted = apt.status == AppointmentStatus.completed;
+            return isToday && isCompleted;
+          } catch (e) {
+            print('🔍 [DatabaseService] Error checking revenue for appointment ${apt.id}: $e');
+            return false;
+          }
         }).fold(0.0, (sum, apt) => sum + (apt.price ?? 0.0));
 
-        return [
+        final result = [
           {
             'nextAppointment': nextAppointment,
             'patientsCount': patientsCount,
@@ -2593,6 +2628,8 @@ class DatabaseService {
             'revenueToday': revenueToday,
           }
         ];
+        
+        return result;
       } catch (e) {
         print('🔍 [DatabaseService] getVetDashboardStats error: $e');
         return [
@@ -2639,6 +2676,88 @@ class DatabaseService {
     return '${months[date.month - 1]} ${date.day}';
   }
 
+  // Add revenue to a specific day
+  Future<void> addRevenueToDay({
+    required String userId,
+    required DateTime date,
+    required double revenue,
+  }) async {
+    try {
+      // Create a date string for the specific day
+      final dateString = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      
+      // Reference to the user's revenue document
+      final revenueDoc = _usersCollection.doc(userId).collection('revenue').doc(dateString);
+      
+      // Get current revenue for this day
+      final currentDoc = await revenueDoc.get();
+      double currentRevenue = 0.0;
+      
+      if (currentDoc.exists) {
+        currentRevenue = (currentDoc.data()?['total'] ?? 0.0).toDouble();
+      }
+      
+      // Add new revenue to the total
+      final newTotal = currentRevenue + revenue;
+      
+      // Update the document
+      await revenueDoc.set({
+        'date': dateString,
+        'total': newTotal,
+        'lastUpdated': FieldValue.serverTimestamp(),
+        'transactions': FieldValue.arrayUnion([
+          {
+            'amount': revenue,
+            'timestamp': FieldValue.serverTimestamp(),
+            'type': 'appointment_completion',
+          }
+        ]),
+      }, SetOptions(merge: true));
+      
+      print('🔍 [DatabaseService] Added revenue of \$${revenue.toStringAsFixed(2)} to $dateString. New total: \$${newTotal.toStringAsFixed(2)}');
+    } catch (e) {
+      print('🔍 [DatabaseService] Error adding revenue: $e');
+      throw e;
+    }
+  }
+
+  // Get revenue for a specific day
+  Future<double> getRevenueForDay(String userId, DateTime date) async {
+    try {
+      final dateString = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final revenueDoc = _usersCollection.doc(userId).collection('revenue').doc(dateString);
+      final doc = await revenueDoc.get();
+      
+      if (doc.exists) {
+        return (doc.data()?['total'] ?? 0.0).toDouble();
+      }
+      return 0.0;
+    } catch (e) {
+      print('🔍 [DatabaseService] Error getting revenue for day: $e');
+      return 0.0;
+    }
+  }
+
+  // Get revenue for a date range
+  Future<double> getRevenueForDateRange(String userId, DateTime startDate, DateTime endDate) async {
+    try {
+      double totalRevenue = 0.0;
+      final currentDate = DateTime(startDate.year, startDate.month, startDate.day);
+      final endDateNormalized = DateTime(endDate.year, endDate.month, endDate.day);
+      
+      DateTime date = currentDate;
+      while (!date.isAfter(endDateNormalized)) {
+        totalRevenue += await getRevenueForDay(userId, date);
+        date = date.add(const Duration(days: 1));
+      }
+      
+      return totalRevenue;
+    } catch (e) {
+      print('🔍 [DatabaseService] Error getting revenue for date range: $e');
+      return 0.0;
+    }
+  }
+
   // Get appointments for vet dashboard (all appointments, filtered by UI)
   Stream<List<Appointment>> getVetAppointmentsForDashboard(String vetId) {
     print('🔍 [DatabaseService] getVetAppointments called for vetId: $vetId');
@@ -2659,11 +2778,13 @@ class DatabaseService {
           print('🔍 [DatabaseService] Found ${snapshot.docs.length} appointments for vet');
           final appointments = snapshot.docs.map((doc) {
             try {
+              final data = doc.data() as Map<String, dynamic>;
+              print('🔍 [DatabaseService] Raw appointment data for ${doc.id}: $data');
               final appointment = Appointment.fromFirestore(doc);
-              print('🔍 [DatabaseService] Appointment: ${appointment.petName} on ${appointment.appointmentDate} - Status: ${appointment.status}');
+              print('🔍 [DatabaseService] Parsed appointment: ${appointment.id} - ${appointment.status.name} - ${appointment.appointmentDate} - ${appointment.timeSlot}');
               return appointment;
             } catch (e) {
-              print('Error parsing appointment ${doc.id}: $e');
+              print('🔍 [DatabaseService] Error parsing appointment ${doc.id}: $e');
               return null;
             }
           }).where((apt) => apt != null).cast<Appointment>().toList();
@@ -2716,6 +2837,20 @@ class DatabaseService {
 
   Future<void> updateUserPatients(String userId, List<String> patients) async {
     await _usersCollection.doc(userId).update({'patients': patients});
+  }
+
+  // Update appointment price when revenue is added
+  Future<void> updateAppointmentPrice(String appointmentId, double price) async {
+    try {
+      await _appointmentsCollection.doc(appointmentId).update({
+        'price': price,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      print('🔍 [DatabaseService] Updated appointment $appointmentId with price: \$${price.toStringAsFixed(2)}');
+    } catch (e) {
+      print('🔍 [DatabaseService] Error updating appointment price: $e');
+      throw e;
+    }
   }
 
   // Get vet analytics data
@@ -2803,12 +2938,22 @@ class DatabaseService {
           print('🔍 [DatabaseService] Total unique pets: ${uniquePetIds.length}');
           print('🔍 [DatabaseService] New patients this month: $newPatientsThisMonth');
 
-          // Calculate revenue (assuming average appointment cost of $50)
-          const averageAppointmentCost = 50.0;
-          final thisMonthRevenue = thisMonthAppointments.length * averageAppointmentCost;
-          final lastMonthRevenue = lastMonthAppointments.length * averageAppointmentCost;
-          final thisWeekRevenue = thisWeekAppointments.length * averageAppointmentCost;
-          final lastWeekRevenue = lastWeekAppointments.length * averageAppointmentCost;
+          // Calculate revenue from completed appointments (real-time)
+          final thisMonthRevenue = thisMonthAppointments.where((apt) => 
+            apt.status == AppointmentStatus.completed
+          ).fold(0.0, (sum, apt) => sum + (apt.price ?? 0.0));
+          
+          final lastMonthRevenue = lastMonthAppointments.where((apt) => 
+            apt.status == AppointmentStatus.completed
+          ).fold(0.0, (sum, apt) => sum + (apt.price ?? 0.0));
+          
+          final thisWeekRevenue = thisWeekAppointments.where((apt) => 
+            apt.status == AppointmentStatus.completed
+          ).fold(0.0, (sum, apt) => sum + (apt.price ?? 0.0));
+          
+          final lastWeekRevenue = lastWeekAppointments.where((apt) => 
+            apt.status == AppointmentStatus.completed
+          ).fold(0.0, (sum, apt) => sum + (apt.price ?? 0.0));
 
           // Calculate emergency cases (appointments with emergency type)
           final emergencyCases = appointments.where((apt) => 
@@ -2849,4 +2994,106 @@ class DatabaseService {
           return analytics;
         });
   }
+
+  // Get vet revenue chart data
+  Stream<Map<String, List<Map<String, dynamic>>>> getVetRevenueChartData(String vetId) {
+    print('🔍 [DatabaseService] getVetRevenueChartData called for vetId: $vetId');
+    
+    return _appointmentsCollection
+        .where('vetId', isEqualTo: vetId)
+        .where('status', isEqualTo: AppointmentStatus.completed.name)
+        .snapshots()
+        .map((snapshot) {
+      print('🔍 [DatabaseService] getVetRevenueChartData received ${snapshot.docs.length} completed appointments');
+      
+      final now = DateTime.now();
+      final Map<String, double> dailyData = {};
+      final Map<String, double> weeklyData = {};
+      final Map<String, double> monthlyData = {};
+      
+      // Initialize last 7 days (current week)
+      for (int i = 6; i >= 0; i--) {
+        final day = now.subtract(Duration(days: i));
+        final dayKey = _getDayName(day.weekday);
+        dailyData[dayKey] = 0.0;
+      }
+      
+      // Initialize last 8 weeks
+      for (int i = 7; i >= 0; i--) {
+        final weekStart = now.subtract(Duration(days: i * 7));
+        final weekKey = 'W${(weekStart.day / 7).ceil()}';
+        weeklyData[weekKey] = 0.0;
+      }
+      
+      // Initialize last 12 months
+      for (int i = 11; i >= 0; i--) {
+        final monthStart = DateTime(now.year, now.month - i, 1);
+        final monthKey = _getMonthName(monthStart.month);
+        monthlyData[monthKey] = 0.0;
+      }
+      
+      for (var doc in snapshot.docs) {
+        try {
+          final appointment = Appointment.fromFirestore(doc);
+          final appointmentDate = appointment.appointmentDate;
+          final revenue = appointment.price ?? 0.0;
+          
+          // Daily data (current week)
+          final dayKey = _getDayName(appointmentDate.weekday);
+          if (dailyData.containsKey(dayKey)) {
+            dailyData[dayKey] = (dailyData[dayKey] ?? 0) + revenue;
+          }
+          
+          // Weekly data
+          final weekStart = appointmentDate.subtract(Duration(days: appointmentDate.weekday - 1));
+          final weekKey = 'W${(weekStart.day / 7).ceil()}';
+          if (weeklyData.containsKey(weekKey)) {
+            weeklyData[weekKey] = (weeklyData[weekKey] ?? 0) + revenue;
+          }
+          
+          // Monthly data
+          final monthKey = _getMonthName(appointmentDate.month);
+          if (monthlyData.containsKey(monthKey)) {
+            monthlyData[monthKey] = (monthlyData[monthKey] ?? 0) + revenue;
+          }
+        } catch (e) {
+          print('🔍 [DatabaseService] Error parsing appointment ${doc.id}: $e');
+        }
+      }
+      
+      final dailyChartData = dailyData.entries.map((entry) => {
+        'period': entry.key,
+        'revenue': entry.value,
+      }).toList();
+      
+      final weeklyChartData = weeklyData.entries.map((entry) => {
+        'period': entry.key,
+        'revenue': entry.value,
+      }).toList();
+      
+      final monthlyChartData = monthlyData.entries.map((entry) => {
+        'period': entry.key,
+        'revenue': entry.value,
+      }).toList();
+      
+      final chartData = {
+        'daily': dailyChartData,
+        'weekly': weeklyChartData,
+        'monthly': monthlyChartData,
+      };
+      
+      print('🔍 [DatabaseService] getVetRevenueChartData calculated: ${dailyChartData.length} days, ${weeklyChartData.length} weeks, ${monthlyChartData.length} months');
+      
+      return chartData;
+    }).handleError((error) {
+      print('🔍 [DatabaseService] getVetRevenueChartData error: $error');
+      return {
+        'daily': <Map<String, dynamic>>[],
+        'weekly': <Map<String, dynamic>>[],
+        'monthly': <Map<String, dynamic>>[],
+      };
+    });
+  }
+
+
 } 

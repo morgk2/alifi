@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../widgets/spinning_loader.dart';
+import '../widgets/revenue_chart_widget.dart';
 import '../models/user.dart';
 import '../models/appointment.dart';
 import '../models/pet.dart'; // Added import for Pet model
 
 import 'vet_schedule_page.dart';
+import 'detailed_schedule_page.dart';
 
 class DetailedVetDashboardPage extends StatefulWidget {
   const DetailedVetDashboardPage({super.key});
@@ -26,6 +29,12 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
 
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+           date1.month == date2.month &&
+           date1.day == date2.day;
   }
 
   void _showSnackBar(String message) {
@@ -114,26 +123,36 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       );
                     },
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.calendar_month, color: Colors.black),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const DetailedSchedulePage(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
-            // Pill-shaped tab bar with extra spacing
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                indicator: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.grey[600],
-                dividerColor: Colors.transparent,
+                         // Pill-shaped tab bar with extra spacing
+             Container(
+               margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+               decoration: BoxDecoration(
+                 color: Colors.grey[200],
+                 borderRadius: BorderRadius.circular(25),
+               ),
+                               child: TabBar(
+                  controller: _tabController,
+                  indicator: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.grey[600],
+                  dividerColor: Colors.transparent,
                 tabs: const [
                   Tab(
                     icon: Icon(Icons.dashboard),
@@ -186,12 +205,47 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                 return const Center(child: SpinningLoader());
               }
 
-              final stats = snapshot.data?.first ?? {
-                'nextAppointment': 'No upcoming',
-                'patientsCount': 0,
-                'appointmentsToday': 0,
-                'revenueToday': 0.0,
-              };
+              if (snapshot.hasError) {
+                print('🔍 [DetailedVetDashboard] Error: ${snapshot.error}');
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red, size: 40),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Error loading dashboard',
+                        style: TextStyle(color: Colors.red, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                print('🔍 [DetailedVetDashboard] No data available');
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.grey, size: 40),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No dashboard data available',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final stats = snapshot.data!.first;
+              
+              // Safely extract values with proper type conversion
+              final nextAppointment = stats['nextAppointment']?.toString() ?? 'No upcoming';
+              final patientsCount = (stats['patientsCount'] ?? 0).toString();
+              final appointmentsToday = (stats['appointmentsToday'] ?? 0).toString();
+              final revenueToday = (stats['revenueToday'] ?? 0.0) as double;
 
               return Column(
                 children: [
@@ -200,7 +254,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       Expanded(
                         child: _buildOverviewCard(
                           'Today\'s Appoint.',
-                          stats['appointmentsToday'].toString(),
+                          appointmentsToday,
                           Icons.medical_services,
                           Colors.blue,
                         ),
@@ -209,7 +263,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       Expanded(
                         child: _buildOverviewCard(
                           'Total Patients',
-                          stats['patientsCount'].toString(),
+                          patientsCount,
                           Icons.people,
                           Colors.green,
                         ),
@@ -222,7 +276,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       Expanded(
                         child: _buildOverviewCard(
                           'Revenue Today',
-                          '\$${(stats['revenueToday'] as num).toStringAsFixed(2)}',
+                          '\$${revenueToday.toStringAsFixed(2)}',
                           Icons.attach_money,
                           Colors.orange,
                         ),
@@ -231,7 +285,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       Expanded(
                         child: _buildOverviewCard(
                           'Next Appoint.',
-                          stats['nextAppointment'] ?? 'No upcoming',
+                          nextAppointment,
                           Icons.calendar_today,
                           Colors.purple,
                         ),
@@ -370,56 +424,56 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
             .compareTo(a.value.map((a) => a.createdAt).reduce((a1, a2) => a1.isAfter(a2) ? a1 : a2)));
         final List<String> orderedPetIds = recentPetEntries.map((e) => e.key).toList();
         
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Search Bar
+          TextField(
+            decoration: InputDecoration(
+              hintText: 'Search patients...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Patient Categories
+          Row(
             children: [
-              // Search Bar
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search patients...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Patient Categories
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildPatientCategoryCard(
-                      'Active Patients',
+              Expanded(
+                child: _buildPatientCategoryCard(
+                  'Active Patients',
                       activePatients.toString(),
-                      Icons.people,
-                      Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildPatientCategoryCard(
-                      'New This Month',
-                      newThisMonth.toString(),
-                      Icons.person_add,
-                      Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'My Patients',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Montserrat',
+                  Icons.people,
+                  Colors.blue,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildPatientCategoryCard(
+                  'New This Month',
+                      newThisMonth.toString(),
+                  Icons.person_add,
+                  Colors.green,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+                'My Patients',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Montserrat',
+            ),
+          ),
+          const SizedBox(height: 16),
               // Show real recent patients ordered by most recent
               if (orderedPetIds.isEmpty)
                 const Center(child: Text('No patients found'))
@@ -500,37 +554,38 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Revenue Chart
-              Container(
-                padding: const EdgeInsets.all(20),
+              StreamBuilder<Map<String, List<Map<String, dynamic>>>>(
+                stream: DatabaseService().getVetRevenueChartData(user.id),
+                builder: (context, chartSnapshot) {
+                  if (chartSnapshot.connectionState == ConnectionState.waiting) {
+                    return Container(
+                      height: 500,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withOpacity(0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Revenue This Week',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Montserrat',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 200,
-                      child: _buildRevenueChart(analytics),
-                    ),
-                  ],
-                ),
+                      child: const Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  
+                  final chartData = chartSnapshot.data ?? {
+                    'daily': <Map<String, dynamic>>[],
+                    'weekly': <Map<String, dynamic>>[],
+                    'monthly': <Map<String, dynamic>>[],
+                  };
+                  
+                  return RevenueChartWidget(
+                    chartData: chartData,
+                    title: 'Revenue Analytics',
+                  );
+                },
               ),
               const SizedBox(height: 24),
 
@@ -591,37 +646,37 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
               const SizedBox(height: 24),
 
               // Appointment Status Breakdown
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Appointment Status',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Montserrat',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildStatusBreakdown(analytics),
-                  ],
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Appointment Status',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Montserrat',
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                _buildStatusBreakdown(analytics),
+              ],
+            ),
           ),
+        ],
+      ),
         );
       },
     );
@@ -737,6 +792,12 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                 statusColor = Colors.blue;
             }
 
+            final now = DateTime.now();
+            final isCurrentAppointment = _isSameDay(appointment.appointmentDate, now) &&
+                appointment.appointmentDate.hour == now.hour &&
+                appointment.appointmentDate.minute >= now.minute - 30 &&
+                appointment.appointmentDate.minute <= now.minute + 30;
+
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
@@ -751,7 +812,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                   ),
                 ],
               ),
-              child: Row(
+              child: Column(
+                children: [
+                  Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
@@ -797,26 +860,76 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       ],
                     ),
                   ),
+                    ],
+                  ),
+                  // Progress tracking for current appointments
+                  if (isCurrentAppointment) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange, width: 1),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                                  color: Colors.orange,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Column(
+                                child: const Text(
+                                  'LIVE',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Appointment in Progress',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          _buildProgressBar(appointment),
+                        ],
+                      ),
+                    ),
+                  ],
+                  // Status and actions
+                  const SizedBox(height: 12),
+                  Row(
                       children: [
-                        Text(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
                           appointment.statusDisplayName,
                           style: TextStyle(
                             color: statusColor,
-                            fontSize: 18,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                      ),
+                      const Spacer(),
                         if (appointment.status == AppointmentStatus.pending)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 12.0),
-                            child: ElevatedButton(
+                        ElevatedButton(
                               onPressed: () async {
                                 await DatabaseService().updateAppointmentStatus(appointment.id, AppointmentStatus.confirmed);
                                 await _addPatientToVet(appointment.vetId, appointment.petId);
@@ -825,17 +938,119 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
-                                minimumSize: const Size(120, 40),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            minimumSize: const Size(80, 32),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                 elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                               child: const Text('Confirm'),
+                        ),
+                      const SizedBox(width: 8),
+                      PopupMenuButton<String>(
+                        onSelected: (value) => _handleAppointmentAction(value, appointment),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 8,
+                        color: Colors.white,
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'confirm',
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.check_circle_outline,
+                                    color: Colors.green,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Confirm',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
                             ),
                           ),
                       ],
-                    ),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'complete',
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.task_alt,
+                                    color: Colors.purple,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Mark Complete',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'cancel',
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.cancel_outlined,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Cancel',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.more_vert,
+                            size: 20,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -844,6 +1059,205 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
         );
       },
     );
+  }
+
+  Widget _buildProgressBar(Appointment appointment) {
+    final now = DateTime.now();
+    final appointmentStart = appointment.appointmentDate;
+    final appointmentEnd = appointmentStart.add(const Duration(hours: 1));
+    
+    if (now.isBefore(appointmentStart) || now.isAfter(appointmentEnd)) {
+      return const SizedBox.shrink();
+    }
+    
+    final totalDuration = appointmentEnd.difference(appointmentStart).inMinutes;
+    final elapsedDuration = now.difference(appointmentStart).inMinutes;
+    final progress = elapsedDuration / totalDuration;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${elapsedDuration}min / ${totalDuration}min',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              '${(progress * 100).round()}%',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        LinearProgressIndicator(
+          value: progress.clamp(0.0, 1.0),
+          backgroundColor: Colors.grey[300],
+          valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
+        ),
+      ],
+    );
+  }
+
+  void _handleAppointmentAction(String action, Appointment appointment) async {
+    switch (action) {
+      case 'confirm':
+        await DatabaseService().updateAppointmentStatus(
+          appointment.id,
+          AppointmentStatus.confirmed,
+        );
+        await _addPatientToVet(appointment.vetId, appointment.petId);
+        break;
+      case 'complete':
+        await DatabaseService().updateAppointmentStatus(
+          appointment.id,
+          AppointmentStatus.completed,
+        );
+        // Show revenue dialog for completed appointment
+        _showRevenueDialog(appointment);
+        break;
+      case 'cancel':
+        await DatabaseService().updateAppointmentStatus(
+          appointment.id,
+          AppointmentStatus.cancelled,
+        );
+        break;
+    }
+    setState(() {}); // Refresh UI
+  }
+
+  void _showRevenueDialog(Appointment appointment) {
+    final TextEditingController revenueController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.attach_money,
+                color: Colors.green,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Appointment Revenue',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'How much did you earn from ${appointment.petName}\'s appointment?',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: revenueController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Revenue Amount',
+                  hintText: 'Enter amount (e.g., 150)',
+                  prefixIcon: const Icon(Icons.attach_money, color: Colors.green),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.green, width: 2),
+                  ),
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final revenue = double.tryParse(revenueController.text);
+                if (revenue != null && revenue > 0) {
+                  // Update the appointment with the revenue amount
+                  await DatabaseService().updateAppointmentPrice(appointment.id, revenue);
+                  // Add revenue to the day's total
+                  await _addRevenueToDay(appointment.appointmentDate, revenue);
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Revenue of \$${revenue.toStringAsFixed(2)} added successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid amount'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Confirm',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _addRevenueToDay(DateTime appointmentDate, double revenue) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final user = authService.currentUser;
+      
+      if (user != null) {
+        await DatabaseService().addRevenueToDay(
+          userId: user.id,
+          date: appointmentDate,
+          revenue: revenue,
+        );
+      }
+    } catch (e) {
+      print('Error adding revenue: $e');
+    }
   }
 
   Widget _buildFilterChip(String label, bool isSelected, int index) {
@@ -952,7 +1366,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
   }
 
   Widget _buildPatientCategoryCard(String title, String count, IconData icon, Color color) {
-    return Container(
+          return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1098,13 +1512,13 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
     print('🔍 [MonthlyStats] Emergency cases: $emergencyCases');
     
     return Column(
-      children: [
+    children: [
         _buildStatRow('Total Appointments', totalAppointments.toString()),
         _buildStatRow('New Patients', newPatients.toString()),
         _buildStatRow('Revenue', '\$${revenue.toStringAsFixed(2)}'),
         _buildStatRow('Emergency Cases', emergencyCases.toString()),
-      ],
-    );
+    ],
+  );
   }
 
   Widget _buildStatRow(String label, String value) {
