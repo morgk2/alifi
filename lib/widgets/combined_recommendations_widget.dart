@@ -3,10 +3,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../models/aliexpress_product.dart';
 import '../models/store_product.dart';
 import '../services/database_service.dart';
+import '../services/device_performance.dart';
 import '../icons.dart';
 import 'unified_product_card.dart';
-import 'scrollable_fade_container.dart';
-import 'spinning_loader.dart';
+import 'skeleton_loader.dart';
 import '../pages/marketplace_page.dart';
 
 class CombinedRecommendationsWidget extends StatefulWidget {
@@ -27,10 +27,14 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
   final DatabaseService _databaseService = DatabaseService();
   final ValueNotifier<int> _currentPageNotifier = ValueNotifier<int>(0);
   Future<Map<String, List<dynamic>>>? _productsFuture;
+  late final DevicePerformance _devicePerformance;
+  late bool _isLowEndDevice;
 
   @override
   void initState() {
     super.initState();
+    _devicePerformance = DevicePerformance();
+    _isLowEndDevice = _devicePerformance.performanceTier == PerformanceTier.low;
     widget.scrollController.addListener(_onScroll);
     _loadProducts();
   }
@@ -58,213 +62,213 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
+    // Use const for static values
+    const double borderRadius = 20.0;
+    
+    // Optimize shadow based on device performance
+    final BoxShadow boxShadow = _isLowEndDevice 
+        ? const BoxShadow(
+            color: Color(0x0D000000), // 5% opacity
+            blurRadius: 5,
+            offset: Offset(0, 5),
+            spreadRadius: 1,
+          )
+        : BoxShadow(
             color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
             spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-            child: Row(
-              children: [
-                SvgPicture.string(
-                  AppIcons.storeIcon,
-                  width: 24,
-                  height: 24,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'You may be Interested',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
+          );
+    
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: [boxShadow],
+        ),
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              child: Row(
+                children: [
+                  SvgPicture.string(
+                    AppIcons.storeIcon,
+                    width: 24,
+                    height: 24,
                   ),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MarketplacePage(),
-                      ),
-                    );
-                  },
-                  child: Row(
-                    children: [
-                      Text(
-                        'See all',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                      Icon(Icons.arrow_forward, color: Colors.grey[600]),
-                    ],
+                  const SizedBox(width: 8),
+                  const Text(
+                    'You may be Interested',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          // Products list
-          SizedBox(
-            height: 280, // Increased height to accommodate the new card layout
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final containerWidth = constraints.maxWidth;
-                final itemWidth = MediaQuery.of(context).size.width * 0.45; // Slightly smaller width for better fit
-
-                return FutureBuilder<Map<String, List<dynamic>>>(
-                  future: _productsFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      print('Error loading combined products: ${snapshot.error}');
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Error loading products',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton(
-                              onPressed: _loadProducts,
-                              child: const Text('Retry'),
-                            ),
-                          ],
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MarketplacePage(),
                         ),
                       );
-                    }
-
-                    if (!snapshot.hasData) {
-                      return Container(
-                        height: 260, // Match the final card height
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const SpinningLoader(
-                                size: 60, // Larger size for better visibility
-                                color: Colors.orange,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Loading products...',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    final combinedProducts = snapshot.data!;
-                    final allProducts = combinedProducts['products'] ?? [];
-                    
-                    if (allProducts.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No products available',
+                    },
+                    child: Row(
+                      children: [
+                        Text(
+                          'See all',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,
                           ),
                         ),
-                      );
-                    }
+                        Icon(Icons.arrow_forward, color: Colors.grey[600]),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Products list
+            SizedBox(
+              height: 320, // Increased height to accommodate larger cards with more info
+              child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                    final itemWidth = MediaQuery.of(context).size.width * 0.45; // Slightly smaller width for better fit
 
-                    final totalWidth = itemWidth * allProducts.length +
-                        16.0 * (allProducts.length - 1);
+                  return FutureBuilder<Map<String, List<dynamic>>>(
+                    future: _productsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        print('Error loading combined products: ${snapshot.error}');
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Error loading products',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton(
+                                onPressed: _loadProducts,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
-                    return ScrollableFadeContainer(
-                      scrollController: widget.scrollController,
-                      containerWidth: containerWidth,
-                      contentWidth: totalWidth,
-                      child: ListView.builder(
+                      if (!snapshot.hasData) {
+                        return _buildSkeletonProducts();
+                      }
+
+                      final combinedProducts = snapshot.data!;
+                      final allProducts = combinedProducts['products'] ?? [];
+                      
+                      if (allProducts.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'No products available',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                        );
+                      }
+
+                      // Limit to maximum 5 cards
+                      final limitedProducts = allProducts.take(5).toList();
+
+                      // Use optimized ListView with caching and recycling
+                      return ListView.builder(
                         controller: widget.scrollController,
                         scrollDirection: Axis.horizontal,
                         physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                        itemCount: allProducts.length,
+                        itemCount: limitedProducts.length,
+                        // Add key for better recycling
+                        key: const PageStorageKey('product_list'),
+                        // Optimize for performance
+                        cacheExtent: itemWidth * 2, // Cache 2 items ahead
+                        itemExtent: itemWidth + 16, // Fixed item width for better performance
+                        addAutomaticKeepAlives: false, // Don't keep invisible items alive
+                        addRepaintBoundaries: true, // Add repaint boundaries for better performance
                         itemBuilder: (context, index) {
-                          final product = allProducts[index];
+                          final product = limitedProducts[index];
+                          // Use const for padding to avoid recreation
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                            child: UnifiedProductCard(
+                            child: LazyProductCard(
                               product: product,
                               width: itemWidth,
-                              height: 260, // Adjusted height for better proportions
+                              height: 420, // Increased card height to fit all content
                               showDetails: true,
+                              scrollController: widget.scrollController,
+                              index: index,
                             ),
                           );
                         },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            // Pagination dots
+            const SizedBox(height: 16),
+            ValueListenableBuilder<int>(
+              valueListenable: _currentPageNotifier,
+              builder: (context, currentPage, child) {
+                return FutureBuilder<Map<String, List<dynamic>>>(
+                  future: _productsFuture,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const SizedBox.shrink();
+                    }
+                    
+                    final combinedProducts = snapshot.data!;
+                    final allProducts = combinedProducts['products'] ?? [];
+                    
+                    if (allProducts.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    
+                    // Limit to maximum 5 cards for pagination dots
+                    final limitedProducts = allProducts.take(5).toList();
+                    
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        limitedProducts.length,
+                        (index) => Container(
+                          width: 8,
+                          height: 8,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: currentPage == index
+                                ? const Color(0xFFF59E0B)
+                                : Colors.grey[300],
+                          ),
+                        ),
                       ),
                     );
                   },
                 );
               },
             ),
-          ),
-          // Pagination dots
-          const SizedBox(height: 16),
-          ValueListenableBuilder<int>(
-            valueListenable: _currentPageNotifier,
-            builder: (context, currentPage, child) {
-              return FutureBuilder<Map<String, List<dynamic>>>(
-                future: _productsFuture,
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const SizedBox.shrink();
-                  }
-                  
-                  final combinedProducts = snapshot.data!;
-                  final allProducts = combinedProducts['products'] ?? [];
-                  
-                  if (allProducts.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
-                  
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      allProducts.length,
-                      (index) => Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: currentPage == index
-                              ? const Color(0xFFF59E0B)
-                              : Colors.grey[300],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-        ],
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
@@ -360,5 +364,259 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
         'store': <StoreProduct>[],
       };
     }
+  }
+
+  Widget _buildSkeletonProducts() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemWidth = MediaQuery.of(context).size.width * 0.45;
+        // Calculate how many skeleton cards can fit on screen
+        final cardsPerScreen = (constraints.maxWidth / (itemWidth + 16)).floor();
+        final numberOfSkeletons = cardsPerScreen.clamp(2, 5); // Show 2-5 skeleton cards
+        
+        return ListView.builder(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          itemCount: numberOfSkeletons,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: _buildSkeletonProductCard(itemWidth),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSkeletonProductCard(double width) {
+    return Container(
+      width: width,
+      height: 320,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image placeholder
+          Container(
+            width: double.infinity,
+            height: 150,
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.3),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+            child: const ShimmerLoader(
+              child: SizedBox.expand(),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title placeholder
+                ShimmerLoader(
+                  child: SkeletonLoader(
+                    width: double.infinity,
+                    height: 16,
+                    baseColor: Colors.grey.withOpacity(0.2),
+                    highlightColor: Colors.grey.withOpacity(0.1),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Subtitle placeholder
+                ShimmerLoader(
+                  child: SkeletonLoader(
+                    width: 120,
+                    height: 14,
+                    baseColor: Colors.grey.withOpacity(0.2),
+                    highlightColor: Colors.grey.withOpacity(0.1),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Price placeholder
+                Row(
+                  children: [
+                    ShimmerLoader(
+                      child: SkeletonLoader(
+                        width: 60,
+                        height: 18,
+                        baseColor: Colors.grey.withOpacity(0.2),
+                        highlightColor: Colors.grey.withOpacity(0.1),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ShimmerLoader(
+                      child: Container(
+                        width: 40,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Rating and orders placeholder
+                Row(
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    ShimmerLoader(
+                      child: SkeletonLoader(
+                        width: 30,
+                        height: 12,
+                        baseColor: Colors.grey.withOpacity(0.2),
+                        highlightColor: Colors.grey.withOpacity(0.1),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ShimmerLoader(
+                      child: SkeletonLoader(
+                        width: 50,
+                        height: 12,
+                        baseColor: Colors.grey.withOpacity(0.2),
+                        highlightColor: Colors.grey.withOpacity(0.1),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class LazyProductCard extends StatefulWidget {
+  final dynamic product;
+  final double width;
+  final double height;
+  final bool showDetails;
+  final ScrollController scrollController;
+  final int index;
+
+  const LazyProductCard({
+    super.key,
+    required this.product,
+    required this.width,
+    required this.height,
+    required this.showDetails,
+    required this.scrollController,
+    required this.index,
+  });
+
+  @override
+  State<LazyProductCard> createState() => _LazyProductCardState();
+}
+
+class _LazyProductCardState extends State<LazyProductCard> {
+  final _visibilityKey = GlobalKey();
+  bool _isVisible = false;
+  bool _isLoaded = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    // Use a more efficient approach with fewer listeners
+    widget.scrollController.addListener(_onScroll);
+    // Initial visibility check after layout
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkVisibility();
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.scrollController.removeListener(_onScroll);
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Only check visibility during scrolling, not on every frame
+    // This reduces the number of calculations
+    _checkVisibility();
+  }
+
+  void _checkVisibility() {
+    if (!mounted) return;
+    
+    // Use more efficient visibility detection
+    final RenderObject? renderObject = _visibilityKey.currentContext?.findRenderObject();
+    if (renderObject == null || !renderObject.attached) return;
+    
+    final RenderBox renderBox = renderObject as RenderBox;
+    final viewportWidth = MediaQuery.of(context).size.width;
+    
+    // Get the widget's position relative to the viewport
+    final Offset position = renderBox.localToGlobal(Offset.zero);
+    
+    // Calculate if the widget is visible in the viewport with a buffer zone
+    // This prevents excessive rebuilds when items are just at the edge
+    final double bufferZone = viewportWidth * 0.2; // 20% buffer on each side
+    final bool isNowVisible = position.dx < viewportWidth + bufferZone && 
+                           position.dx + renderBox.size.width > -bufferZone;
+    
+    // Only update state if visibility changed
+    if (isNowVisible != _isVisible) {
+      setState(() {
+        _isVisible = isNowVisible;
+        if (isNowVisible && !_isLoaded) {
+          _isLoaded = true;
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Use a placeholder for non-visible items to reduce memory usage
+    if (!_isVisible && !_isLoaded) {
+      return Container(
+        key: _visibilityKey,
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(
+          child: Icon(Icons.image, color: Colors.grey),
+        ),
+      );
+    }
+
+    // Once loaded, keep the card in memory to prevent rebuilding when scrolling back
+    return KeyedSubtree(
+      key: _visibilityKey,
+      child: UnifiedProductCard(
+        product: widget.product,
+        width: widget.width,
+        height: widget.height,
+        showDetails: widget.showDetails,
+      ),
+    );
   }
 }

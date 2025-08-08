@@ -1,85 +1,100 @@
-import 'package:flutter/material.dart' hide ScrollDirection;
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import 'dart:ui';
-import 'package:timeago/timeago.dart' as timeago;
+import 'dart:async';
 import '../models/fundraising.dart';
 import '../models/lost_pet.dart';
-import '../models/store_item.dart';
-import '../models/store_product.dart';
+import '../models/user.dart';
+import '../models/appointment.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
+import '../services/navigation_service.dart';
 import '../icons.dart';
 import '../widgets/placeholder_image.dart';
-import '../widgets/scrollable_fade_container.dart';
 import '../widgets/fundraising_card.dart';
-import '../widgets/lost_pet_card.dart';
-import '../widgets/product_card.dart';
 import '../widgets/combined_recommendations_widget.dart';
-import '../models/aliexpress_product.dart';
 import 'notifications_page.dart';
 import 'profile_page.dart';
 import 'settings_page.dart';
 import 'leaderboard_page.dart';
-import 'marketplace_page.dart';
-import '../main.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:flutter/animation.dart';
-import '../widgets/spinning_loader.dart';
 import '../widgets/ai_assistant_card.dart';
 import '../widgets/seller_dashboard_card.dart';
 import '../widgets/vet_dashboard_card.dart';
+import '../widgets/optimized_image.dart';
+import '../widgets/today_appointment_widget.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/gift_notification_controller.dart';
-import '../services/notification_service.dart';
-import '../models/user.dart';
 import '../widgets/notification_badge.dart';
+import '../services/device_performance.dart';
+import '../widgets/skeleton_loader.dart';
+import 'wishlist_page.dart';
+import 'adoption_center_page.dart';
+import 'vet_signup_page.dart';
+import 'store_signup_page.dart';
+import 'user_orders_page.dart';
+
 
 class HomePage extends StatefulWidget {
   final VoidCallback onNavigateToMap;
   final Function(bool) onAIAssistantExpanded;  // Add this callback
+  final ValueChanged<double>? onSideMenuProgressChanged;
 
   const HomePage({
     super.key,
     required this.onNavigateToMap,
     required this.onAIAssistantExpanded,  // Add this parameter
+    this.onSideMenuProgressChanged,
   });
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   bool _isAIAssistantExpanded = false;
-  final ScrollController _petsScrollController = ScrollController();
-  final ScrollController _storeScrollController = ScrollController();
-  final ScrollController _mainScrollController = ScrollController();
+  // Add side menu state
+  bool _isSideMenuOpen = false;
+  // Add animation controller for side menu
+  late AnimationController _sideMenuController;
+  late Animation<double> _sideMenuAnimation;
+  // Consolidated scroll controller for better performance
+  final ScrollController _scrollController = ScrollController();
   final DatabaseService _databaseService = DatabaseService();
   GiftNotificationController? _giftNotificationController;
   
-  // Add refresh controller
+  // Single animation controller for refresh
   late AnimationController _refreshController;
   
   // Replace setState variables with ValueNotifier for better performance
-  final ValueNotifier<bool> _showHeaderNotifier = ValueNotifier<bool>(false);
-  final ValueNotifier<bool> _isAtTopNotifier = ValueNotifier<bool>(false);
+  // Static header only; remove dynamic header notifiers
   final ValueNotifier<int> _currentPetPageNotifier = ValueNotifier<int>(0);
   final ValueNotifier<int> _currentStorePageNotifier = ValueNotifier<int>(0);
   final ValueNotifier<List<LostPet>> _lostPetsNotifier = ValueNotifier<List<LostPet>>([]);
   final ValueNotifier<latlong.LatLng?> _userLocationNotifier = ValueNotifier<latlong.LatLng?>(null);
   final ValueNotifier<bool> _isLoadingLocationNotifier = ValueNotifier<bool>(true);
+  final ValueNotifier<bool> _isLoadingPetsNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _hasAttemptedLoadNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<bool> _isRefreshingNotifier = ValueNotifier<bool>(false);
 
   // Back button exit functionality
   DateTime? _lastBackPressTime;
 
   Future<bool> _onWillPop() async {
+    // If side menu is open, close it instead of exiting
+    if (_isSideMenuOpen) {
+      _closeSideMenu();
+      return false;
+    }
+    
     final now = DateTime.now();
     if (_lastBackPressTime == null || 
         now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
@@ -96,128 +111,89 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return true;
   }
 
-  // Use mock data for store items
-  final List<StoreItem> _storeItems = StoreItem.mockItems;
+  // Removed unused methods and variables for better performance
 
-  // Helper method to calculate distance between two points
-  String _calculateDistance(latlong.LatLng? userLocation, latlong.LatLng petLocation) {
-    if (userLocation == null) return '';
-    
-    final distance = Geolocator.distanceBetween(
-      userLocation.latitude,
-      userLocation.longitude,
-      petLocation.latitude,
-      petLocation.longitude,
-    );
-    
-    if (distance < 1000) {
-      return '${distance.round()}m away';
+  // Removed unused method _reportFound
+
+  void _toggleSideMenu() {
+    if (_isSideMenuOpen) {
+      _closeSideMenu();
     } else {
-      return '${(distance / 1000).toStringAsFixed(1)}km away';
+      _openSideMenu();
     }
   }
 
-  // Helper method to check if pet is within range (10km)
-  bool _isWithinRange(latlong.LatLng? userLocation, latlong.LatLng petLocation) {
-    if (userLocation == null) return false;
-    
-    final distance = Geolocator.distanceBetween(
-      userLocation.latitude,
-      userLocation.longitude,
-      petLocation.latitude,
-      petLocation.longitude,
-    );
-    
-    return distance <= 10000; // 10km in meters
+  void _openSideMenu() {
+    setState(() {
+      _isSideMenuOpen = true;
+    });
+    _sideMenuController.forward();
   }
 
-  Future<void> _reportFound(BuildContext context, LostPet lostPet) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Text(
-          AppLocalizations.of(context)?.reportFound ?? 'Report Found',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        content: Text(
-          AppLocalizations.of(context)?.thisWillPostYourMissingPetReport ?? 'Are you sure you want to mark this pet as found? This will remove it from the lost pets list.',
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              AppLocalizations.of(context)?.cancel ?? 'Cancel',
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              AppLocalizations.of(context)?.reportFound ?? 'Report Found',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      try {
-        await _databaseService.markLostPetAsFound(lostPet.id);
-        
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context)?.petMarkedAsFoundSuccessfully ?? 'Pet marked as found successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context)?.errorMarkingPetAsFound(e) ?? 'Error marking pet as found: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+  void _closeSideMenu() {
+    _sideMenuController.reverse().then((_) {
+      if (mounted) {
+        setState(() {
+          _isSideMenuOpen = false;
+        });
       }
-    }
+    });
   }
 
   @override
   void initState() {
     super.initState();
-    _petsScrollController.addListener(_onPetScroll);
-    _storeScrollController.addListener(_onStoreScroll);
-    _mainScrollController.addListener(_onMainScroll);
+    final devicePerformance = DevicePerformance();
+    final isLowEnd = devicePerformance.performanceTier == PerformanceTier.low;
+    final animationDuration = isLowEnd ? const Duration(milliseconds: 200) : const Duration(milliseconds: 500);
     
-    // Initialize refresh controller
-    _refreshController = AnimationController(
+    // Initialize side menu animation controller
+    _sideMenuController = AnimationController(
+      duration: const Duration(milliseconds: 300),
       vsync: this,
-      duration: const Duration(milliseconds: 1500), // Slower rotation for smoother look
     );
     
-    _initializeLocationAndLoadPets();
+    // Create the side menu animation
+    _sideMenuAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _sideMenuController,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    ))
+      ..addListener(() {
+        // Report progress to parent for moving the bottom nav bar
+        final progress = _sideMenuAnimation.value;
+        widget.onSideMenuProgressChanged?.call(progress);
+      });
+    
+    // Initialize page controller with viewportFraction for showing partial next/prev cards
+    _petPageController = PageController(
+      viewportFraction: 0.85,
+      initialPage: 0,
+    );
+    
+    // Listen to page changes and update the notifier
+    _petPageController?.addListener(_onPetPageScroll);
+    
+    // Initialize single animation controller for refresh
+    _refreshController = AnimationController(
+      duration: animationDuration,
+      vsync: this,
+    );
+    
+    // Add scroll controller listener for main scroll functionality
+    _scrollController.addListener(_onScroll);
+    
+    // Check for appointments first, then load pets
+    _checkAppointmentsBeforeLoadingPets();
+    
+    // Set up a timer to periodically check for appointments
+    _appointmentCheckTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _checkForAppointmentsInBackground(),
+    );
   }
 
   @override
@@ -228,42 +204,101 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       _giftNotificationController =
           GiftNotificationController(context, authService);
     }
+    
+    // Check for appointments in didChangeDependencies to ensure Provider is available
+    _checkForAppointmentsInBackground();
+  }
+  
+  // Check for appointments in the background and update the notifier
+  Future<void> _checkForAppointmentsInBackground() async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final user = authService.currentUser;
+      if (user != null) {
+        final appointments = await DatabaseService().getUserTodayAppointments(user.id).first;
+        _todayAppointmentsNotifier.value = appointments;
+        print('🔍 [HomePage] Found ${appointments.length} appointments for today');
+      }
+    } catch (e) {
+      print('🔍 [HomePage] Error checking appointments in background: $e');
+    }
   }
 
   Position? _currentPosition;
+  
+  // Store today's appointments
+  final ValueNotifier<List<Appointment>> _todayAppointmentsNotifier = ValueNotifier<List<Appointment>>([]);
 
+  // Initialize location and load pets regardless of appointments
+  Future<void> _checkAppointmentsBeforeLoadingPets() async {
+    try {
+      // Initialize location and load pets
+      _initializeLocationAndLoadPets();
+    } catch (e) {
+      print('🔍 [HomePage] Error initializing location: $e');
+    }
+  }
+  
+  // Optimized location initialization with better error handling and performance
   Future<void> _initializeLocationAndLoadPets() async {
     try {
+      // On web, use recent pets as fallback since location might not work properly
+      if (kIsWeb) {
+        print('Running on web platform, using recent lost pets');
+        _loadRecentLostPets();
+        _isLoadingLocationNotifier.value = false;
+        return;
+      }
+      
       // Only check location permission if we don't have a position yet
       if (_currentPosition == null) {
-        // Request location permission
-        final status = await Permission.location.request();
+        // Check permission status without requesting immediately
+        final status = await Permission.location.status;
         if (status != PermissionStatus.granted) {
-          print('Location permission denied, loading recent lost pets instead');
-    _loadRecentLostPets();
-          _isLoadingLocationNotifier.value = false;
-          return;
+          // Only request if not explicitly denied before
+          if (status != PermissionStatus.denied && status != PermissionStatus.permanentlyDenied) {
+            final requestStatus = await Permission.location.request();
+            if (requestStatus != PermissionStatus.granted) {
+              print('Location permission denied, using recent lost pets instead');
+              _loadRecentLostPets();
+              _isLoadingLocationNotifier.value = false;
+              return;
+            }
+          } else {
+            print('Location permission previously denied, using recent lost pets instead');
+            _loadRecentLostPets();
+            _isLoadingLocationNotifier.value = false;
+            return;
+          }
         }
 
         // Check if location services are enabled
         bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
         if (!serviceEnabled) {
-          print('Location services disabled, loading recent lost pets instead');
+          print('Location services disabled, using recent lost pets instead');
           _loadRecentLostPets();
           _isLoadingLocationNotifier.value = false;
           return;
         }
       }
 
-      // Get current position with lower accuracy for faster response
-      Position position = await Geolocator.getCurrentPosition(
+      // Use a compute function to move location calculation off the UI thread
+      // This prevents UI jank during location acquisition
+      Position? position;
+      
+      // Try to get last known position first (fast)
+      position = await Geolocator.getLastKnownPosition();
+      
+      // If no last known position, get current position with timeout
+      if (position == null) {
+        try {
+          position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.low,
         timeLimit: const Duration(seconds: 2),
-      ).catchError((error) async {
-        // If timeout or error, use last known position
-        return await Geolocator.getLastKnownPosition() ?? 
-          // If no last known position, use current position or default
-          _currentPosition ?? Position(
+          );
+        } catch (e) {
+          // Use default position if both methods fail
+          position = _currentPosition ?? Position(
             latitude: 36.7538,
             longitude: 3.0588,
             timestamp: DateTime.now(),
@@ -275,66 +310,144 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             speed: 0,
             speedAccuracy: 0,
           );
-      });
+        }
+      }
       
       final userLocation = latlong.LatLng(position.latitude, position.longitude);
       _userLocationNotifier.value = userLocation;
       _currentPosition = position;
-      print('User location obtained: ${position.latitude}, ${position.longitude}');
       
       // Load nearby lost pets
-      _loadNearbyLostPets(userLocation);
+      _loadNearbyLostPets();
       
     } catch (e) {
-      print('Error getting location: $e, loading recent lost pets instead');
+      print('Error getting location: $e, using recent lost pets instead');
       _loadRecentLostPets();
     } finally {
       _isLoadingLocationNotifier.value = false;
     }
   }
 
-  Future<void> _loadNearbyLostPets(latlong.LatLng userLocation) async {
-    // Subscribe to nearby lost pets stream
-    _databaseService.getNearbyLostPets(
+  // Stream subscriptions for better memory management
+  StreamSubscription? _nearbyPetsSubscription;
+  StreamSubscription? _recentPetsSubscription;
+  Timer? _appointmentCheckTimer;
+
+  void _loadNearbyLostPets() async {
+    
+    // Cancel any existing subscription first
+    _nearbyPetsSubscription?.cancel();
+    _recentPetsSubscription?.cancel();
+    
+    // Set loading state
+    _isLoadingPetsNotifier.value = true;
+    _hasAttemptedLoadNotifier.value = true;
+    
+    // Check if user location is available
+    final userLocation = _userLocationNotifier.value;
+    if (userLocation == null) {
+      print('User location not available, loading recent lost pets instead');
+      _loadRecentLostPets();
+      return;
+    }
+    
+    print('Loading nearby lost pets for location: ${userLocation.latitude}, ${userLocation.longitude}');
+    
+    // Subscribe to nearby lost pets stream with proper memory management
+    _nearbyPetsSubscription = _databaseService.getNearbyLostPets(
       userLocation: userLocation,
-      radiusInKm: 10, // 10km radius
+      radiusInKm: 50, // Increased radius to 50km for testing
     ).listen((pets) {
       if (mounted) {
         print('Loaded ${pets.length} nearby lost pets');
-        _lostPetsNotifier.value = pets;
+        _isLoadingPetsNotifier.value = false;
+        if (pets.isEmpty) {
+          print('No nearby pets found, falling back to recent pets');
+          _loadRecentLostPets();
+        } else {
+          _lostPetsNotifier.value = pets;
+        }
       }
+    }, onError: (error) {
+      print('Error loading nearby lost pets: $error');
+      _isLoadingPetsNotifier.value = false;
+      // Fallback to recent pets on error
+      _loadRecentLostPets();
     });
   }
 
   Future<void> _loadRecentLostPets() async {
-    // Subscribe to recent lost pets stream as fallback
-    _databaseService.getRecentLostPets().listen((pets) {
+    
+    // Cancel any existing subscription first
+    _nearbyPetsSubscription?.cancel();
+    _recentPetsSubscription?.cancel();
+    
+    // Set loading state if not already loading
+    if (!_isLoadingPetsNotifier.value) {
+      _isLoadingPetsNotifier.value = true;
+    }
+    _hasAttemptedLoadNotifier.value = true;
+    
+    // Subscribe to recent lost pets stream as fallback with proper memory management
+    _recentPetsSubscription = _databaseService.getRecentLostPets().listen((pets) {
       if (mounted) {
         print('Loaded ${pets.length} recent lost pets (fallback)');
+        _isLoadingPetsNotifier.value = false;
         _lostPetsNotifier.value = pets;
       }
+    }, onError: (error) {
+      print('Error loading recent lost pets: $error');
+      _isLoadingPetsNotifier.value = false;
+      // Set empty list to show "no pets" message
+      _lostPetsNotifier.value = [];
     });
+  }
+
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   @override
   void dispose() {
-    _petsScrollController.removeListener(_onPetScroll);
-    _storeScrollController.removeListener(_onStoreScroll);
-    _mainScrollController.removeListener(_onMainScroll);
-    _petsScrollController.dispose();
-    _storeScrollController.dispose();
-    _mainScrollController.dispose();
+    // Dispose the page controller
+    _petPageController?.removeListener(_onPetPageScroll);
+    _petPageController?.dispose();
+    _petPageController = null;
+    
+    // Dispose consolidated scroll controller
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    
+    // Dispose animation controllers
     _refreshController.dispose();
+    _sideMenuController.dispose();
+    
+    // Cancel all stream subscriptions and timers
+    _nearbyPetsSubscription?.cancel();
+    _recentPetsSubscription?.cancel();
+    _appointmentCheckTimer?.cancel();
     
     // Dispose ValueNotifiers
-    _showHeaderNotifier.dispose();
-    _isAtTopNotifier.dispose();
     _currentPetPageNotifier.dispose();
     _currentStorePageNotifier.dispose();
     _lostPetsNotifier.dispose();
     _userLocationNotifier.dispose();
     _isLoadingLocationNotifier.dispose();
+    _isLoadingPetsNotifier.dispose();
+    _hasAttemptedLoadNotifier.dispose();
     _isRefreshingNotifier.dispose();
+    _todayAppointmentsNotifier.dispose();
     _giftNotificationController?.dispose();
     
     super.dispose();
@@ -347,7 +460,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       try {
         // Start both operations concurrently
         await Future.wait([
-          _initializeLocationAndLoadPets(),
+          _checkAppointmentsBeforeLoadingPets(), // Check appointments first
           // Add artificial minimum delay to ensure smooth animation
           Future.delayed(const Duration(milliseconds: 500)),
         ]);
@@ -360,64 +473,247 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
   }
 
-  void _onPetScroll() {
-    if (!_petsScrollController.hasClients || !mounted) return;
+  // Completely new implementation for pet card carousel
+  PageController? _petPageController;
+  
+  void _onPetPageScroll() {
+    if (_petPageController == null || !mounted) return;
     
-    final double offset = _petsScrollController.offset;
-    final double itemWidth = MediaQuery.of(context).size.width * 0.85 + 16.0; // Width + horizontal margin
-    final int page = (offset / itemWidth).round();
+    // Get the current page as a double (includes fractional part during animation)
+    final double currentPageDouble = _petPageController!.page ?? 0;
     
-    if (page != _currentPetPageNotifier.value) {
-      _currentPetPageNotifier.value = page;
+    // For indicator and other integer-based logic, round to nearest page
+    final int currentPage = currentPageDouble.round();
+    
+    // Update the current page notifier if it changed
+    if (currentPage != _currentPetPageNotifier.value) {
+      _currentPetPageNotifier.value = currentPage;
     }
-
-    // If the scroll is ending (user lifts finger), snap to the nearest item
-    if (!_petsScrollController.position.isScrollingNotifier.value) {
-      final double targetOffset = page * itemWidth;
-      _petsScrollController.animateTo(
-        targetOffset,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
+  }
+  
+  void _navigateToPetCard(int direction) {
+    if (_petPageController == null || !mounted) return;
+    
+    final int currentPage = _currentPetPageNotifier.value;
+    final int targetPage = currentPage + direction;
+    
+    // Check bounds
+    if (targetPage < 0 || targetPage >= _lostPetsNotifier.value.length) return;
+    
+    // Animate to the target page with a spring-like effect
+    _petPageController!.animateToPage(
+      targetPage,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutBack,
+    );
+    
+    // Add haptic feedback for physical feel
+    HapticFeedback.mediumImpact();
+  }
+  
+  void _openLostPetInMap(LostPet lostPet) {
+    // Navigate to map and show the lost pet detail dialog
+    widget.onNavigateToMap();
+    
+    // Add a small delay to ensure the map is loaded before showing the dialog
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        // This will trigger the same behavior as clicking a lost pet marker on the map
+        // You can implement the specific dialog logic here or call a method from the map page
+        _showLostPetDetailDialog(lostPet);
+      }
+    });
+  }
+  
+  void _showLostPetDetailDialog(LostPet lostPet) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white.withOpacity(0.95),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.pets,
+              color: const Color(0xFFF59E0B),
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Lost Pet Details',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              lostPet.pet.name,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${lostPet.pet.breed} • ${lostPet.pet.age} years old',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.location_on, color: Colors.red, size: 16),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    lostPet.address,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Lost ${_formatTimeAgo(lostPet.lastSeenDate)}',
+              style: TextStyle(
+                color: Colors.orange[600],
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            // Display reward if available
+            if (lostPet.reward != null && lostPet.reward! > 0) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4CAF50).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF4CAF50),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.monetization_on,
+                      color: const Color(0xFF4CAF50),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '\$${lostPet.reward!.toStringAsFixed(0)} Reward',
+                      style: TextStyle(
+                        color: const Color(0xFF4CAF50),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (lostPet.contactNumbers.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.phone, color: Colors.green, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    lostPet.contactNumbers.first,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Close',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Open in external maps app
+              _openInExternalMaps(lostPet);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF59E0B),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(0, 44), // Increased height
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'Open in Maps',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _openInExternalMaps(LostPet lostPet) async {
+    final url = 'https://www.google.com/maps/search/?api=1&query=${lostPet.location.latitude},${lostPet.location.longitude}';
+    try {
+      await launchUrlString(url);
+    } catch (e) {
+      debugPrint('Error opening maps: $e');
     }
   }
 
-  void _onStoreScroll() {
-    if (!_storeScrollController.hasClients || !mounted) return;
-    final double offset = _storeScrollController.offset;
-    final double itemWidth = MediaQuery.of(context).size.width * 0.6;
+  // Consolidated scroll handler for better performance
+  void _onScroll() {
+    if (!_scrollController.hasClients || !mounted) return;
+    
+    // Static header: no dynamic visibility logic
+    final double offset = _scrollController.offset;
+    
+    // Static header: no dynamic visibility or opacity logic
+    
+    // Calculate store page for pagination dots
+    final viewportWidth = MediaQuery.of(context).size.width;
+    final itemWidth = viewportWidth * 0.6;
     final int page = (offset / itemWidth).round();
     if (page != _currentStorePageNotifier.value) {
       _currentStorePageNotifier.value = page;
     }
   }
 
-  void _onMainScroll() {
-    if (!_mainScrollController.hasClients || !mounted) return;
-    
-    // Show header when scrolling up, hide when scrolling down
-    if (_mainScrollController.position.userScrollDirection == ScrollDirection.reverse && _mainScrollController.offset > 100) {
-      if (_showHeaderNotifier.value) {
-        _showHeaderNotifier.value = false;
-      }
-    } else if (_mainScrollController.position.userScrollDirection == ScrollDirection.forward && _mainScrollController.offset > 100) {
-      if (!_showHeaderNotifier.value) {
-        _showHeaderNotifier.value = true;
-      }
-    }
-    
-    // Track if we're at the top
-    final isAtTop = _mainScrollController.offset <= 0;
-    if (isAtTop != _isAtTopNotifier.value) {
-      _isAtTopNotifier.value = isAtTop;
-    }
-  }
-
   void _navigateToSettings(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const SettingsPage(),
-      ),
+    _closeSideMenu();
+    NavigationService.push(
+      context,
+      const SettingsPage(),
     );
   }
 
@@ -433,19 +729,99 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          NotificationListener<ScrollNotification>(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            // Background color
+            Container(
+              color: Colors.white,
+            ),
+            // Side Menu (behind main content)
+            AnimatedBuilder(
+              animation: _sideMenuAnimation,
+              child: _buildSideMenu(),
+              builder: (context, child) {
+                return Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Transform.translate(
+                    offset: Offset(-MediaQuery.of(context).size.width * 0.65 * (1 - _sideMenuAnimation.value), 0),
+                    child: child,
+                  ),
+                );
+              },
+            ),
+            // Main content with animation and rounded corners
+            AnimatedBuilder(
+              animation: _sideMenuAnimation,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(MediaQuery.of(context).size.width * 0.65 * _sideMenuAnimation.value, 0),
+                  child: Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(32 * _sideMenuAnimation.value),
+                        bottomLeft: Radius.circular(32 * _sideMenuAnimation.value),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15 * _sideMenuAnimation.value),
+                          blurRadius: 25 * _sideMenuAnimation.value,
+                          offset: const Offset(0, 0),
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: _buildMainContent(),
+                  ),
+                );
+              },
+            ),
+            if (_isAIAssistantExpanded)
+              Positioned.fill(
+                child: AIPetAssistantCard(
+                  isExpanded: true,
+                  onTap: () => _toggleAIAssistant(false),
+                ),
+              ),
+            // Overlay to close side menu when tapping outside
+            if (_isSideMenuOpen)
+              Positioned(
+                left: MediaQuery.of(context).size.width * 0.65,
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  onTap: _closeSideMenu,
+                  child: Container(
+                    color: Colors.transparent,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Heavy main content extracted so AnimatedBuilder can reuse it without rebuilding on every tick
+  Widget _buildMainContent() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.white,
+      child: NotificationListener<ScrollNotification>(
             onNotification: (notification) {
               if (notification is ScrollStartNotification) {
-                // Reset refresh state when starting new scroll
                 if (_isRefreshingNotifier.value) {
                   _isRefreshingNotifier.value = false;
                   _refreshController.stop();
                 }
               } else if (notification is ScrollUpdateNotification) {
-                // Check for overscroll
                 if (notification.metrics.pixels < -80 && !_isRefreshingNotifier.value) {
                   _isRefreshingNotifier.value = true;
                   _handleRefresh();
@@ -454,7 +830,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               return false;
             },
             child: CustomScrollView(
-              controller: _mainScrollController,
+              controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
@@ -489,7 +865,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 16),
-                        _buildHeader(),
+                        _buildHeader(context),
                         const SizedBox(height: 24),
                         _buildGreeting(),
                         const SizedBox(height: 24),
@@ -500,6 +876,31 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 SliverToBoxAdapter(
                   child: _buildWhatsNewSlider(),
                 ),
+                // Today's Vet Appointments Section
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: ValueListenableBuilder<List<Appointment>>(
+                      valueListenable: _todayAppointmentsNotifier,
+                      builder: (context, appointments, _) {
+                        if (appointments.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 32),
+                            TodayAppointmentWidget(
+                              appointments: appointments,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                // Recommendations Section
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -507,7 +908,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                       children: [
                         const SizedBox(height: 32),
                         CombinedRecommendationsWidget(
-                          scrollController: _storeScrollController,
+                          scrollController: _scrollController,
                           limit: 10,
                         ),
                         const SizedBox(height: 80),
@@ -585,7 +986,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           ],
                         ),
                         const SizedBox(height: 16),
-                        // AI Pet Assistant Card
                         if (!_isAIAssistantExpanded)
                           AIPetAssistantCard(
                             isExpanded: _isAIAssistantExpanded,
@@ -598,164 +998,168 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 ),
               ],
             ),
-          ),
-          if (_isAIAssistantExpanded)
-            Positioned.fill(
-              child: AIPetAssistantCard(
-                isExpanded: true,
-                onTap: () => _toggleAIAssistant(false),
+      ),
+    );
+  }
+
+  Widget _buildSideMenu() {
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.65,
+      height: double.infinity,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF5F5F5),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 28),
+          // App logo (centered)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Center(
+              child: Image.asset(
+                'assets/images/logo_cropped.png',
+                width: 120,
+                fit: BoxFit.contain,
               ),
             ),
-          // Collapsible header with ValueListenableBuilder
-          ValueListenableBuilder<bool>(
-            valueListenable: _showHeaderNotifier,
-            builder: (context, showHeader, child) {
-              return ValueListenableBuilder<bool>(
-                valueListenable: _isAtTopNotifier,
-                builder: (context, isAtTop, child) {
-                  return AnimatedSlide(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-                    offset: Offset(0, (showHeader && !isAtTop) ? 0 : -1),
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  width: double.infinity,
-                  height: 56 + MediaQuery.of(context).padding.top,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.85),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Colors.grey[300]!,
-                        width: 0.5,
-                      ),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: 20,
-                      right: 20,
-                      top: MediaQuery.of(context).padding.top,
-                    ),
-                    child: SizedBox(
-                      height: 56,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Center text
-                          const Center(
-                            child: Text(
-                              'alifi',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFF59E0B),
-                              ),
-                            ),
-                          ),
-                          // Left and right elements
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.menu),
-                                    onPressed: () => _navigateToSettings(context),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => const LeaderboardPage(),
-                                        ),
-                                      );
-                                    },
-                                    child: Image.asset(
-                                      'assets/images/leaderboard.png',
-                                    width: 28,
-                                    height: 28,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Consumer<AuthService>(
-                                    builder: (context, authService, child) {
-                                      return NotificationBadge(
-                                        onTap: () {
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (context) => const NotificationsPage(),
-                                            ),
-                                          );
-                                        },
-                                        child: Container(
-                                          width: 40,
-                                          height: 40,
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[100],
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Center(
-                                            child: SvgPicture.string(
-                                              AppIcons.bellIcon,
-                                              width: 20,
-                                              height: 20,
-                                              colorFilter: const ColorFilter.mode(
-                                                Colors.black,
-                                                BlendMode.srcIn,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(width: 8),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) => const ProfilePage(),
-                                        ),
-                                      );
-                                    },
-                                    child: const CircleAvatar(
-                                      radius: 16,
-                                      backgroundColor: Colors.grey,
-                                      child: Icon(Icons.person, color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-                  );
-                },
-              );
-            },
           ),
+          const SizedBox(height: 16),
+          // Profile option (now inside a white container like the others)
+          _buildMenuGroup([
+            _buildMenuItem(
+              title: 'Profile',
+              onTap: () {
+                _closeSideMenu();
+                NavigationService.push(context, const ProfilePage());
+              },
+            ),
+          ]),
+          const SizedBox(height: 12),
+          // Wishlist and Adoption Center group
+          _buildMenuGroup([
+            _buildMenuItem(
+              title: 'Wishlist',
+              onTap: () {
+                _closeSideMenu();
+                NavigationService.push(context, const WishlistPage());
+              },
+            ),
+            _buildMenuItem(
+              title: 'Adoption Center',
+              onTap: () {
+                _closeSideMenu();
+                NavigationService.push(context, const AdoptionCenterPage());
+              },
+            ),
+          ]),
+          const SizedBox(height: 12),
+          // Orders & Messages group
+          _buildMenuGroup([
+            _buildMenuItem(
+              title: 'Orders & Messages',
+              onTap: () {
+                _closeSideMenu();
+                NavigationService.push(context, const UserOrdersPage());
+              },
+            ),
+          ]),
+          const SizedBox(height: 12),
+          // Become a Vet and Become a Store group
+          _buildMenuGroup([
+            _buildMenuItem(
+              title: 'Become a Vet',
+              onTap: () {
+                _closeSideMenu();
+                NavigationService.push(context, const VetSignUpPage());
+              },
+            ),
+            _buildMenuItem(
+              title: 'Become a Store',
+              onTap: () {
+                _closeSideMenu();
+                NavigationService.push(context, const StoreSignUpPage());
+              },
+            ),
+          ]),
+          const Spacer(),
+          // Settings and Logout group
+          _buildMenuGroup([
+            _buildMenuItem(
+              title: 'Settings',
+              onTap: () {
+                _closeSideMenu();
+                NavigationService.push(context, const SettingsPage());
+              },
+            ),
+            _buildMenuItem(
+              title: 'Log out',
+              onTap: () async {
+                _closeSideMenu();
+                await Provider.of<AuthService>(context, listen: false).signOut();
+              },
+              textColor: Colors.red,
+            ),
+          ]),
+          const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+
+  Widget _buildMenuItem({
+    required String title,
+    required VoidCallback onTap,
+    Color? textColor,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+                        child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: textColor ?? Colors.black,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuGroup(List<Widget> items) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: items.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          
+          return Column(
+            children: [
+              item,
+              if (index < items.length - 1)
+                Container(
+                  height: 1,
+                  color: Colors.grey[300],
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+            ],
+          );
+        }).toList(),
     ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return SizedBox(
-      height: 56, // Fixed height for consistency
+      height: 64, // Increased height to accommodate larger notification icon
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -777,17 +1181,24 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             children: [
               Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.menu),
-                    onPressed: () => _navigateToSettings(context),
+                  GestureDetector(
+                    onTap: _toggleSideMenu,
+                    child: SvgPicture.asset(
+                      'assets/images/menu.svg',
+                      width: 28,
+                      height: 28,
+                      colorFilter: const ColorFilter.mode(
+                        Colors.black,
+                        BlendMode.srcIn,
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 16),
                   GestureDetector(
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const LeaderboardPage(),
-                        ),
+                      NavigationService.push(
+                        context,
+                        const LeaderboardPage(),
                       );
                     },
                     child: Image.asset(
@@ -804,48 +1215,82 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     builder: (context, authService, child) {
                       return NotificationBadge(
                         onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const NotificationsPage(),
-                            ),
+                          NavigationService.push(
+                            context,
+                            const NotificationsPage(),
                           );
                         },
                         child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Center(
-                            child: SvgPicture.string(
-                              AppIcons.bellIcon,
-                              width: 20,
-                              height: 20,
-                              colorFilter: const ColorFilter.mode(
-                                Colors.black,
-                                BlendMode.srcIn,
-                              ),
-                            ),
+                          width: 32,
+                          height: 32,
+                          margin: const EdgeInsets.only(left: 8),
+                          child: Image.asset(
+                            'assets/images/notification_icon.png',
+                            width: 32,
+                            height: 32,
+                            fit: BoxFit.contain,
                           ),
                         ),
                       );
                     },
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const ProfilePage(),
+                  const SizedBox(width: 20),
+                  Consumer<AuthService>(
+                    builder: (context, authService, child) {
+                      final user = authService.currentUser;
+                      return GestureDetector(
+                        onTap: () {
+                          NavigationService.push(
+                            context,
+                            const ProfilePage(),
+                          );
+                        },
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Colors.grey[300],
+                          child: user?.photoURL != null && user!.photoURL!.isNotEmpty
+                              ? ClipOval(
+                                  child: OptimizedImage(
+                                    imageUrl: user.photoURL!,
+                                    width: 32,
+                                    height: 32,
+                                    fit: BoxFit.cover,
+                                    placeholder: Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.grey,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.person,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                    ),
+                                    errorWidget: Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.grey,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.person,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
                         ),
                       );
                     },
-                    child: const CircleAvatar(
-                      radius: 16,
-                      backgroundColor: Colors.grey,
-                      child: Icon(Icons.person, color: Colors.white),
-                    ),
                   ),
                 ],
               ),
@@ -856,33 +1301,20 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildHeaderButton({
-    required String icon,
-    required VoidCallback onTap,
+  // Removed unused method _buildHeaderButton
+  
+  Widget _buildNavigationArrow({
+    required int direction,
+    required IconData icon,
   }) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Center(
-            child: SvgPicture.string(
-              icon,
-              width: 20,
-              height: 20,
-              colorFilter: const ColorFilter.mode(
-                Colors.black,
-                BlendMode.srcIn,
-              ),
-            ),
-          ),
+    return GestureDetector(
+      onTap: () => _navigateToPetCard(direction),
+      child: Container(
+        padding: const EdgeInsets.all(8.0),
+        child: Icon(
+          icon,
+          size: 24,
+          color: Colors.black,
         ),
       ),
     );
@@ -904,26 +1336,16 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Good afternoon, user!',
-                      style: TextStyle(
+                    Text(
+                      _getGreeting(user),
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Colors.grey,
                       ),
                     ),
                     if (!isStoreAccount && !isVetAccount) ...[
-                      if (isLoadingLocation)
-                        const Text(
-                          "Loading nearby pets...",
-                          style: TextStyle(
-                            fontFamily: 'Montserrat',
-                            fontSize: 34,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -1.2,
-                          ),
-                        )
-                      else if (userLocation != null)
+                      if (userLocation != null)
                         const Text(
                           "Lost pets nearby",
                           style: TextStyle(
@@ -969,142 +1391,451 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           return const VetDashboardCard();
         }
 
-        return ValueListenableBuilder<List<LostPet>>(
-          valueListenable: _lostPetsNotifier,
-          builder: (context, lostPets, child) {
-            if (lostPets.isEmpty) {
-              return ValueListenableBuilder<bool>(
-                valueListenable: _isLoadingLocationNotifier,
-                builder: (context, isLoadingLocation, child) {
-                  return ValueListenableBuilder<latlong.LatLng?>(
-                    valueListenable: _userLocationNotifier,
-                    builder: (context, userLocation, child) {
-                      String message;
-                      if (isLoadingLocation) {
-                        message = 'Loading nearby pets...';
-                      } else if (userLocation != null) {
-                        message = 'No lost pets reported nearby (within 10km)';
-                      } else {
-                        message = 'No recent lost pets reported';
-                      }
-                      
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            children: [
-                              Text(
-                                message,
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 16,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              if (userLocation == null && !isLoadingLocation) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Enable location to see pets in your area',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              );
+        // Check for today's appointments first - ABSOLUTE PRIORITY
+        return StreamBuilder<List<Appointment>>(
+          stream: DatabaseService().getUserTodayAppointments(user?.id ?? ''),
+          builder: (context, appointmentSnapshot) {
+            if (appointmentSnapshot.connectionState == ConnectionState.waiting) {
+              // Keep UI stable and continue showing lost pets while appointments load
+              return _buildSmartLostPetsSection();
             }
 
-            return Column(
-              children: [
-                SizedBox(
-                  height: 220,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final containerWidth = constraints.maxWidth;
-                      final itemWidth = MediaQuery.of(context).size.width * 0.85;
-                      final totalWidth = itemWidth * lostPets.length + 16.0 * (lostPets.length - 1);
+            final todayAppointments = appointmentSnapshot.data ?? [];
+            
+            print('🔍 [HomePage] Today\'s appointments count: ${todayAppointments.length}');
+            for (final appointment in todayAppointments) {
+              print('🔍 [HomePage] Appointment found: ${appointment.petName} at ${appointment.formattedTime} (${appointment.status.name})');
+            }
+            
+            // We'll show lost pets regardless of appointments
+            print('🔍 [HomePage] Showing lost pets section regardless of appointments');
 
-                      return ScrollableFadeContainer(
-                        scrollController: _petsScrollController,
-                        containerWidth: containerWidth,
-                        contentWidth: totalWidth,
-                        child: ListView.builder(
-                          controller: _petsScrollController,
-                          scrollDirection: Axis.horizontal,
-                          physics: const PageScrollPhysics().applyTo(
-                            const BouncingScrollPhysics(),
+            // Show lost pets section with smart loading
+            return _buildSmartLostPetsSection();
+          },
+        );
+      },
+    );
+  }
+
+  // Optimized pet card with reduced nesting and simplified rendering
+  Widget _buildLostPetCard(LostPet lostPet, BuildContext context) {
+    final devicePerformance = DevicePerformance();
+    final isLowEndDevice = devicePerformance.performanceTier == PerformanceTier.low;
+    
+    // Use const where possible for better performance
+    const double cardWidth = 300;
+    
+    // Optimize text styles for low-end devices
+    final TextStyle nameStyle = TextStyle(
+      fontSize: isLowEndDevice ? 16 : 18,
+      fontWeight: FontWeight.bold,
+    );
+    
+    final TextStyle infoStyle = TextStyle(
+      color: Colors.grey[600],
+      fontSize: isLowEndDevice ? 12 : 14,
+    );
+    
+    return RepaintBoundary(
+      child: SizedBox(
+        width: cardWidth,
+        // Flatten widget tree by removing unnecessary Container
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(50),
+                    child: lostPet.pet.imageUrls.isNotEmpty
+                        ? OptimizedImage(
+                            imageUrl: lostPet.pet.imageUrls.first,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            isCircular: true,
+                            placeholder: const PlaceholderImage(
+                              width: 100,
+                              height: 100,
+                              isCircular: true,
+                            ),
+                            errorWidget: const PlaceholderImage(
+                              width: 100,
+                              height: 100,
+                              isCircular: true,
+                            ),
+                          )
+                        : const PlaceholderImage(
+                            width: 100,
+                            height: 100,
+                            isCircular: true,
                           ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: (MediaQuery.of(context).size.width - itemWidth) / 2,
-                          ),
-                          itemCount: lostPets.length,
-                          itemBuilder: (context, index) {
-                            final lostPet = lostPets[index];
-                            return ValueListenableBuilder<int>(
-                              valueListenable: _currentPetPageNotifier,
-                              builder: (context, currentPage, child) {
-                                return AnimatedScale(
-                                  scale: currentPage == index ? 1.0 : 0.92,
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeOutCubic,
-                                  child: Container(
-                                    width: itemWidth,
-                                    margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 24.0),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(90),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.15),
-                                          blurRadius: 16,
-                                          offset: const Offset(0, 8),
-                                          spreadRadius: 2,
-                                        ),
-                                      ],
-                                    ),
-                                    child: _buildLostPetCard(lostPet, context),
-                                  ),
-                                );
-                              },
-                            );
-                          },
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          lostPet.pet.name,
+                            style: nameStyle,
                         ),
-                      );
-                    },
+                        const SizedBox(height: 4),
+                        Text(
+                          '${lostPet.pet.breed} • ${lostPet.pet.age} years',
+                            style: infoStyle,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on, color: Colors.red, size: 16),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child:                               Text(
+                                lostPet.address,
+                                style: infoStyle.copyWith(fontSize: isLowEndDevice ? 11 : 12),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Lost ${_formatTimeAgo(lostPet.lastSeenDate)}',
+                          style: TextStyle(
+                            color: Colors.orange[600],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Open in Maps button
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _openLostPetInMap(lostPet),
+                            icon: const Icon(
+                              Icons.map,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                            label: const Text(
+                              'Open in Maps',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF59E0B),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'LOST',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
-                ValueListenableBuilder<int>(
-                  valueListenable: _currentPetPageNotifier,
-                  builder: (context, currentPage, child) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(
-                        lostPets.length,
-                        (index) => Container(
-                          width: 8,
-                          height: 8,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: currentPage == index
-                                ? const Color(0xFFF59E0B)
-                                : Colors.grey[300],
-                          ),
-                        ),
-                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getGreeting(User? user) {
+    // Get the current hour to determine the appropriate greeting
+    final hour = DateTime.now().hour;
+    String timeGreeting;
+    
+    if (hour < 12) {
+      timeGreeting = 'Good morning';
+    } else if (hour < 17) {
+      timeGreeting = 'Good afternoon';
+    } else {
+      timeGreeting = 'Good evening';
+    }
+    
+    // Get the user's first name from display name
+    String firstName = 'user';
+    if (user?.displayName != null && user!.displayName!.isNotEmpty) {
+      final nameParts = user.displayName!.trim().split(' ');
+      firstName = nameParts.first;
+    }
+    
+    return '$timeGreeting, $firstName!';
+  }
+
+  Widget _buildLostPetsSkeleton() {
+    return Column(
+      children: [
+        // Pet card carousel skeleton
+        SizedBox(
+          height: 240,
+          child: PageView.builder(
+            itemCount: 3, // Show 3 skeleton cards
+            itemBuilder: (context, index) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 24.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(200),
+                  border: Border.all(
+                    color: Colors.grey[300]!,
+                    width: 0.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                child: _buildLostPetCardSkeleton(),
+              );
+            },
+          ),
+        ),
+        // Navigation arrows (static)
+        const SizedBox(height: 16),
+        // Page indicators skeleton
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (index) => Container(
+            width: 8,
+            height: 8,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.grey[300],
+            ),
+          )),
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  Widget _buildSmartLostPetsSection() {
+    return ValueListenableBuilder<List<LostPet>>(
+      valueListenable: _lostPetsNotifier,
+      builder: (context, lostPets, child) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: _isLoadingPetsNotifier,
+          builder: (context, isLoadingPets, child) {
+            return ValueListenableBuilder<bool>(
+              valueListenable: _hasAttemptedLoadNotifier,
+              builder: (context, hasAttemptedLoad, child) {
+                return ValueListenableBuilder<bool>(
+                  valueListenable: _isLoadingLocationNotifier,
+                  builder: (context, isLoadingLocation, child) {
+                    return ValueListenableBuilder<latlong.LatLng?>(
+                      valueListenable: _userLocationNotifier,
+                      builder: (context, userLocation, child) {
+                        // Show skeleton only on initial load (no data yet) while loading
+                        if (isLoadingPets && !isLoadingLocation && lostPets.isEmpty) {
+                          return _buildLostPetsSkeleton();
+                        }
+                        
+                        // Show "no pets" message only when we're not loading and have no pets
+                        if (lostPets.isEmpty && !isLoadingPets && hasAttemptedLoad) {
+                          String message;
+                          String subtitle = '';
+                          
+                          if (userLocation != null) {
+                            message = 'No lost pets reported nearby';
+                            subtitle = 'We\'ll notify you when pets are reported in your area';
+                          } else {
+                            message = 'No recent lost pets reported';
+                            subtitle = 'Enable location to see pets in your area';
+                          }
+                          
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.pets_outlined,
+                                    size: 48,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    message,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    subtitle,
+                                    style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontSize: 14,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                        
+                        // Show pets when we have them
+                        if (lostPets.isNotEmpty) {
+                          return Column(
+                            children: [
+                              // Pet card carousel with navigation arrows
+                              SizedBox(
+                                height: 240,
+                                child: Stack(
+                                  children: [
+                                    PageView.builder(
+                                      controller: _petPageController,
+                                      physics: const BouncingScrollPhysics(),
+                                      itemCount: lostPets.length,
+                                      pageSnapping: true,
+                                      key: const PageStorageKey('pet_carousel'),
+                                      itemBuilder: (context, index) {
+                                        final lostPet = lostPets[index];
+                                        return Container(
+                                          margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 24.0),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(200),
+                                            border: Border.all(color: Colors.grey[300]!, width: 0.5),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(0.05),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                                spreadRadius: 0,
+                                              ),
+                                            ],
+                                          ),
+                                          child: _buildLostPetCard(lostPet, context),
+                                        );
+                                      },
+                                    ),
+                                                                         // Navigation arrows - only show when there are items to navigate to
+                                     ValueListenableBuilder<int>(
+                                       valueListenable: _currentPetPageNotifier,
+                                       builder: (context, currentPage, child) {
+                                         return Stack(
+                                           children: [
+                                             // Left arrow - only show if not on first page
+                                             if (currentPage > 0)
+                                               Positioned(
+                                                 left: 16,
+                                                 top: 0,
+                                                 bottom: 0,
+                                                 child: Center(
+                                                   child: GestureDetector(
+                                                     onTap: () => _navigateToPetCard(-1),
+                                                     child: Icon(
+                                                       Icons.chevron_left,
+                                                       color: Colors.grey[700],
+                                                       size: 32,
+                                                     ),
+                                                   ),
+                                                 ),
+                                               ),
+                                             // Right arrow - only show if not on last page
+                                             if (currentPage < lostPets.length - 1)
+                                               Positioned(
+                                                 right: 16,
+                                                 top: 0,
+                                                 bottom: 0,
+                                                 child: Center(
+                                                   child: GestureDetector(
+                                                     onTap: () => _navigateToPetCard(1),
+                                                     child: Icon(
+                                                       Icons.chevron_right,
+                                                       color: Colors.grey[700],
+                                                       size: 32,
+                                                     ),
+                                                   ),
+                                                 ),
+                                               ),
+                                           ],
+                                         );
+                                       },
+                                     ),
+                                  ],
+                                ),
+                              ),
+                              // Page indicators
+                              if (lostPets.length > 1) ...[
+                                const SizedBox(height: 16),
+                                ValueListenableBuilder<int>(
+                                  valueListenable: _currentPetPageNotifier,
+                                  builder: (context, currentPage, child) {
+                                    return Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: List.generate(lostPets.length, (index) => Container(
+                                        width: 8,
+                                        height: 8,
+                                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: index == currentPage ? const Color(0xFFF59E0B) : Colors.grey[300],
+                                        ),
+                                      )),
+                                    );
+                                  },
+                                ),
+                              ],
+                              const SizedBox(height: 32),
+                            ],
+                          );
+                        }
+                        
+                        // Default case - show nothing while initializing
+                        return const SizedBox.shrink();
+                      },
                     );
                   },
-                ),
-              ],
+                );
+              },
             );
           },
         );
@@ -1112,176 +1843,104 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildLostPetCard(LostPet lostPet, BuildContext context) {
-    return Stack(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(50),
-                child: lostPet.pet.imageUrls.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: lostPet.pet.imageUrls.first,
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => const PlaceholderImage(
-                          width: 100,
-                          height: 100,
-                          isCircular: true,
-                        ),
-                        errorWidget: (context, url, error) => const PlaceholderImage(
-                          width: 100,
-                          height: 100,
-                          isCircular: true,
-                        ),
-                        fadeInDuration: const Duration(milliseconds: 300),
-                      )
-                    : const PlaceholderImage(
-                        width: 100,
-                        height: 100,
-                        isCircular: true,
-                      ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      lostPet.pet.name,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Text(
-                          'Last seen: ',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                        Text(
-                          timeago.format(lostPet.lastSeenDate),
-                          style: TextStyle(
-                            color: Colors.orange[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    ValueListenableBuilder<latlong.LatLng?>(
-                      valueListenable: _userLocationNotifier,
-                      builder: (context, userLocation, child) {
-                        final distance = _calculateDistance(userLocation, lostPet.location);
-                        return Row(
-                          children: [
-                            const Text(
-                              'Location: ',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                            Expanded(
-                              child: Text(
-                                lostPet.address,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (distance.isNotEmpty) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.red[100],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  distance,
-                                  style: TextStyle(
-                                    color: Colors.red[700],
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    Consumer<AuthService>(
-                      builder: (context, authService, child) {
-                        final currentUser = authService.currentUser;
-                        final isCurrentUserPet = currentUser?.id == lostPet.reportedByUserId;
-                        
-                        return ElevatedButton(
-                          onPressed: isCurrentUserPet 
-                              ? () => _reportFound(context, lostPet)
-                              : widget.onNavigateToMap,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isCurrentUserPet 
-                                ? Colors.green 
-                                : const Color(0xFFF59E0B),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            minimumSize: const Size(120, 36),
-                            elevation: 4,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isCurrentUserPet ? Icons.check_circle : Icons.map, 
-                                size: 18
-                              ),
-                              const SizedBox(width: 4),
-                              Text(isCurrentUserPet ? 
-                                AppLocalizations.of(context)?.reportFound ?? 'Report Found' : 
-                                AppLocalizations.of(context)?.openInMaps ?? 'Open maps'),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Range indicator
-        ValueListenableBuilder<latlong.LatLng?>(
-          valueListenable: _userLocationNotifier,
-          builder: (context, userLocation, child) {
-            if (_isWithinRange(userLocation, lostPet.location)) {
-              return Positioned(
-                top: 8,
-                right: 8,
+  Widget _buildLostPetCardSkeleton() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(50), // Match the pill shape
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            // Pet Image skeleton (circular)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(50),
+              child: ShimmerLoader(
                 child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
+                  width: 100,
+                  height: 100,
+                  color: Colors.grey.withOpacity(0.3), // Much lighter gray
                 ),
-              );
-            }
-            return const SizedBox.shrink();
-          },
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Pet name skeleton
+                  ShimmerLoader(
+                    child: Container(
+                      width: 120,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3), // Much lighter gray
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Breed and age skeleton
+                  ShimmerLoader(
+                    child: Container(
+                      width: 100,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3), // Much lighter gray
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Location skeleton
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, color: Colors.grey.withOpacity(0.3), size: 16),
+                      const SizedBox(width: 4),
+                      ShimmerLoader(
+                        child: Container(
+                          width: 80,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.3), // Much lighter gray
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Time skeleton
+                  ShimmerLoader(
+                    child: Container(
+                      width: 60,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3), // Much lighter gray
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Button skeleton
+                  ShimmerLoader(
+                    child: Container(
+                      width: 100,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3), // Much lighter gray
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

@@ -187,11 +187,13 @@ class OrderActionDialog extends StatelessWidget {
   static OrderActionDialog placeOrder({
     required String productName,
     required double price,
+    required int quantity,
     required VoidCallback onConfirm,
   }) {
+    final totalPrice = price * quantity;
     return OrderActionDialog(
       title: 'Place Order',
-      message: 'Are you sure you want to order "$productName" for \$${price.toStringAsFixed(2)}?',
+      message: 'Are you sure you want to order $quantity x "$productName" for \$${totalPrice.toStringAsFixed(2)}?',
       confirmText: 'Place Order',
       confirmColor: Colors.green,
       onConfirm: onConfirm,

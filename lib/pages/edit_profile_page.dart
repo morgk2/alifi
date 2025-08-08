@@ -7,6 +7,7 @@ import '../widgets/placeholder_image.dart';
 import '../icons.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/navigation_service.dart';
 import '../widgets/spinning_loader.dart';
 import 'package:flutter/services.dart';
 
@@ -51,7 +52,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Delete Account',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: const Text(
           'Are you sure you want to delete your account? This action cannot be undone.',
         ),
@@ -100,7 +105,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (mounted) {
         _isSavingNotifier.value = false;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Information saved!')),
+          SnackBar(
+            content: const Text('Profile updated successfully!'),
+            backgroundColor: const Color(0xFFFF9E42),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
         );
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
@@ -108,7 +118,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _isSavingNotifier.value = false;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update profile: $e')),
+          SnackBar(
+            content: Text('Failed to update profile: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
         );
       }
     }
@@ -117,12 +132,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 24,
+          height: 24,
+          color: Colors.black,
+        ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -139,8 +159,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
             builder: (context, isSaving, child) {
               return TextButton(
                 onPressed: isSaving ? null : _saveChanges,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 child: isSaving
-                ? const SpinningLoader(size: 32, color: Colors.orange)
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF9E42)),
+                    ),
+                  )
                 : const Text(
                     'Save',
                     style: TextStyle(
@@ -158,9 +191,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         builder: (context, authService, _) {
           final user = authService.currentUser;
           if (user == null) {
-            // Handle the case where the user is not logged in, 
-            // for example, by showing a loading indicator or an error message.
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SpinningLoader());
           }
           final isNormalUser = user.accountType == 'normal';
           final isVetOrStore = ['vet', 'store'].contains(user.accountType);
@@ -171,77 +202,95 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 child: Form(
                   key: _formKey,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: Stack(
-                            children: [
-                              if (user?.photoURL != null)
-                                CircleAvatar(
-                                  radius: 60,
-                                  backgroundImage: NetworkImage(user!.photoURL!),
-                                )
-                              else
-                                const PlaceholderImage(
-                                  width: 120,
-                                  height: 120,
-                                  isCircular: true,
-                                ),
-                              Positioned(
-                                right: 0,
-                                bottom: 0,
-                                child: Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFF9E42),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 2,
+                      // Profile Picture Section
+                      Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            Stack(
+                              children: [
+                                if (user?.photoURL != null && user!.photoURL!.isNotEmpty)
+                                  CircleAvatar(
+                                    radius: 60,
+                                    backgroundImage: NetworkImage(user.photoURL!),
+                                  )
+                                else
+                                  Container(
+                                    width: 120,
+                                    height: 120,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[200],
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.person,
+                                      size: 60,
+                                      color: Colors.grey,
                                     ),
                                   ),
-                                  child: IconButton(
-                                    padding: EdgeInsets.zero,
-                                    icon: const Icon(
-                                      Icons.camera_alt,
-                                      color: Colors.white,
-                                      size: 20,
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFF9E42),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 3,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                                     ),
-                                    onPressed: () {
-                                      // TODO: Implement image picker
-                                    },
+                                    child: IconButton(
+                                      padding: EdgeInsets.zero,
+                                      icon: const Icon(
+                                        Icons.camera_alt,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                      onPressed: () {
+                                        // TODO: Implement image picker
+                                      },
+                                    ),
                                   ),
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Tap to change photo',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(16),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Form Fields Section
+                      Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.all(20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Username',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
+                            _buildFormField(
+                              label: 'Username',
                               controller: _usernameController,
-                              decoration: const InputDecoration(
-                                hintText: 'username',
-                                border: OutlineInputBorder(),
-                              ),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.deny(RegExp(r'@')),
-                              ],
+                              hintText: 'Enter username',
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Username cannot be empty';
@@ -251,22 +300,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 }
                                 return null;
                               },
+                              inputFormatters: [
+                                FilteringTextInputFormatter.deny(RegExp(r'@')),
+                              ],
                             ),
-                            const SizedBox(height: 20),
-                            const Text(
-                              'Display Name',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
+                            
+                            const SizedBox(height: 24),
+                            
+                            _buildFormField(
+                              label: 'Display Name',
                               controller: _displayNameController,
-                              decoration: const InputDecoration(
-                                hintText: 'Display Name',
-                                border: OutlineInputBorder(),
-                              ),
+                              hintText: 'Enter display name',
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Display name cannot be empty';
@@ -274,65 +318,82 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 return null;
                               },
                             ),
+                            
                             if (isVetOrStore) ...[
-                              const SizedBox(height: 20),
-                              const Text(
-                                'Basic Info',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
+                              const SizedBox(height: 24),
+                              _buildFormField(
+                                label: 'Professional Info',
                                 controller: _basicInfoController,
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter your professional information, qualifications, etc.',
-                                  border: OutlineInputBorder(),
-                                ),
-                                maxLines: 5,
+                                hintText: 'Enter your qualifications, experience, etc.',
+                                maxLines: 4,
                                 maxLength: 500,
                                 textCapitalization: TextCapitalization.sentences,
                               ),
                             ],
-                            const SizedBox(height: 32),
-                            if (isNormalUser) ...[
-                            const Text(
-                              'Account Type',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildLinkedAccountTile(
-                              'Request to be a Vet',
-                              AppIcons.petsIcon,
-                              false, // Not linked yet
-                              () {
-                                Navigator.of(context).push(MaterialPageRoute(
-                                  builder: (context) => const VetSignUpPage(),
-                                ));
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildLinkedAccountTile(
-                              'Request to be a Store',
-                              AppIcons.storeIcon,
-                              false, // Not linked yet
-                              () {
-                                Navigator.of(context).push(MaterialPageRoute(
-                                  builder: (context) => const StoreSignUpPage(),
-                                ));
-                              },
-                            ),
-                            const SizedBox(height: 40),
                           ],
+                        ),
+                      ),
+                      
+                      if (isNormalUser) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          color: Colors.white,
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Account Type',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildAccountTypeTile(
+                                'Request to be a Vet',
+                                AppIcons.petsIcon,
+                                'Join our veterinary network',
+                                () {
+                                  NavigationService.push(
+                                    context,
+                                    const VetSignUpPage(),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              _buildAccountTypeTile(
+                                'Request to be a Store',
+                                AppIcons.storeIcon,
+                                'Sell pet products and services',
+                                () {
+                                  NavigationService.push(
+                                    context,
+                                    const StoreSignUpPage(),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Linked Accounts Section
+                      Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             const Text(
                               'Linked Accounts',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
+                                color: Colors.black87,
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -362,51 +423,199 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 // TODO: Implement Apple account linking
                               },
                             ),
-                            const SizedBox(height: 40),
-                            Center(
-                              child: TextButton(
-                                onPressed: _showDeleteAccountDialog,
-                                child: const Text(
-                                  'Delete Account',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 16,
-                                  ),
-                                ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Delete Account Section
+                      Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.all(20),
+                        child: Center(
+                          child: TextButton(
+                            onPressed: _showDeleteAccountDialog,
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(color: Colors.red[300]!),
+                              ),
+                            ),
+                            child: const Text(
+                              'Delete Account',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Loading Overlay
+              ValueListenableBuilder<bool>(
+                valueListenable: _isSavingNotifier,
+                builder: (context, isSaving, child) {
+                  if (isSaving) {
+                    return Container(
+                      color: Colors.black.withOpacity(0.3),
+                      child: const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SpinningLoader(size: 64, color: Color(0xFFFF9E42)),
+                            SizedBox(height: 16),
+                            Text(
+                              'Saving changes...',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ), // <-- ✅ comma added here
-              ValueListenableBuilder<bool>(
-                valueListenable: _isSavingNotifier,
-                builder: (context, isSaving, child) {
-                  if (isSaving) {
-                    return Positioned.fill(
-                  child: Container(
-                    color: Colors.white.withOpacity(0.7),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(height: 80),
-                        SpinningLoader(size: 64, color: Colors.orange),
-                        SizedBox(height: 16),
-                        Text('Saving...', style: TextStyle(fontSize: 16)),
-                      ],
-                    ),
-                  ),
                     );
                   }
                   return const SizedBox.shrink();
                 },
-                ),
+              ),
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildFormField({
+    required String label,
+    required TextEditingController controller,
+    required String hintText,
+    String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
+    int maxLines = 1,
+    int? maxLength,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: TextStyle(color: Colors.grey[400]),
+            filled: true,
+            fillColor: Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFFF9E42), width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.red[300]!, width: 1),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.red[300]!, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+          inputFormatters: inputFormatters,
+          validator: validator,
+          maxLines: maxLines,
+          maxLength: maxLength,
+          textCapitalization: textCapitalization,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccountTypeTile(
+    String title,
+    String icon,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF9E42).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SvgPicture.string(
+                icon,
+                width: 24,
+                height: 24,
+                colorFilter: const ColorFilter.mode(Color(0xFFFF9E42), BlendMode.srcIn),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -420,95 +629,84 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Row(
         children: [
-          SvgPicture.string(
-            icon,
-            width: 24,
-            height: 24,
-          ),
-          const SizedBox(width: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: SvgPicture.string(
+              icon,
+              width: 20,
+              height: 20,
             ),
           ),
-          const Spacer(),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+            ),
+          ),
           if (isLinked)
-            const Icon(
-              Icons.check_circle,
-              color: Colors.green,
-              size: 24,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.green[200]!),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: Colors.green[600],
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Linked',
+                    style: TextStyle(
+                      color: Colors.green[600],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             )
           else
             TextButton(
               onPressed: onTap,
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                backgroundColor: const Color(0xFFFF9E42).withOpacity(0.1),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: Colors.grey),
                 ),
               ),
               child: const Text(
                 'Link',
                 style: TextStyle(
-                  color: Colors.black87,
+                  color: Color(0xFFFF9E42),
                   fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _SpinningLoader extends StatefulWidget {
-  @override
-  State<_SpinningLoader> createState() => _SpinningLoaderState();
-}
-
-class _SpinningLoaderState extends State<_SpinningLoader> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.rotate(
-          angle: _controller.value * 6.28319, // 2*pi
-          child: child,
-        );
-      },
-      child: Image.asset(
-        'assets/images/loading.png',
-        width: 64,
-        height: 64,
       ),
     );
   }

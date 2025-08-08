@@ -1,13 +1,274 @@
+import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification.dart';
-import '../models/user.dart';
 import 'push_notification_service.dart';
+import 'in_app_notification_controller.dart';
 
-class NotificationService {
+class NotificationService extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final PushNotificationService _pushNotificationService = PushNotificationService();
   
   CollectionReference get _notificationsCollection => _firestore.collection('notifications');
+
+  // Track unread counts for different users
+  Map<String, int> _unreadOrders = {};
+  Map<String, int> _unreadMessages = {};
+  Map<String, int> _sellerUnreadOrders = {};
+  Map<String, int> _sellerUnreadMessages = {};
+
+  // In-app banner listener state
+  StreamSubscription<QuerySnapshot>? _notificationsSubscription;
+  bool _skipInitialNotificationBatch = true;
+
+  // Getters for unread counts
+  int getUnreadOrders(String userId) => _unreadOrders[userId] ?? 0;
+  int getUnreadMessages(String userId) => _unreadMessages[userId] ?? 0;
+  int getSellerUnreadOrders(String sellerId) => _sellerUnreadOrders[sellerId] ?? 0;
+  int getSellerUnreadMessages(String sellerId) => _sellerUnreadMessages[sellerId] ?? 0;
+
+  // Initialize listeners for a user
+  void initializeListeners(String userId, String accountType) {
+    if (accountType == 'store') {
+      _listenToSellerOrders(userId);
+      _listenToSellerMessages(userId);
+    } else {
+      _listenToBuyerOrders(userId);
+      _listenToBuyerMessages(userId);
+    }
+    // Start listening for new notifications to show in-app banner
+    startInAppBannerListener(userId);
+  }
+
+  // Listen for new notifications and show in-app banner
+  void startInAppBannerListener(String userId) {
+    // Cancel previous subscription if any
+    _notificationsSubscription?.cancel();
+    _skipInitialNotificationBatch = true;
+
+    _notificationsSubscription = _notificationsCollection
+        .where('recipientId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .limit(20)
+        .snapshots()
+        .listen((snapshot) {
+      if (_skipInitialNotificationBatch) {
+        // Skip the initial batch to avoid showing banners for historical notifications
+        _skipInitialNotificationBatch = false;
+        return;
+      }
+
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          try {
+            final notif = AppNotification.fromFirestore(change.doc);
+            // Choose best image depending on type and payload
+            String? imageUrl = notif.senderPhotoUrl;
+            final data = notif.data;
+            if ((imageUrl == null || imageUrl.isEmpty) && data != null) {
+              final dynamicImg = data['imageUrl'] ?? data['productImageUrl'] ?? data['storeImageUrl'] ?? data['photoUrl'] ?? data['avatarUrl'];
+              if (dynamicImg is String && dynamicImg.isNotEmpty) {
+                imageUrl = dynamicImg;
+              }
+            }
+            InAppNotificationController().show(
+              title: notif.title,
+              body: notif.body,
+              imageUrl: imageUrl,
+            );
+          } catch (e) {
+            debugPrint('Error showing in-app notification banner: $e');
+          }
+        }
+      }
+    }, onError: (e) {
+      debugPrint('Error listening to notifications for in-app banner: $e');
+    });
+  }
+
+  // Listen to buyer orders
+  void _listenToBuyerOrders(String userId) {
+    _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('orders')
+        .where('status', whereIn: ['ordered', 'pending', 'confirmed', 'shipped'])
+        .snapshots()
+        .listen((snapshot) {
+      int unreadCount = 0;
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final isRead = data['isRead'] ?? false;
+        if (!isRead) {
+          unreadCount++;
+        }
+      }
+      _unreadOrders[userId] = unreadCount;
+      notifyListeners();
+    });
+  }
+
+  // Listen to buyer messages
+  void _listenToBuyerMessages(String userId) {
+    _firestore
+        .collection('chat_messages')
+        .where('receiverId', isEqualTo: userId)
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .listen((snapshot) {
+      _unreadMessages[userId] = snapshot.docs.length;
+      notifyListeners();
+
+      // Show in-app banner for newly added unread messages
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data() as Map<String, dynamic>;
+          final String senderId = data['senderId'] as String? ?? '';
+          final String messageText = (data['message'] ?? data['text'] ?? '').toString();
+
+          getUserInfo(senderId).then((senderInfo) {
+            final String title = 'New Message';
+            final String body = messageText.isNotEmpty ? messageText : 'You received a new message';
+            final String? imageUrl = senderInfo?['photoUrl'] as String?;
+            InAppNotificationController().show(
+              title: title,
+              body: body,
+              imageUrl: imageUrl,
+            );
+          }).catchError((e) {
+            debugPrint('Error fetching sender info for banner: $e');
+          });
+        }
+      }
+    });
+  }
+
+  // Listen to seller orders
+  void _listenToSellerOrders(String sellerId) {
+    _firestore
+        .collection('orders')
+        .where('storeId', isEqualTo: sellerId)
+        .where('status', whereIn: ['ordered', 'pending', 'confirmed', 'shipped'])
+        .snapshots()
+        .listen((snapshot) {
+      int unreadCount = 0;
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final isRead = data['isRead'] ?? false;
+        if (!isRead) {
+          unreadCount++;
+        }
+      }
+      _sellerUnreadOrders[sellerId] = unreadCount;
+      notifyListeners();
+    });
+  }
+
+  // Listen to seller messages
+  void _listenToSellerMessages(String sellerId) {
+    _firestore
+        .collection('chat_messages')
+        .where('receiverId', isEqualTo: sellerId)
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .listen((snapshot) {
+      _sellerUnreadMessages[sellerId] = snapshot.docs.length;
+      notifyListeners();
+
+      // Show in-app banner for newly added unread messages
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data() as Map<String, dynamic>;
+          final String senderId = data['senderId'] as String? ?? '';
+          final String messageText = (data['message'] ?? data['text'] ?? '').toString();
+
+          getUserInfo(senderId).then((senderInfo) {
+            final String title = 'New Message';
+            final String body = messageText.isNotEmpty ? messageText : 'You received a new message';
+            final String? imageUrl = senderInfo?['photoUrl'] as String?;
+            InAppNotificationController().show(
+              title: title,
+              body: body,
+              imageUrl: imageUrl,
+            );
+          }).catchError((e) {
+            debugPrint('Error fetching sender info for banner: $e');
+          });
+        }
+      }
+    });
+  }
+
+  // Mark order as read
+  Future<void> markOrderAsRead(String userId, String orderId, String accountType) async {
+    try {
+      if (accountType == 'store') {
+        await _firestore
+            .collection('orders')
+            .doc(orderId)
+            .update({'isRead': true});
+      } else {
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('orders')
+            .doc(orderId)
+            .update({'isRead': true});
+      }
+    } catch (e) {
+      print('Error marking order as read: $e');
+    }
+  }
+
+  // Mark message as read
+  Future<void> markMessageAsRead(String messageId) async {
+    try {
+      await _firestore
+          .collection('chat_messages')
+          .doc(messageId)
+          .update({'isRead': true});
+    } catch (e) {
+      print('Error marking message as read: $e');
+    }
+  }
+
+  // Mark all messages as read for a conversation
+  Future<void> markAllMessagesAsRead(String userId, String otherUserId) async {
+    try {
+      final batch = _firestore.batch();
+      
+      // Mark messages where user is receiver
+      final messagesQuery = _firestore
+          .collection('chat_messages')
+          .where('senderId', isEqualTo: otherUserId)
+          .where('receiverId', isEqualTo: userId)
+          .where('isRead', isEqualTo: false);
+      
+      final messagesSnapshot = await messagesQuery.get();
+      for (var doc in messagesSnapshot.docs) {
+        batch.update(doc.reference, {'isRead': true});
+      }
+      
+      await batch.commit();
+    } catch (e) {
+      print('Error marking all messages as read: $e');
+    }
+  }
+
+  // Clear all unread counts for a user
+  void clearUnreadCounts(String userId) {
+    _unreadOrders[userId] = 0;
+    _unreadMessages[userId] = 0;
+    _sellerUnreadOrders[userId] = 0;
+    _sellerUnreadMessages[userId] = 0;
+    notifyListeners();
+  }
+
+  // Dispose listeners
+  void dispose() {
+    _notificationsSubscription?.cancel();
+    super.dispose();
+  }
 
   // Send a notification
   Future<String> sendNotification(AppNotification notification) async {
@@ -147,6 +408,54 @@ class NotificationService {
     } catch (e) {
       print('Error sending chat message notification: $e');
       throw e;
+    }
+  }
+
+  // Send wishlist (favorite) notification to store owner
+  Future<void> sendWishlistNotification({
+    required String storeOwnerId,
+    required String wisherUserId,
+    String? wisherName,
+    String? wisherPhotoUrl,
+    required String productName,
+    required String productId,
+  }) async {
+    try {
+      final notification = AppNotification(
+        id: '',
+        recipientId: storeOwnerId,
+        senderId: wisherUserId,
+        senderName: wisherName,
+        senderPhotoUrl: wisherPhotoUrl,
+        type: NotificationType.follow, // reuse a generic type; can add specific later
+        title: 'New Wishlist',
+        body: '${wisherName ?? 'Someone'} added $productName to their wishlist',
+        data: {
+          'type': 'wishlist',
+          'productId': productId,
+          'productName': productName,
+        },
+        isRead: false,
+        createdAt: DateTime.now(),
+        relatedId: productId,
+      );
+
+      await sendNotification(notification);
+
+      try {
+        await _pushNotificationService.sendPushNotification(
+          recipientUserId: storeOwnerId,
+          title: 'New Wishlist',
+          body: '${wisherName ?? 'Someone'} added $productName to their wishlist',
+          data: {
+            'type': 'wishlist',
+            'productId': productId,
+            'productName': productName,
+          },
+        );
+      } catch (_) {}
+    } catch (e) {
+      debugPrint('Error sending wishlist notification: $e');
     }
   }
 

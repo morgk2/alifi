@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/order.dart' as store_order;
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/currency_service.dart';
 import '../dialogs/order_action_dialog.dart';
 import 'package:provider/provider.dart';
 
@@ -73,8 +74,8 @@ class StoreOrdersTab extends StatelessWidget {
           Expanded(
             child: TabBarView(
               children: [
-                _buildOrdersList(context, user.id, ['pending', 'confirmed', 'shipped']),
-                _buildOrdersList(context, user.id, ['delivered']),
+                _buildOrdersList(context, user.id, ['ordered', 'pending', 'confirmed', 'shipped']),
+                _buildOrdersList(context, user.id, ['delivered', 'confirmed_delivered', 'disputed_delivery']),
                 _buildOrdersList(context, user.id, null),
               ],
             ),
@@ -255,7 +256,7 @@ class StoreOrdersTab extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    order.status.toUpperCase(),
+                    _formatStatusText(order.status),
                     style: TextStyle(
                       color: _getStatusColor(order.status),
                       fontSize: 11,
@@ -379,31 +380,48 @@ class StoreOrdersTab extends StatelessWidget {
                   ),
                 ),
                 // Price
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '\$${order.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 20,
-                        color: Colors.green,
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                  ],
+                Consumer<CurrencyService>(
+                  builder: (context, currencyService, child) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          currencyService.formatPrice(order.price * order.quantity),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20,
+                            color: Colors.green,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${order.quantity} × ${currencyService.formatPrice(order.price)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
             const SizedBox(height: 20),
             // Action button
-            if (order.status == 'pending' || order.status == 'confirmed' || order.status == 'shipped')
+            if (order.status == 'ordered' || order.status == 'pending' || order.status == 'confirmed' || order.status == 'shipped')
               Container(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
                     String newStatus = '';
                     switch (order.status) {
+                      case 'ordered':
+                        newStatus = 'confirmed';
+                        break;
                       case 'pending':
                         newStatus = 'confirmed';
                         break;
@@ -426,6 +444,7 @@ class StoreOrdersTab extends StatelessWidget {
                     ),
                   ),
                   child: Text(
+                    order.status == 'ordered' ? 'Confirm Order' :
                     order.status == 'pending' ? 'Confirm Order' :
                     order.status == 'confirmed' ? 'Ship Order' :
                     order.status == 'shipped' ? 'Mark as Delivered' : '',
@@ -445,6 +464,8 @@ class StoreOrdersTab extends StatelessWidget {
 
   Color _getStatusColor(String status) {
     switch (status) {
+      case 'ordered':
+        return Colors.amber;
       case 'pending':
         return Colors.orange;
       case 'confirmed':
@@ -453,10 +474,27 @@ class StoreOrdersTab extends StatelessWidget {
         return Colors.purple;
       case 'delivered':
         return Colors.green;
+      case 'confirmed_delivered':
+        return Colors.green[800]!;
+      case 'disputed_delivery':
+        return Colors.orange[800]!;
       case 'cancelled':
         return Colors.red;
+      case 'refunded':
+        return Colors.red[300]!;
       default:
         return Colors.grey;
+    }
+  }
+
+  String _formatStatusText(String status) {
+    switch (status) {
+      case 'confirmed_delivered':
+        return 'CONFIRMED DELIVERED';
+      case 'disputed_delivery':
+        return 'DISPUTED DELIVERY';
+      default:
+        return status.toUpperCase();
     }
   }
 

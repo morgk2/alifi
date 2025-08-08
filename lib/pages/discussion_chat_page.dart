@@ -3,9 +3,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/notification_service.dart';
+import '../services/currency_service.dart';
 import '../models/chat_message.dart';
-import '../models/order.dart' as store_order;
+
 import '../dialogs/store_products_dialog.dart';
+import '../widgets/currency_symbol.dart';
+import '../services/currency_service.dart' show Currency;
 import 'package:provider/provider.dart';
 
 class DiscussionChatPage extends StatefulWidget {
@@ -52,6 +56,10 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
     final currentUser = authService.currentUser;
     
     if (currentUser != null) {
+      // Mark messages as read when chat is opened
+      final notificationService = Provider.of<NotificationService>(context, listen: false);
+      notificationService.markAllMessagesAsRead(currentUser.id, widget.storeUser.id);
+      
       DatabaseService().getChatMessages(currentUser.id, widget.storeUser.id).listen((messages) {
         setState(() {
           _messages = messages;
@@ -182,7 +190,12 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
         elevation: 0,
         toolbarHeight: 100, // Increased to avoid status bar
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 24,
+          height: 24,
+          color: Colors.black,
+        ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Row(
@@ -470,7 +483,7 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                         Row(
                           children: [
                             Text(
-                              '4.8',
+                              (productData['rating'] ?? 0.0).toStringAsFixed(1),
                               style: const TextStyle(
                                 color: Colors.black87,
                                 fontWeight: FontWeight.bold,
@@ -485,7 +498,7 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '30 orders',
+                              '${productData['totalOrders'] ?? 0} orders',
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 14,
@@ -498,14 +511,37 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                  Text(
-                    '\$${(productData['price'] ?? 0.0).toStringAsFixed(2)}',
-                    style: const TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 24,
-                                fontFamily: 'InterDisplay',
-                              ),
+                            Consumer<CurrencyService>(
+                              builder: (context, currencyService, child) {
+                                return currencyService.currentCurrency == Currency.DZD
+                                  ? Row(
+                                      children: [
+                                                                        CurrencySymbol(
+                                  size: 26,
+                                  color: Colors.green,
+                                ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${(productData['price'] ?? 0.0).toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 24,
+                                            fontFamily: 'InterDisplay',
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Text(
+                                      '\$${(productData['price'] ?? 0.0).toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 24,
+                                        fontFamily: 'InterDisplay',
+                                      ),
+                                    );
+                              },
                             ),
                             ElevatedButton(
                               onPressed: () {
@@ -608,9 +644,9 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                     // Rating and Orders Row
                     Row(
                       children: [
-                        Text(
-                          '4.8',
-                          style: const TextStyle(
+                                            Text(
+                          (productData['rating'] ?? 0.0).toStringAsFixed(1),
+                      style: const TextStyle(
                             color: Colors.black87,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -624,7 +660,7 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '30 orders',
+                          '${productData['totalOrders'] ?? 0} orders',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,
@@ -634,14 +670,37 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                     ),
                     const SizedBox(height: 12),
                     // Price
-                    Text(
-                      '\$${(productData['price'] ?? 0.0).toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                        fontFamily: 'InterDisplay',
-                      ),
+                    Consumer<CurrencyService>(
+                      builder: (context, currencyService, child) {
+                        return currencyService.currentCurrency == Currency.DZD
+                          ? Row(
+                              children: [
+                                CurrencySymbol(
+                                  size: 26,
+                                  color: Colors.green,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${(productData['price'] ?? 0.0).toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 24,
+                                    fontFamily: 'InterDisplay',
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Text(
+                              '\$${(productData['price'] ?? 0.0).toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 24,
+                                fontFamily: 'InterDisplay',
+                              ),
+                            );
+                      },
                     ),
                   ],
                 ),

@@ -2,8 +2,9 @@ import 'package:alifi/pages/detailed_seller_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/currency_service.dart';
 import 'package:provider/provider.dart';
-import 'spinning_loader.dart';
+import 'skeleton_loader.dart';
 
 class SellerDashboardCard extends StatelessWidget {
   const SellerDashboardCard({super.key});
@@ -67,28 +68,7 @@ class SellerDashboardCard extends StatelessWidget {
             stream: DatabaseService().getStoreDashboardStats(user!.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return Container(
-                  height: 200, // Match the final content height
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SpinningLoader(
-                          size: 50,
-                          color: Colors.green,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Loading dashboard...',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return _buildSkeletonLoader();
               }
 
               if (snapshot.hasError) {
@@ -153,11 +133,15 @@ class SellerDashboardCard extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildStatCard(
-                            'Total Sales',
-                            '\$${totalSales.toStringAsFixed(2)}',
-                            Icons.attach_money,
-                            Colors.green,
+                          child: Consumer<CurrencyService>(
+                            builder: (context, currencyService, child) {
+                              return _buildStatCard(
+                                'Total Sales',
+                                currencyService.formatPrice(totalSales),
+                                Icons.attach_money,
+                                Colors.green,
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -260,6 +244,85 @@ class SellerDashboardCard extends StatelessWidget {
               color: color,
               fontSize: 24,
               fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonStatCard(Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SkeletonLoader(
+                width: 80,
+                height: 14,
+                baseColor: color.withOpacity(0.2),
+                highlightColor: color.withOpacity(0.1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SkeletonLoader(
+            width: 60,
+            height: 24,
+            baseColor: color.withOpacity(0.2),
+            highlightColor: color.withOpacity(0.1),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonLoader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: _buildSkeletonStatCard(Colors.green)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildSkeletonStatCard(Colors.blue)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: _buildSkeletonStatCard(Colors.orange)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildSkeletonStatCard(Colors.purple)),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              onPressed: null,
+              icon: const Icon(Icons.analytics),
+              label: const Text('View All Seller Tools'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.green,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
             ),
           ),
         ],

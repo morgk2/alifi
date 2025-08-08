@@ -17,6 +17,14 @@ enum AppointmentType {
   followUp,
 }
 
+enum VetStatus {
+  waiting,
+  ongoing,
+  delayed,
+  cancelled,
+  soon,
+}
+
 class Appointment {
   final String id;
   final String vetId;
@@ -34,6 +42,10 @@ class Appointment {
   final DateTime updatedAt;
   final String? vetNotes;
   final String? prescription;
+  final bool? isInProgress;
+  final DateTime? startedAt;
+  final DateTime? endedAt;
+  final VetStatus? vetStatus;
 
   Appointment({
     required this.id,
@@ -52,6 +64,10 @@ class Appointment {
     required this.updatedAt,
     this.vetNotes,
     this.prescription,
+    this.isInProgress,
+    this.startedAt,
+    this.endedAt,
+    this.vetStatus,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -71,6 +87,10 @@ class Appointment {
       'updatedAt': Timestamp.fromDate(updatedAt),
       'vetNotes': vetNotes,
       'prescription': prescription,
+      'isInProgress': isInProgress,
+      'startedAt': startedAt != null ? Timestamp.fromDate(startedAt!) : null,
+      'endedAt': endedAt != null ? Timestamp.fromDate(endedAt!) : null,
+      'vetStatus': vetStatus?.name,
     };
   }
 
@@ -100,6 +120,15 @@ class Appointment {
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
       vetNotes: data['vetNotes'],
       prescription: data['prescription'],
+      isInProgress: data['isInProgress'] ?? false,
+      startedAt: data['startedAt'] != null ? (data['startedAt'] as Timestamp).toDate() : null,
+      endedAt: data['endedAt'] != null ? (data['endedAt'] as Timestamp).toDate() : null,
+      vetStatus: data['vetStatus'] != null 
+          ? VetStatus.values.firstWhere(
+              (e) => e.name == data['vetStatus'],
+              orElse: () => VetStatus.waiting,
+            )
+          : VetStatus.waiting,
     );
   }
 
@@ -120,6 +149,10 @@ class Appointment {
     DateTime? updatedAt,
     String? vetNotes,
     String? prescription,
+    bool? isInProgress,
+    DateTime? startedAt,
+    DateTime? endedAt,
+    VetStatus? vetStatus,
   }) {
     return Appointment(
       id: id ?? this.id,
@@ -138,6 +171,10 @@ class Appointment {
       updatedAt: updatedAt ?? this.updatedAt,
       vetNotes: vetNotes ?? this.vetNotes,
       prescription: prescription ?? this.prescription,
+      isInProgress: isInProgress ?? this.isInProgress,
+      startedAt: startedAt ?? this.startedAt,
+      endedAt: endedAt ?? this.endedAt,
+      vetStatus: vetStatus ?? this.vetStatus,
     );
   }
 
@@ -268,5 +305,31 @@ class Appointment {
       print('🔍 [Appointment] Error calculating isPast for appointment $id: $e');
       return false;
     }
+  }
+
+  // Vet status helper methods
+  String get vetStatusDisplayName {
+    switch (vetStatus ?? VetStatus.waiting) {
+      case VetStatus.waiting:
+        return 'Waiting';
+      case VetStatus.ongoing:
+        return 'Ongoing';
+      case VetStatus.delayed:
+        return 'Delayed';
+      case VetStatus.cancelled:
+        return 'Cancelled';
+      case VetStatus.soon:
+        return 'Soon';
+    }
+  }
+
+  bool get isOngoing {
+    // Check if appointment is in progress (either by vetStatus or isInProgress flag)
+    return vetStatus == VetStatus.ongoing || isInProgress == true;
+  }
+
+  bool get canEnd {
+    // Can end if appointment is ongoing and in progress
+    return isOngoing && isInProgress == true;
   }
 }

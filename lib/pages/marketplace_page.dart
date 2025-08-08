@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/marketplace_product.dart';
 import '../services/database_service.dart';
+import '../services/navigation_service.dart';
+import '../services/notification_service.dart';
+import '../services/auth_service.dart';
+import '../services/currency_service.dart';
+import '../services/currency_service.dart' show Currency;
 import '../widgets/spinning_loader.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/optimized_image.dart';
+import '../widgets/optimized_shadow.dart';
+import '../widgets/optimized_list_view.dart';
+import '../widgets/lazy_marketplace_product_card.dart';
+import '../widgets/badge_widget.dart';
+import '../widgets/currency_selector.dart';
+import '../widgets/currency_symbol.dart';
 import 'product_details_page.dart';
-import '../models/aliexpress_product.dart';
-import '../models/store_product.dart';
 import 'user_orders_page.dart';
 import 'category_page.dart';
 import 'dart:async';
+import '../services/device_performance.dart';
 
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
@@ -45,12 +56,15 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
   @override
   void initState() {
     super.initState();
+    final devicePerformance = DevicePerformance();
+    final isLowEnd = devicePerformance.performanceTier == PerformanceTier.low;
+    final animationDuration = isLowEnd ? const Duration(milliseconds: 120) : const Duration(milliseconds: 300);
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: animationDuration,
       vsync: this,
     );
     _searchFadeController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: animationDuration,
       vsync: this,
     );
     
@@ -112,22 +126,22 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
           Expanded(
             child: GestureDetector(
               onTap: _showSortDialog,
-      child: Container(
+              child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
+                decoration: BoxDecoration(
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey[200]!),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
                       blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      offset: Offset.zero,
                     ),
                   ],
                 ),
                 child: Row(
-          children: [
+                  children: [
                     Icon(Icons.sort, size: 18, color: Colors.grey[600]),
                     const SizedBox(width: 8),
                     Text(
@@ -150,17 +164,17 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
           Expanded(
             child: GestureDetector(
               onTap: _showFilterDialog,
-                    child: Container(
+              child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
+                decoration: BoxDecoration(
                   color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey[200]!),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
                       blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      offset: Offset.zero,
                     ),
                   ],
                 ),
@@ -180,11 +194,11 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                     Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey[600]),
                   ],
                 ),
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -223,9 +237,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
             ),
-              child: Column(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
-                children: [
+              children: [
                 const Text(
                   'Sort by',
                   style: TextStyle(
@@ -256,8 +270,8 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                   });
                 }),
                 const SizedBox(height: 24),
-                  Row(
-                    children: [
+                Row(
+                  children: [
                     Expanded(
                       child: TextButton(
                         onPressed: () => Navigator.pop(context),
@@ -268,9 +282,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                         ),
                         child: const Text(
                           'Cancel',
-                        style: TextStyle(
+                          style: TextStyle(
                             color: Colors.grey,
-                          fontSize: 16,
+                            fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -299,9 +313,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                          ),
-                        ),
-                      ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -326,12 +340,12 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-                      children: [
+              children: [
                 const Text(
                   'Filter by Category',
                   style: TextStyle(
                     fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
@@ -391,18 +405,18 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                         ),
                         child: const Text(
                           'Done',
-                              style: TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
-                              ),
-                            ),
-                          ),
-                      ],
+                        ),
+                      ),
                     ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
+          ),
         ),
       ),
     );
@@ -415,7 +429,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
+        decoration: BoxDecoration(
           color: isSelected ? Colors.orange[50] : Colors.transparent,
           borderRadius: BorderRadius.circular(25),
           border: Border.all(
@@ -427,7 +441,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
           children: [
             Icon(
               icon,
-                    size: 20,
+              size: 20,
               color: isSelected ? Colors.orange : Colors.grey[600],
             ),
             const SizedBox(width: 12),
@@ -465,7 +479,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
           ),
         ),
         child: Row(
-                  children: [
+          children: [
             Icon(
               icon,
               size: 20,
@@ -490,90 +504,56 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
     );
   }
 
-  // Remove the old dropdown methods
-  void _showSortOptions() {
-    // Removed - replaced with custom dialog
-  }
-
-  void _showFilterOptions() {
-    // Removed - replaced with custom dialog
-  }
-
-  PopupMenuItem<String> _buildMenuItem(String value, String text, IconData icon) {
-    // Removed - no longer needed
-    return PopupMenuItem<String>(value: value, child: const SizedBox.shrink());
-  }
-
-  void _onSortSelected(String value) {
-    // Removed - no longer needed
-  }
-
-  void _onFilterSelected(String value) {
-    // Removed - no longer needed
-  }
-
   Widget _buildCategories() {
     return Column(
       children: [
-                    SizedBox(
-                  height: 90,
-                  child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _categories.length,
-                    itemBuilder: (context, index) {
-                      final category = _categories[index];
-                      final isSelected = _selectedCategory == category['name'];
-                      return GestureDetector(
-                        onTap: () {
-                  Navigator.of(context).push(
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => CategoryPage(
-                        title: category['name'],
-                        accentColor: Colors.orange,
-                        imageAsset: category['icon'],
-                      ),
-                      transitionsBuilder: (_, animation, __, child) =>
-                        SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(1, 0),
-                            end: Offset.zero,
-                          ).animate(CurvedAnimation(
-                            parent: animation,
-                            curve: Curves.easeInOut,
-                          )),
-                          child: child,
-                        ),
+        SizedBox(
+          height: 90,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _categories.length,
+            itemBuilder: (context, index) {
+              final category = _categories[index];
+              final isSelected = _selectedCategory == category['name'];
+              return GestureDetector(
+                onTap: () {
+                  NavigationService.push(
+                    context,
+                    CategoryPage(
+                      title: category['name'],
+                      accentColor: Colors.orange,
+                      imageAsset: category['icon'],
                     ),
                   );
-                        },
-                        child: Container(
-                          width: 70,
-                          margin: const EdgeInsets.only(right: 16),
-                          child: Column(
-                            children: [
-                              Image.asset(
-                                category['icon'],
-                                width: 40,
-                                height: 40,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                category['name'],
-                                style: TextStyle(
-                                  color: isSelected ? Colors.orange : Colors.grey[600],
-                                  fontSize: 12,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                },
+                child: Container(
+                  width: 70,
+                  margin: const EdgeInsets.only(right: 16),
+                  child: Column(
+                    children: [
+                      Image.asset(
+                        category['icon'],
+                        width: 40,
+                        height: 40,
                       ),
-                    ),
-                const SizedBox(height: 20),
+                      const SizedBox(height: 8),
+                      Text(
+                        category['name'],
+                        style: TextStyle(
+                          color: isSelected ? Colors.orange : Colors.grey[600],
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -641,14 +621,14 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
               ),
               const SizedBox(height: 16),
               GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   childAspectRatio: 0.75,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: products.length,
                 itemBuilder: (context, index) {
                   return _buildSearchResultCard(products[index]);
@@ -664,157 +644,203 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
   Widget _buildRegularSections() {
     return Column(
       children: [
-                // New Listings section
-                    Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                      const Icon(Icons.star, color: Colors.black),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'New Listings',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                      const Icon(Icons.chevron_right),
-                              ],
-                            ),
-                          ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 280,
-                  child: StreamBuilder<List<MarketplaceProduct>>(
-                    stream: _databaseService.getNewMarketplaceProducts(limit: 10),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return Center(child: Text('Error: ${snapshot.error}'));
-                      }
-
-                      if (!snapshot.hasData) {
-                        return const Center(
-                          child: SpinningLoader(
-                            size: 40,
-                            color: Colors.orange,
-                          ),
-                        );
-                      }
-
-                      final products = snapshot.data!;
-                      return ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: products.length,
-                        itemBuilder: (context, index) {
-                          return _buildProductCard(products[index], isLarge: true);
-                        },
-                      );
-                    },
-                  ),
+        // New Listings section
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              const Icon(Icons.star, color: Colors.black),
+              const SizedBox(width: 8),
+              const Text(
+                'New Listings',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 24),
-                // Recommended section
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                        children: [
-                      const Icon(Icons.recommend, color: Colors.black),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Recommended',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right),
-                    ],
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 280,
+          child: StreamBuilder<List<MarketplaceProduct>>(
+            stream: _databaseService.getNewMarketplaceProducts(limit: 5),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+
+              if (!snapshot.hasData) {
+                return const Center(
+                  child: SpinningLoader(
+                    size: 40,
+                    color: Colors.orange,
                   ),
+                );
+              }
+
+              final products = snapshot.data!;
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: products.length,
+                physics: const ClampingScrollPhysics(),
+                itemBuilder: (context, index) {
+                  return LazyMarketplaceProductCard(
+                    product: products[index],
+                    index: index,
+                    isHorizontal: true,
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Recommended section
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              const Icon(Icons.recommend, color: Colors.black),
+              const SizedBox(width: 8),
+              const Text(
+                'Recommended',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 280,
-                  child: StreamBuilder<List<MarketplaceProduct>>(
-                    stream: _databaseService.getRecommendedMarketplaceProducts(limit: 10),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return Center(child: Text('Error: ${snapshot.error}'));
-                      }
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 280,
+          child: StreamBuilder<List<MarketplaceProduct>>(
+            stream: _databaseService.getRecommendedMarketplaceProducts(limit: 5),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
 
-                      if (!snapshot.hasData) {
-                        return const Center(
-                          child: SpinningLoader(
-                            size: 40,
-                            color: Colors.orange,
-                          ),
-                        );
-                      }
+              if (!snapshot.hasData) {
+                return const Center(
+                  child: SpinningLoader(
+                    size: 40,
+                    color: Colors.orange,
+                  ),
+                );
+              }
 
-                      final products = snapshot.data!;
-                      return ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: products.length,
-                        itemBuilder: (context, index) {
-                          return _buildProductCard(products[index], isLarge: true);
-                        },
-                      );
-                    },
-                      ),
+              if (snapshot.data!.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No recommended products available',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 16,
                     ),
-                    const SizedBox(height: 24),
+                  ),
+                );
+              }
+
+              final products = snapshot.data!;
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: products.length,
+                physics: const ClampingScrollPhysics(),
+                itemBuilder: (context, index) {
+                  return LazyMarketplaceProductCard(
+                    product: products[index],
+                    index: index,
+                    isHorizontal: true,
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
         // Popular Products section
-                    Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                      const Icon(Icons.trending_up, color: Colors.black),
-                          const SizedBox(width: 8),
-                          const Text(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              const Icon(Icons.trending_up, color: Colors.black),
+              const SizedBox(width: 8),
+              const Text(
                 'Popular Products',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                      const Icon(Icons.chevron_right),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: StreamBuilder<List<MarketplaceProduct>>(
-                    stream: _databaseService.getMarketplaceProducts(
-                      category: _selectedCategory == 'All' ? null : _selectedCategory,
-                      limit: 20,
-                    ),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return Center(child: Text('Error: ${snapshot.error}'));
-                      }
-
-                      if (!snapshot.hasData) {
-                        return const Center(
-                          child: SpinningLoader(
-                            size: 40,
-                            color: Colors.orange,
-      ),
-    );
-  }
-
-                      final products = snapshot.data!;
-                      return Column(
-                        children: products
-                            .map((product) => _buildProductCard(product))
-                            .toList(),
-                      );
-                    },
-                  ),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 24),
-              ],
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: StreamBuilder<List<MarketplaceProduct>>(
+            stream: _databaseService.getMarketplaceProducts(
+              category: _selectedCategory == 'All' ? null : _selectedCategory,
+              limit: 6,
+            ),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+
+              if (!snapshot.hasData) {
+                return const Center(
+                  child: SpinningLoader(
+                    size: 40,
+                    color: Colors.orange,
+                  ),
+                );
+              }
+
+              if (snapshot.data!.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No popular products available',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 16,
+                    ),
+                  ),
+                );
+              }
+
+              final products = snapshot.data!;
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.75,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: products.length,
+                itemBuilder: (context, index) {
+                  return LazyMarketplaceProductCard(
+                    product: products[index],
+                    index: index,
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
     );
   }
 
@@ -823,164 +849,211 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
         ? ((1 - (product.price / product.originalPrice)) * 100).round()
         : 0;
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProductDetailsPage(
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: () {
+          NavigationService.push(
+            context,
+            ProductDetailsPage(
               product: product.type == 'aliexpress'
                   ? product.toAliexpress()
                   : product.toStore(),
             ),
-          ),
-        );
-      },
-      child: Container(
-        width: isLarge ? 160 : double.infinity,
-        margin: EdgeInsets.only(right: isLarge ? 16 : 0, bottom: isLarge ? 0 : 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: product.type == 'store'
-                ? Colors.green[200]!
-                : (isLarge ? Colors.grey[200]! : Colors.orange[100]!),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  child: CachedNetworkImage(
-                    imageUrl: product.imageUrls.first,
-                    height: isLarge ? 140 : 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => const Center(
-                      child: SpinningLoader(color: Colors.orange),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[200],
-                      child: Icon(Icons.error, color: Colors.grey[400]),
-                    ),
-                  ),
-                ),
-                if (product.type == 'store')
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Store',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+          );
+        },
+        child: Container(
+          width: isLarge ? 160 : double.infinity,
+          margin: EdgeInsets.only(right: isLarge ? 16 : 0, bottom: isLarge ? 0 : 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: product.type == 'store'
+                  ? Colors.green[200]!
+                  : (isLarge ? Colors.grey[200]! : Colors.orange[100]!),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: Offset.zero,
+              ),
+            ],
           ),
-        ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
                 children: [
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: OptimizedImage(
+                      imageUrl: product.imageUrls.first,
+                      height: isLarge ? 140 : 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: const Center(
+                        child: SpinningLoader(color: Colors.orange),
+                      ),
+                      errorWidget: Container(
+                        color: Colors.grey[200],
+                        child: Icon(Icons.error, color: Colors.grey[400]),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text(
-                        '\$${product.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: product.type == 'store' ? Colors.green : Colors.orange,
+                  if (product.type == 'store')
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
                         ),
-                      ),
-                      if (discountPercentage > 0) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '\$${product.originalPrice.toStringAsFixed(2)}',
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Store',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (!isLarge) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.star, color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          product.rating.toString(),
-                          style: const TextStyle(
-                            fontSize: 12,
+                            color: Colors.white,
+                            fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${product.totalOrders} orders',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                        if (product.isFreeShipping) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green[50],
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'Free Shipping',
-                              style: TextStyle(
-                                color: Colors.green[700],
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
-                  ],
                 ],
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Consumer<CurrencyService>(
+                      builder: (context, currencyService, child) {
+                        return Row(
+                          children: [
+                            currencyService.currentCurrency == Currency.DZD
+                              ? Row(
+                                  children: [
+                                    CurrencySymbol(
+                                      size: 18,
+                                      color: product.type == 'store' ? Colors.green : Colors.orange,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      currencyService.formatPrice(product.price),
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: product.type == 'store' ? Colors.green : Colors.orange,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  currencyService.formatPrice(product.price),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: product.type == 'store' ? Colors.green : Colors.orange,
+                                  ),
+                                ),
+                            if (discountPercentage > 0) ...[
+                              const SizedBox(width: 8),
+                              currencyService.currentCurrency == Currency.DZD
+                                ? Row(
+                                    children: [
+                                      CurrencySymbol(
+                                        size: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        currencyService.formatPrice(product.originalPrice),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                          decoration: TextDecoration.lineThrough,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : Text(
+                                    currencyService.formatPrice(product.originalPrice),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                      decoration: TextDecoration.lineThrough,
+                                    ),
+                                  ),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
+                    if (!isLarge) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.star, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            product.rating.toString(),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${product.totalOrders} orders',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                          if (product.isFreeShipping) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Free Shipping',
+                                style: TextStyle(
+                                  color: Colors.green[700],
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -991,143 +1064,183 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
         ? ((1 - (product.price / product.originalPrice)) * 100).round()
         : 0;
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProductDetailsPage(
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: () {
+          NavigationService.push(
+            context,
+            ProductDetailsPage(
               product: product.type == 'aliexpress'
                   ? product.toAliexpress()
                   : product.toStore(),
             ),
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: product.type == 'store'
-                ? Colors.green[200]!
-                : Colors.orange[100]!,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: product.type == 'store'
+                  ? Colors.green[200]!
+                  : Colors.orange[100]!,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  child: CachedNetworkImage(
-                    imageUrl: product.imageUrls.first,
-                    height: 120,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => const Center(
-                      child: SpinningLoader(color: Colors.orange),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[200],
-                      child: Icon(Icons.error, color: Colors.grey[400]),
-                    ),
-                  ),
-                ),
-                if (product.type == 'store')
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Store',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: Offset.zero,
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
                 children: [
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                    child: OptimizedImage(
+                      imageUrl: product.imageUrls.first,
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: const Center(
+                        child: SpinningLoader(color: Colors.orange),
+                      ),
+                      errorWidget: Container(
+                        color: Colors.grey[200],
+                        child: Icon(Icons.error, color: Colors.grey[400]),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        '\$${product.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: product.type == 'store' ? Colors.green : Colors.orange,
+                  if (product.type == 'store')
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Store',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                      if (discountPercentage > 0) ...[
+                    ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Consumer<CurrencyService>(
+                      builder: (context, currencyService, child) {
+                        return Row(
+                          children: [
+                            currencyService.currentCurrency == Currency.DZD
+                              ? Row(
+                                  children: [
+                                    CurrencySymbol(
+                                      size: 24,
+                                      color: product.type == 'store' ? Colors.green : Colors.orange,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      currencyService.formatPrice(product.price),
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: product.type == 'store' ? Colors.green : Colors.orange,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  currencyService.formatPrice(product.price),
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: product.type == 'store' ? Colors.green : Colors.orange,
+                                  ),
+                                ),
+                            if (discountPercentage > 0) ...[
+                              const SizedBox(width: 4),
+                              currencyService.currentCurrency == Currency.DZD
+                                ? Row(
+                                    children: [
+                                      CurrencySymbol(
+                                        size: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        currencyService.formatPrice(product.originalPrice),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                          decoration: TextDecoration.lineThrough,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : Text(
+                                    currencyService.formatPrice(product.originalPrice),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                      decoration: TextDecoration.lineThrough,
+                                    ),
+                                  ),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.star, color: Colors.amber, size: 16),
+                        const SizedBox(width: 2),
+                        Text(
+                          product.rating.toString(),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(width: 4),
                         Text(
-                          '\$${product.originalPrice.toStringAsFixed(2)}',
+                          '${product.totalOrders}',
                           style: TextStyle(
-                            fontSize: 14,
                             color: Colors.grey[600],
-                            decoration: TextDecoration.lineThrough,
+                            fontSize: 14,
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.star, color: Colors.amber, size: 16),
-                      const SizedBox(width: 2),
-                      Text(
-                        product.rating.toString(),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${product.totalOrders}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1135,9 +1248,6 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final statusBarHeight = mediaQuery.padding.top;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
@@ -1150,27 +1260,38 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             expandedHeight: 120,
             toolbarHeight: 60,
             actions: [
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const UserOrdersPage(),
+              Consumer<NotificationService>(
+                builder: (context, notificationService, child) {
+                  final authService = Provider.of<AuthService>(context, listen: false);
+                  final user = authService.currentUser;
+                  final unreadCount = user != null 
+                      ? notificationService.getUnreadOrders(user.id) + notificationService.getUnreadMessages(user.id)
+                      : 0;
+                  
+                  return IconButton(
+                    onPressed: () {
+                      NavigationService.push(
+                        context,
+                        const UserOrdersPage(),
+                      );
+                    },
+                    icon: BadgeWidget(
+                      count: unreadCount,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.green[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.shopping_bag_outlined,
+                          color: Colors.green[600],
+                          size: 20,
+                        ),
+                      ),
                     ),
                   );
                 },
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.green[50],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.shopping_bag_outlined,
-                    color: Colors.green[600],
-                    size: 20,
-                  ),
-                ),
               ),
               const SizedBox(width: 8),
             ],
@@ -1204,7 +1325,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                         BoxShadow(
                           color: Colors.black.withOpacity(0.1),
                           blurRadius: 10,
-                          offset: const Offset(0, 2),
+                          offset: Offset.zero,
                         ),
                       ],
                     ),
@@ -1271,4 +1392,4 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
       ),
     );
   }
-} 
+}

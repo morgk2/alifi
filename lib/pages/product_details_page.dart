@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/aliexpress_product.dart';
 import '../models/store_product.dart';
 import '../models/user.dart';
 import '../models/marketplace_product.dart';
+import '../services/navigation_service.dart';
+import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/spinning_loader.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'user_profile_page.dart';
 import '../services/database_service.dart';
+import '../services/currency_service.dart';
+import '../services/currency_service.dart' show Currency;
+import '../widgets/currency_symbol.dart';
 import 'package:alifi/dialogs/gift_user_search_dialog.dart';
 import 'package:alifi/pages/store_chat_page.dart';
+import 'package:alifi/pages/checkout_page.dart';
+import '../widgets/product_review_card.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final dynamic product;  // Can be either AliexpressProduct or StoreProduct
@@ -24,6 +33,46 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool get isStoreProduct => widget.product is StoreProduct;
+  bool _isWishlisted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadWishlistState());
+  }
+
+  Future<void> _loadWishlistState() async {
+    final auth = context.read<AuthService>();
+    final user = auth.currentUser;
+    if (user == null) return;
+    final type = isStoreProduct ? 'store' : 'aliexpress';
+    final id = isStoreProduct ? (widget.product as StoreProduct).id : (widget.product as AliexpressProduct).id;
+    final inList = await DatabaseService().isInWishlist(userId: user.id, productId: id, productType: type);
+    if (mounted) setState(() => _isWishlisted = inList);
+  }
+
+  Future<void> _toggleWishlist() async {
+    final auth = context.read<AuthService>();
+    final notify = context.read<NotificationService>();
+    final user = auth.currentUser;
+    if (user == null) return;
+    final type = isStoreProduct ? 'store' : 'aliexpress';
+    final id = isStoreProduct ? (widget.product as StoreProduct).id : (widget.product as AliexpressProduct).id;
+    await DatabaseService().toggleWishlistItem(userId: user.id, productId: id, productType: type);
+    if (mounted) setState(() => _isWishlisted = !_isWishlisted);
+
+    if (isStoreProduct && _isWishlisted) {
+      final storeProduct = widget.product as StoreProduct;
+      await notify.sendWishlistNotification(
+        storeOwnerId: storeProduct.storeId,
+        wisherUserId: user.id,
+        wisherName: user.displayName,
+        wisherPhotoUrl: user.photoURL,
+        productName: storeProduct.name,
+        productId: storeProduct.id,
+      );
+    }
+  }
 
   Widget _buildRelatedProductCard(MarketplaceProduct product) {
     final discountPercentage = product.originalPrice > 0
@@ -32,14 +81,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
+        NavigationService.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => ProductDetailsPage(
-              product: product.type == 'aliexpress'
-                  ? product.toAliexpress()
-                  : product.toStore(),
-            ),
+          ProductDetailsPage(
+            product: product.type == 'aliexpress'
+                ? product.toAliexpress()
+                : product.toStore(),
           ),
         );
       },
@@ -113,28 +160,68 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text(
-                        '\$${product.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: product.type == 'store' ? Colors.green : Colors.orange,
-                        ),
-                      ),
-                      if (discountPercentage > 0) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '\$${product.originalPrice.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
-                      ],
-                    ],
+                  Consumer<CurrencyService>(
+                    builder: (context, currencyService, child) {
+                      return Row(
+                        children: [
+                          currencyService.currentCurrency == Currency.DZD
+                            ? Row(
+                                children: [
+                                  CurrencySymbol(
+                                    size: 16,
+                                    color: product.type == 'store' ? Colors.green : Colors.orange,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    currencyService.formatPrice(product.price),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: product.type == 'store' ? Colors.green : Colors.orange,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                currencyService.formatPrice(product.price),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: product.type == 'store' ? Colors.green : Colors.orange,
+                                ),
+                              ),
+                          if (discountPercentage > 0) ...[
+                            const SizedBox(width: 8),
+                            currencyService.currentCurrency == Currency.DZD
+                              ? Row(
+                                  children: [
+                                    CurrencySymbol(
+                                      size: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      currencyService.formatPrice(product.originalPrice),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  currencyService.formatPrice(product.originalPrice),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                          ],
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -163,7 +250,12 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 24,
+          height: 24,
+          color: Colors.black,
+        ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -176,6 +268,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              _isWishlisted ? Icons.favorite : Icons.favorite_border,
+              color: _isWishlisted ? Colors.red : Colors.black,
+            ),
+            onPressed: _toggleWishlist,
+            tooltip: 'Add to wishlist',
+          ),
           IconButton(
             icon: const Icon(Icons.share, color: Colors.black),
             onPressed: () async {
@@ -282,46 +382,86 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   ),
                   const SizedBox(height: 8),
                   // Price and Discount
-                  Row(
-                    children: [
-                      Text(
-                        '\$${widget.product.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: isStoreProduct ? Colors.green : Colors.orange,
-                        ),
-                      ),
-                      if (discountPercentage > 0) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '\$${widget.product.originalPrice.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.red[50],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '-$discountPercentage%',
-                            style: TextStyle(
-                              color: Colors.red[700],
-                              fontWeight: FontWeight.bold,
+                  Consumer<CurrencyService>(
+                    builder: (context, currencyService, child) {
+                      return Row(
+                        children: [
+                          currencyService.currentCurrency == Currency.DZD
+                            ? Row(
+                                children: [
+                                  CurrencySymbol(
+                                    size: 24,
+                                    color: isStoreProduct ? Colors.green : Colors.orange,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    currencyService.formatPrice(widget.product.price),
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: isStoreProduct ? Colors.green : Colors.orange,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                currencyService.formatPrice(widget.product.price),
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: isStoreProduct ? Colors.green : Colors.orange,
+                                ),
+                              ),
+                          if (discountPercentage > 0) ...[
+                            const SizedBox(width: 8),
+                            currencyService.currentCurrency == Currency.DZD
+                              ? Row(
+                                  children: [
+                                    CurrencySymbol(
+                                      size: 16,
+                                      color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      currencyService.formatPrice(widget.product.originalPrice),
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey[600],
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  currencyService.formatPrice(widget.product.originalPrice),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red[50],
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '-$discountPercentage%',
+                                style: TextStyle(
+                                  color: Colors.red[700],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
-                    ],
+                          ],
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   // Rating and Orders
@@ -439,11 +579,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             ),
                             trailing: TextButton(
                               onPressed: () {
-                                Navigator.push(
+                                NavigationService.push(
                                   context,
-                                  MaterialPageRoute(
-                                    builder: (context) => UserProfilePage(user: store),
-                                  ),
+                                  UserProfilePage(user: store),
                                 );
                               },
                               child: const Text('View Store'),
@@ -533,6 +671,122 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     ),
                   ],
                   const SizedBox(height: 24),
+                  
+                  // Reviews Section (only for store products)
+                  if (isStoreProduct) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Customer Reviews',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Montserrat',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.orange[100],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.star, size: 14, color: Colors.orange[700]),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${(widget.product as StoreProduct).rating.toStringAsFixed(1)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.orange[700],
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 400),
+                      child: StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: DatabaseService().getProductReviews((widget.product as StoreProduct).id),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasError) {
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              child: Text('Error loading reviews: ${snapshot.error}'),
+                            );
+                          }
+
+                          if (!snapshot.hasData) {
+                            return const Center(
+                              child: SpinningLoader(
+                                size: 30,
+                                color: Colors.orange,
+                              ),
+                            );
+                          }
+
+                          final reviews = snapshot.data!;
+
+                          if (reviews.isEmpty) {
+                            return Container(
+                              padding: const EdgeInsets.all(32),
+                              child: const Center(
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.rate_review_outlined,
+                                      size: 48,
+                                      color: Colors.grey,
+                                    ),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'No reviews yet',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Be the first to review this product',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: reviews.length,
+                            itemBuilder: (context, index) {
+                              return ProductReviewCard(
+                                review: reviews[index],
+                                showProduct: false,
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+
                   // You may be interested too
                   const Text(
                     'You may be interested too',
@@ -595,7 +849,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
@@ -607,56 +861,83 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             ],
           ),
           child: isStoreProduct
-              ? ElevatedButton(
-                  onPressed: () async {
-                    // Get store user information and navigate to chat
-                    try {
-                      final storeUser = await DatabaseService().getUser(widget.product.storeId);
-                      if (storeUser != null) {
-                        Navigator.push(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) =>
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          // Navigate to checkout page
+                          NavigationService.push(
+                            context,
+                            CheckoutPage(product: widget.product),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF5A623), // Orange
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          minimumSize: const Size(double.infinity, 56),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
+                        ),
+                        child: const Text(
+                          'Buy Now',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          // Get store user information and navigate to chat
+                          try {
+                            final storeUser = await DatabaseService().getUser(widget.product.storeId);
+                            if (storeUser != null) {
+                              NavigationService.push(
+                                context,
                                 StoreChatPage(
                                   product: widget.product,
                                   storeUser: storeUser,
                                 ),
-                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                              return SlideTransition(
-                                position: Tween<Offset>(
-                                  begin: const Offset(1.0, 0.0),
-                                  end: Offset.zero,
-                                ).animate(animation),
-                                child: child,
                               );
-                            },
-                            transitionDuration: const Duration(milliseconds: 300),
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to open chat: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          minimumSize: const Size(double.infinity, 56),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        );
-                      }
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to open chat: $e'),
-                          backgroundColor: Colors.red,
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
                         ),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                        child: const Text(
+                          'Contact Store',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'Contact Store',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  ],
                 )
               : Row(
                   children: [

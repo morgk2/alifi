@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/currency_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/sales_chart_widget.dart';
+import '../widgets/badge_widget.dart';
 import 'store/add_product_page.dart';
 import 'store_messages_tab.dart';
 import 'store_orders_tab.dart';
@@ -114,18 +117,44 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                   text: 'Products',
                 ),
                 Tab(
-                  icon: Image.asset(
-                    'assets/images/orders.png',
-                    width: 40,
-                    height: 40,
+                  icon: Consumer<NotificationService>(
+                    builder: (context, notificationService, child) {
+                      final authService = Provider.of<AuthService>(context, listen: false);
+                      final user = authService.currentUser;
+                      final unreadOrders = user != null 
+                          ? notificationService.getSellerUnreadOrders(user.id)
+                          : 0;
+                      
+                      return BadgeWidget(
+                        count: unreadOrders,
+                        child: Image.asset(
+                          'assets/images/orders.png',
+                          width: 40,
+                          height: 40,
+                        ),
+                      );
+                    },
                   ),
                   text: 'Orders',
                 ),
                 Tab(
-                  icon: Image.asset(
-                    'assets/images/messages.png',
-                    width: 40,
-                    height: 40,
+                  icon: Consumer<NotificationService>(
+                    builder: (context, notificationService, child) {
+                      final authService = Provider.of<AuthService>(context, listen: false);
+                      final user = authService.currentUser;
+                      final unreadMessages = user != null 
+                          ? notificationService.getSellerUnreadMessages(user.id)
+                          : 0;
+                      
+                      return BadgeWidget(
+                        count: unreadMessages,
+                        child: Image.asset(
+                          'assets/images/messages.png',
+                          width: 40,
+                          height: 40,
+                        ),
+                      );
+                    },
                   ),
                   text: 'Messages',
                 ),
@@ -176,7 +205,18 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
             stream: DatabaseService().getStoreSalesAnalytics(user.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(
+                  child: Image.asset(
+                    'assets/images/loading.png',
+                    width: 32,
+                    height: 32,
+                    color: const Color(0xFFF59E0B),
+                  ),
+                );
+              }
+              
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
               }
               
               final analytics = snapshot.data ?? {
@@ -221,14 +261,18 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          '\$${analytics['todaySales'].toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
-                            fontFamily: 'InterDisplay',
-                          ),
+                        Consumer<CurrencyService>(
+                          builder: (context, currencyService, child) {
+                            return Text(
+                              currencyService.formatPrice(analytics['todaySales']),
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green[700],
+                                fontFamily: 'InterDisplay',
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -268,14 +312,18 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                                 ],
                               ),
                               const SizedBox(height: 6),
-                              Text(
-                                '\$${analytics['weekSales'].toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue[700],
-                                  fontFamily: 'InterDisplay',
-                                ),
+                              Consumer<CurrencyService>(
+                                builder: (context, currencyService, child) {
+                                  return Text(
+                                    currencyService.formatPrice(analytics['weekSales']),
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue[700],
+                                      fontFamily: 'InterDisplay',
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -313,14 +361,18 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                                 ],
                               ),
                               const SizedBox(height: 6),
-                              Text(
-                                '\$${analytics['monthSales'].toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.purple[700],
-                                  fontFamily: 'InterDisplay',
-                                ),
+                              Consumer<CurrencyService>(
+                                builder: (context, currencyService, child) {
+                                  return Text(
+                                    currencyService.formatPrice(analytics['monthSales']),
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.purple[700],
+                                      fontFamily: 'InterDisplay',
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -346,7 +398,14 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
             stream: DatabaseService().getStoreDashboardStats(user.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(
+                  child: Image.asset(
+                    'assets/images/loading.png',
+                    width: 32,
+                    height: 32,
+                    color: const Color(0xFFF59E0B),
+                  ),
+                );
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return const Center(child: Text('No data available.'));
@@ -360,11 +419,15 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                 mainAxisSpacing: 16,
                 childAspectRatio: 1.2,
                 children: [
-                  _buildStatCard(
-                    'Total Sales',
-                    '\$${(stats['totalSales'] as num).toStringAsFixed(2)}',
-                    Icons.attach_money_rounded,
-                    Colors.green,
+                  Consumer<CurrencyService>(
+                    builder: (context, currencyService, child) {
+                      return _buildStatCard(
+                        'Total Sales',
+                        currencyService.formatPrice((stats['totalSales'] as num).toDouble()),
+                        Icons.attach_money_rounded,
+                        Colors.green,
+                      );
+                    },
                   ),
                   _buildStatCard(
                     'Unique Customers',
@@ -402,7 +465,18 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
             stream: DatabaseService().getStoreSalesChartData(user.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(
+                  child: Image.asset(
+                    'assets/images/loading.png',
+                    width: 32,
+                    height: 32,
+                    color: const Color(0xFFF59E0B),
+                  ),
+                );
+              }
+              
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
               }
               
               final chartData = snapshot.data ?? {
@@ -482,7 +556,14 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
         stream: DatabaseService().getProductsByStore(user.id),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: Image.asset(
+                'assets/images/loading.png',
+                width: 32,
+                height: 32,
+                color: const Color(0xFFF59E0B),
+              ),
+            );
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
@@ -532,10 +613,12 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                               color: Colors.grey[200],
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                            child: Center(
+                              child: Image.asset(
+                                'assets/images/loading.png',
+                                width: 24,
+                                height: 24,
+                                color: const Color(0xFFF59E0B),
                               ),
                             ),
                           ),
@@ -572,36 +655,40 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Text(
-                                  '\$${product.price.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 18,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                if (product.totalOrders > 0)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      '${product.totalOrders} orders',
+                            Consumer<CurrencyService>(
+                              builder: (context, currencyService, child) {
+                                return Row(
+                                  children: [
+                                    Text(
+                                      currencyService.formatPrice(product.price),
                                       style: const TextStyle(
                                         fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12,
-                                        color: Colors.orange,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 18,
+                                        color: Colors.green,
                                       ),
                                     ),
-                                  ),
-                              ],
+                                    const SizedBox(width: 8),
+                                    if (product.totalOrders > 0)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          '${product.totalOrders} orders',
+                                          style: const TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 12,
+                                            color: Colors.orange,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
                           ],
                         ),

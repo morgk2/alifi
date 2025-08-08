@@ -25,6 +25,12 @@ class User {
   final List<String> searchTokens;
   final List<String>? products;
   final LatLng? location;  // Added location property
+  final List<Map<String, dynamic>>? reviews;  // Added reviews field
+  final Map<String, dynamic>? defaultAddress;  // Added default address field
+  final List<Map<String, dynamic>>? addresses;  // Added multiple addresses field
+  final double dailyRevenue;  // Daily revenue for sellers
+  final double totalRevenue;  // Total lifetime revenue for sellers
+  final DateTime? lastRevenueUpdate;  // Last time revenue was updated
 
   String? get firstName => displayName?.split(' ').first;
   String? get lastName => displayName != null && displayName!.split(' ').length > 1 
@@ -55,6 +61,12 @@ class User {
     List<String>? searchTokens,
     this.products,
     this.location,  // Added location parameter
+    this.reviews,  // Added reviews parameter
+    this.defaultAddress,  // Added default address parameter
+    this.addresses,  // Added multiple addresses parameter
+    this.dailyRevenue = 0.0,  // Added daily revenue parameter
+    this.totalRevenue = 0.0,  // Added total revenue parameter
+    this.lastRevenueUpdate,  // Added last revenue update parameter
   }) : 
     this.followers = followers ?? [],
     this.following = following ?? [],
@@ -87,6 +99,12 @@ class User {
         'latitude': location!.latitude,
         'longitude': location!.longitude,
       } : null,  // Added location to Firestore data
+      'reviews': reviews,  // Added reviews to Firestore data
+      'defaultAddress': defaultAddress,  // Added default address to Firestore data
+      'addresses': addresses,  // Added multiple addresses to Firestore data
+      'dailyRevenue': dailyRevenue,  // Added daily revenue to Firestore data
+      'totalRevenue': totalRevenue,  // Added total revenue to Firestore data
+      'lastRevenueUpdate': lastRevenueUpdate != null ? Timestamp.fromDate(lastRevenueUpdate!) : null,  // Added last revenue update to Firestore data
     };
   }
 
@@ -136,6 +154,12 @@ class User {
       searchTokens: data['searchTokens'] != null ? List<String>.from(data['searchTokens']) : null,
       products: data['products'] != null ? List<String>.from(data['products']) : null,
       location: location,  // Added location to factory constructor
+      reviews: data['reviews'] != null ? List<Map<String, dynamic>>.from(data['reviews']) : null,  // Added reviews to factory constructor
+      defaultAddress: data['defaultAddress'] != null ? Map<String, dynamic>.from(data['defaultAddress']) : null,  // Added default address to factory constructor
+      addresses: data['addresses'] != null ? List<Map<String, dynamic>>.from(data['addresses']) : null,  // Added multiple addresses to factory constructor
+      dailyRevenue: (data['dailyRevenue'] ?? 0.0).toDouble(),  // Added daily revenue to factory constructor
+      totalRevenue: (data['totalRevenue'] ?? 0.0).toDouble(),  // Added total revenue to factory constructor
+      lastRevenueUpdate: (data['lastRevenueUpdate'] as Timestamp?)?.toDate(),  // Added last revenue update to factory constructor
     );
   }
 
@@ -163,6 +187,12 @@ class User {
     List<String>? searchTokens,
     List<String>? products,
     LatLng? location,  // Added location to copyWith
+    List<Map<String, dynamic>>? reviews,  // Added reviews to copyWith
+    Map<String, dynamic>? defaultAddress,  // Added default address to copyWith
+    List<Map<String, dynamic>>? addresses,  // Added multiple addresses to copyWith
+    double? dailyRevenue,  // Added daily revenue to copyWith
+    double? totalRevenue,  // Added total revenue to copyWith
+    DateTime? lastRevenueUpdate,  // Added last revenue update to copyWith
   }) {
     return User(
       id: id ?? this.id,
@@ -188,6 +218,12 @@ class User {
       searchTokens: searchTokens ?? this.searchTokens,
       products: products ?? this.products,
       location: location ?? this.location,  // Added location to copyWith
+      reviews: reviews ?? this.reviews,  // Added reviews to copyWith
+      defaultAddress: defaultAddress ?? this.defaultAddress,  // Added default address to copyWith
+      addresses: addresses ?? this.addresses,  // Added multiple addresses to copyWith
+      dailyRevenue: dailyRevenue ?? this.dailyRevenue,  // Added daily revenue to copyWith
+      totalRevenue: totalRevenue ?? this.totalRevenue,  // Added total revenue to copyWith
+      lastRevenueUpdate: lastRevenueUpdate ?? this.lastRevenueUpdate,  // Added last revenue update to copyWith
     );
   }
 } 

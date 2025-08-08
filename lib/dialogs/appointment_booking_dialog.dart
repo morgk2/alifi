@@ -458,7 +458,12 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
         surfaceTintColor: Colors.white,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 24,
+          height: 24,
+          color: Colors.black,
+        ),
         ),
         title: const Text(
           'Book Appointment',

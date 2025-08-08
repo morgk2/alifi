@@ -58,6 +58,7 @@ class _StoreProductsDialogState extends State<StoreProductsDialog>
       builder: (context) => OrderActionDialog.placeOrder(
         productName: product.name,
         price: product.price,
+        quantity: 1, // Default quantity for contact store orders
         onConfirm: () {
           Navigator.of(context).pop(true);
         },

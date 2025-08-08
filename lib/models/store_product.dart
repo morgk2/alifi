@@ -9,7 +9,9 @@ class StoreProduct {
   final List<String> imageUrls;
   final String category;
   final double rating;
+  final int reviewCount;
   final int totalOrders;
+  final int shippedOrders;
   final bool isFreeShipping;
   final String shippingTime;
   final int stockQuantity;
@@ -27,7 +29,9 @@ class StoreProduct {
     required this.imageUrls,
     required this.category,
     this.rating = 0.0,
+    this.reviewCount = 0,
     this.totalOrders = 0,
+    this.shippedOrders = 0,
     required this.isFreeShipping,
     required this.shippingTime,
     required this.stockQuantity,
@@ -46,7 +50,9 @@ class StoreProduct {
       'imageUrls': imageUrls,
       'category': category,
       'rating': rating,
+      'reviewCount': reviewCount,
       'totalOrders': totalOrders,
+      'shippedOrders': shippedOrders,
       'isFreeShipping': isFreeShipping,
       'shippingTime': shippingTime,
       'stockQuantity': stockQuantity,
@@ -69,7 +75,9 @@ class StoreProduct {
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
       category: data['category'] ?? '',
       rating: (data['rating'] ?? 0.0).toDouble(),
+      reviewCount: data['reviewCount'] ?? 0,
       totalOrders: data['totalOrders'] ?? 0,
+      shippedOrders: data['shippedOrders'] ?? 0,
       isFreeShipping: data['isFreeShipping'] ?? false,
       shippingTime: data['shippingTime'] ?? '',
       stockQuantity: data['stockQuantity'] ?? 0,
@@ -90,6 +98,7 @@ class StoreProduct {
     String? category,
     double? rating,
     int? totalOrders,
+    int? shippedOrders,
     bool? isFreeShipping,
     String? shippingTime,
     int? stockQuantity,
@@ -108,6 +117,7 @@ class StoreProduct {
       category: category ?? this.category,
       rating: rating ?? this.rating,
       totalOrders: totalOrders ?? this.totalOrders,
+      shippedOrders: shippedOrders ?? this.shippedOrders,
       isFreeShipping: isFreeShipping ?? this.isFreeShipping,
       shippingTime: shippingTime ?? this.shippingTime,
       stockQuantity: stockQuantity ?? this.stockQuantity,

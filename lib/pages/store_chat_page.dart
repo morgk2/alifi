@@ -4,8 +4,9 @@ import '../models/store_product.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/notification_service.dart';
 import '../models/chat_message.dart';
-import '../models/order.dart' as store_order;
+
 import '../dialogs/store_products_dialog.dart';
 import 'package:provider/provider.dart';
 
@@ -56,6 +57,10 @@ class _StoreChatPageState extends State<StoreChatPage>
     final currentUser = authService.currentUser;
     
     if (currentUser != null) {
+      // Mark messages as read when chat is opened
+      final notificationService = Provider.of<NotificationService>(context, listen: false);
+      notificationService.markAllMessagesAsRead(currentUser.id, widget.storeUser.id);
+      
       DatabaseService().getChatMessages(currentUser.id, widget.storeUser.id).listen((messages) {
         setState(() {
           _messages = messages;
@@ -206,7 +211,12 @@ class _StoreChatPageState extends State<StoreChatPage>
           elevation: 0,
           toolbarHeight: 100,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 24,
+          height: 24,
+          color: Colors.black,
+        ),
             onPressed: () {
               _slideAnimationController.reverse().then((_) {
                 Navigator.of(context).pop();
@@ -611,7 +621,7 @@ class _StoreChatPageState extends State<StoreChatPage>
                         Row(
                           children: [
                             Text(
-                              '4.8',
+                              (productData['rating'] ?? 0.0).toStringAsFixed(1),
                               style: const TextStyle(
                                 color: Colors.black87,
                                 fontWeight: FontWeight.bold,
@@ -626,7 +636,7 @@ class _StoreChatPageState extends State<StoreChatPage>
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '30 orders',
+                              '${productData['totalOrders'] ?? 0} orders',
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 14,
@@ -750,7 +760,7 @@ class _StoreChatPageState extends State<StoreChatPage>
                     Row(
                       children: [
                     Text(
-                          '4.8',
+                          (productData['rating'] ?? 0.0).toStringAsFixed(1),
                       style: const TextStyle(
                             color: Colors.black87,
                             fontWeight: FontWeight.bold,
@@ -765,7 +775,7 @@ class _StoreChatPageState extends State<StoreChatPage>
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '30 orders',
+                          '${productData['totalOrders'] ?? 0} orders',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,

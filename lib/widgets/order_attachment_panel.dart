@@ -83,7 +83,7 @@ class OrderAttachmentPanel extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      '4.8',
+                      (productData['rating'] ?? 0.0).toStringAsFixed(1),
                       style: const TextStyle(
                         color: Colors.black87,
                         fontWeight: FontWeight.bold,
@@ -98,7 +98,7 @@ class OrderAttachmentPanel extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '30 orders',
+                      '${productData['totalOrders'] ?? 0} orders',
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 14,

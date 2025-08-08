@@ -1,8 +1,11 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification.dart';
+import 'in_app_notification_controller.dart';
 import 'auth_service.dart';
+import 'dart:convert';
 
 class PushNotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -157,10 +160,37 @@ class PushNotificationService {
     print('Got a message whilst in the foreground!');
     print('Message data: ${message.data}');
 
-    if (message.notification != null) {
-      print('Message also contained a notification: ${message.notification}');
-      
-      // Show local notification
+    // On web, message.notification is often null (data-only). Show banner regardless.
+    final String title = message.notification?.title 
+        ?? (message.data['title'] as String?) 
+        ?? 'Notification';
+    final String body = message.notification?.body 
+        ?? (message.data['body'] as String?) 
+        ?? (message.data['message'] as String?) 
+        ?? '';
+
+    String? imageUrl;
+    // Prefer sender/store/product photos; fall back to generic data image keys
+    imageUrl = (message.data['senderPhotoUrl']
+          ?? message.data['productImageUrl']
+          ?? message.data['storeImageUrl']
+          ?? message.data['imageUrl']
+          ?? message.data['photoUrl']
+          ?? message.data['avatarUrl']) as String?;
+
+    // Show in-app banner on all platforms
+    try {
+      InAppNotificationController().show(
+        title: title,
+        body: body,
+        imageUrl: imageUrl,
+      );
+    } catch (e) {
+      print('Error showing in-app notification banner: $e');
+    }
+
+    // Only show local notifications on mobile/desktop (plugin not supported on web)
+    if (!kIsWeb && message.notification != null) {
       _showLocalNotification(message);
     }
   }
@@ -283,6 +313,155 @@ class PushNotificationService {
     //       'body': body,
     //       'data': data,
     //     });
+  }
+
+  // Check if notifications are enabled
+  Future<bool> areNotificationsEnabled() async {
+    try {
+      final settings = await _firebaseMessaging.getNotificationSettings();
+      return settings.authorizationStatus == AuthorizationStatus.authorized ||
+             settings.authorizationStatus == AuthorizationStatus.provisional;
+    } catch (e) {
+      print('Error checking notification status: $e');
+      return false;
+    }
+  }
+
+  // Request permission again (for when user initially denied)
+  Future<bool> requestPermissionAgain() async {
+    try {
+      final settings = await _firebaseMessaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+      
+      final granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
+                     settings.authorizationStatus == AuthorizationStatus.provisional;
+      
+      if (granted) {
+        // Re-initialize if permission was granted
+        await initialize();
+      }
+      
+      return granted;
+    } catch (e) {
+      print('Error requesting notification permission: $e');
+      return false;
+    }
+  }
+
+  // Send a test notification
+  Future<void> testNotification() async {
+    try {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+        'alifi_notifications',
+        'Alifi Notifications',
+        channelDescription: 'Notifications for Alifi app',
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+      );
+
+      const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+          DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: iOSPlatformChannelSpecifics,
+      );
+
+      await _localNotifications.show(
+        999, // Use a unique ID for test notifications
+        'Test Notification',
+        'This is a test notification from Alifi!',
+        platformChannelSpecifics,
+        payload: 'test_notification',
+      );
+      
+      print('Test notification sent successfully');
+    } catch (e) {
+      print('Error sending test notification: $e');
+      rethrow;
+    }
+  }
+
+  // Send appointment reminder notification
+  Future<void> sendAppointmentReminder({
+    required String recipientUserId,
+    required String petName,
+    required String appointmentType,
+    required String time,
+    required String vetName,
+    required String appointmentId,
+  }) async {
+    try {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+        'alifi_appointments',
+        'Appointment Reminders',
+        channelDescription: 'Reminders for pet care appointments',
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+      );
+
+      const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+          DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: iOSPlatformChannelSpecifics,
+      );
+
+      final title = 'Appointment Reminder';
+      final body = 'Your $appointmentType appointment for $petName is in 2 hours at $time with $vetName';
+
+      await _localNotifications.show(
+        appointmentId.hashCode, // Use appointment ID hash as notification ID
+        title,
+        body,
+        platformChannelSpecifics,
+        payload: jsonEncode({
+          'type': 'appointment_reminder',
+          'appointmentId': appointmentId,
+          'petName': petName,
+          'appointmentType': appointmentType,
+          'time': time,
+          'vetName': vetName,
+        }),
+      );
+
+      // Also send push notification if user has FCM token
+      await sendPushNotification(
+        recipientUserId: recipientUserId,
+        title: title,
+        body: body,
+        data: {
+          'type': 'appointment_reminder',
+          'appointmentId': appointmentId,
+          'petName': petName,
+          'appointmentType': appointmentType,
+          'time': time,
+          'vetName': vetName,
+        },
+      );
+      
+      print('Appointment reminder sent successfully for $petName');
+    } catch (e) {
+      print('Error sending appointment reminder: $e');
+      rethrow;
+    }
   }
 }
 

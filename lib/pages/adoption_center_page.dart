@@ -69,7 +69,11 @@ class _AdoptionCenterPageState extends State<AdoptionCenterPage> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back),
+                    icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 24,
+          height: 24,
+        ),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 8),

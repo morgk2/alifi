@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:ui';
 import '../icons.dart';
+import '../utils/navigation_bar_detector.dart';
 import 'home_page.dart';
 import 'map_page.dart';
 import 'my_pets_page.dart';
@@ -23,12 +24,14 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
   late List<Widget> _pages;
+  // Track side menu progress (0.0 closed → 1.0 open) to move nav bar with HomePage
+  double _sideMenuProgress = 0.0;
 
   @override
   void initState() {
     super.initState();
     _pages = [
-      HomePage(
+      _PersistentHomePage(
         onNavigateToMap: () {
           setState(() {
             _currentIndex = 1;
@@ -44,11 +47,18 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
             }
           });
         },
+        onSideMenuProgressChanged: (progress) {
+          if (_currentIndex == 0) {
+            setState(() {
+              _sideMenuProgress = progress;
+            });
+          }
+        },
       ),
-      const MapPage(),
-      const MyPetsPage(),
-      const MarketplacePage(),
-      const UserSearchPage(),
+      const _PersistentMapPage(),
+      const _PersistentMyPetsPage(),
+      const _PersistentMarketplacePage(),
+      const _PersistentUserSearchPage(),
     ];
 
     _hideController = AnimationController(
@@ -100,16 +110,22 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
     return Scaffold(
       body: Stack(
         children: [
-          _pages[_currentIndex],
+          IndexedStack(
+            index: _currentIndex,
+            children: _pages,
+          ),
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: _buildBottomNavBar(),
+            child: Transform.translate(
+              offset: Offset(MediaQuery.of(context).size.width * 0.65 * (_currentIndex == 0 ? _sideMenuProgress : 0.0), 0),
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: _buildBottomNavBar(),
+                ),
               ),
             ),
           ),
@@ -182,7 +198,11 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
           ),
           // Navigation bar
           Padding(
-        padding: EdgeInsets.only(left: sidePadding, right: sidePadding, bottom: 24.0),
+        padding: EdgeInsets.only(
+          left: sidePadding, 
+          right: sidePadding, 
+          bottom: NavigationBarDetector.getRecommendedBottomPadding(context),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -327,5 +347,113 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
         ],
       ),
     );
+  }
+}
+
+// Persistent wrapper classes to keep tabs alive
+class _PersistentHomePage extends StatefulWidget {
+  final VoidCallback onNavigateToMap;
+  final Function(bool) onAIAssistantExpanded;
+  final ValueChanged<double>? onSideMenuProgressChanged;
+
+  const _PersistentHomePage({
+    required this.onNavigateToMap,
+    required this.onAIAssistantExpanded,
+    this.onSideMenuProgressChanged,
+  });
+
+  @override
+  State<_PersistentHomePage> createState() => _PersistentHomePageState();
+}
+
+class _PersistentHomePageState extends State<_PersistentHomePage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return HomePage(
+      onNavigateToMap: widget.onNavigateToMap,
+      onAIAssistantExpanded: widget.onAIAssistantExpanded,
+      onSideMenuProgressChanged: widget.onSideMenuProgressChanged,
+    );
+  }
+}
+
+class _PersistentMapPage extends StatefulWidget {
+  const _PersistentMapPage();
+
+  @override
+  State<_PersistentMapPage> createState() => _PersistentMapPageState();
+}
+
+class _PersistentMapPageState extends State<_PersistentMapPage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return const MapPage();
+  }
+}
+
+class _PersistentMyPetsPage extends StatefulWidget {
+  const _PersistentMyPetsPage();
+
+  @override
+  State<_PersistentMyPetsPage> createState() => _PersistentMyPetsPageState();
+}
+
+class _PersistentMyPetsPageState extends State<_PersistentMyPetsPage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return const MyPetsPage();
+  }
+}
+
+class _PersistentMarketplacePage extends StatefulWidget {
+  const _PersistentMarketplacePage();
+
+  @override
+  State<_PersistentMarketplacePage> createState() => _PersistentMarketplacePageState();
+}
+
+class _PersistentMarketplacePageState extends State<_PersistentMarketplacePage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return const MarketplacePage();
+  }
+}
+
+class _PersistentUserSearchPage extends StatefulWidget {
+  const _PersistentUserSearchPage();
+
+  @override
+  State<_PersistentUserSearchPage> createState() => _PersistentUserSearchPageState();
+}
+
+class _PersistentUserSearchPageState extends State<_PersistentUserSearchPage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return const UserSearchPage();
   }
 }

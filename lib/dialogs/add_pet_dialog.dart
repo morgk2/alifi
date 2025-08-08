@@ -1523,7 +1523,11 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                   _currentStep > 0
                       ? TextButton.icon(
                     onPressed: _previousStep,
-                    icon: const Icon(Icons.arrow_back),
+                    icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 24,
+          height: 24,
+        ),
                           label: const Text('Back'),
                           style: TextButton.styleFrom(
                             foregroundColor: Colors.grey,

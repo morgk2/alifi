@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/navigation_service.dart';
 import '../models/pet.dart';
 import '../dialogs/add_pet_dialog.dart';
 import '../widgets/spinning_loader.dart';
@@ -407,10 +408,9 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
               'Health Information',
               Icons.favorite,
               () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => PetHealthPage(pet: pet),
-                  ),
+                NavigationService.push(
+                  context,
+                  PetHealthPage(pet: pet),
                 );
               },
             ),
@@ -444,34 +444,31 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
 
                     if (isAvailable && idUrl.isNotEmpty) {
                       // Pet ID is ready - show the ID image
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => PetIdDisplayPage(
-                            petName: pet.name,
-                            idUrl: idUrl,
-                          ),
+                      NavigationService.push(
+                        context,
+                        PetIdDisplayPage(
+                          petName: pet.name,
+                          idUrl: idUrl,
                         ),
                       );
                     } else {
                       // Pet ID is being processed
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => PetIdProcessingPage(
-                            petName: pet.name,
-                          ),
+                      NavigationService.push(
+                        context,
+                        PetIdProcessingPage(
+                          petName: pet.name,
                         ),
                       );
                     }
                   } else {
                     // No petId document exists - show initial request page
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => PetIdRequestPage(
-                          petNames: _petsNotifier.value.map((p) => p.name).toList(),
-                          onPetSelected: (petName) {
-                            // Handle pet selection if needed
-                          },
-                        ),
+                    NavigationService.push(
+                      context,
+                      PetIdRequestPage(
+                        petNames: _petsNotifier.value.map((p) => p.name).toList(),
+                        onPetSelected: (petName) {
+                          // Handle pet selection if needed
+                        },
                       ),
                     );
                   }
@@ -1081,22 +1078,9 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                      ),
                     IconButton(
                       onPressed: () {
-                        Navigator.of(context).push(
-                          PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) {
-                              return SlideTransition(
-                                position: Tween<Offset>(
-                                  begin: const Offset(0.0, 1.0),
-                                  end: Offset.zero,
-                                ).animate(CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeOutCubic,
-                                )),
-                                child: const AdoptionCenterPage(),
-                              );
-                            },
-                            transitionDuration: const Duration(milliseconds: 500),
-                          ),
+                        NavigationService.push(
+                          context,
+                          const AdoptionCenterPage(),
                         );
                       },
                       icon: Image.asset(
@@ -1738,7 +1722,12 @@ class PetIdDisplayPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF3A1A0B)),
+          icon: Image.asset(
+            'assets/images/back_icon.png',
+            width: 24,
+            height: 24,
+            color: const Color(0xFF3A1A0B),
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -1967,7 +1956,12 @@ class PetIdProcessingPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF3A1A0B)),
+          icon: Image.asset(
+            'assets/images/back_icon.png',
+            width: 24,
+            height: 24,
+            color: const Color(0xFF3A1A0B),
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),

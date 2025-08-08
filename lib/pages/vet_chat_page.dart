@@ -125,7 +125,12 @@ class _VetChatPageState extends State<VetChatPage>
           elevation: 0,
           toolbarHeight: 100,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 24,
+          height: 24,
+          color: Colors.black,
+        ),
             onPressed: () {
               _slideAnimationController.reverse().then((_) {
                 Navigator.of(context).pop();

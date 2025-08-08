@@ -214,7 +214,11 @@ class _PetHealthPageState extends State<PetHealthPage> {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, size: 28),
+                    icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 28,
+          height: 28,
+        ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   const SizedBox(width: 8),

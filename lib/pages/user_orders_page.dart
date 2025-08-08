@@ -3,10 +3,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/order.dart' as store_order;
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/notification_service.dart';
+import '../services/currency_service.dart';
 import '../pages/discussion_chat_page.dart';
 import '../models/store_product.dart';
 import '../models/user.dart';
 import '../dialogs/order_action_dialog.dart';
+import '../widgets/product_review_dialog.dart';
+import '../widgets/badge_widget.dart';
 import 'package:provider/provider.dart';
 
 class UserOrdersPage extends StatefulWidget {
@@ -20,6 +24,34 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
   int _selectedIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // Mark orders as read when page is opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final user = authService.currentUser;
+      if (user != null) {
+        final notificationService = Provider.of<NotificationService>(context, listen: false);
+        // Mark all unread orders as read
+        _markOrdersAsRead(user.id);
+      }
+    });
+  }
+
+  Future<void> _markOrdersAsRead(String userId) async {
+    try {
+      final databaseService = DatabaseService();
+      final orders = await databaseService.getUserOrders(userId).first;
+      
+      for (final order in orders) {
+        await databaseService.markOrderAsRead(userId, order.id, 'user');
+      }
+    } catch (e) {
+      print('Error marking orders as read: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -27,7 +59,12 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 24,
+          height: 24,
+          color: Colors.black,
+        ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -112,25 +149,38 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                               ]
                             : null,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline,
-                            size: 20,
-                            color: _selectedIndex == 1 ? Colors.green[600] : Colors.grey[600],
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Messages',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                              color: _selectedIndex == 1 ? Colors.green[600] : Colors.grey[600],
-                            ),
-                          ),
-                        ],
+                      child: Consumer<NotificationService>(
+                        builder: (context, notificationService, child) {
+                          final authService = Provider.of<AuthService>(context, listen: false);
+                          final user = authService.currentUser;
+                          final unreadMessages = user != null 
+                              ? notificationService.getUnreadMessages(user.id)
+                              : 0;
+                          
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              BadgeWidget(
+                                count: unreadMessages,
+                                child: Icon(
+                                  Icons.chat_bubble_outline,
+                                  size: 20,
+                                  color: _selectedIndex == 1 ? Colors.green[600] : Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Messages',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                  color: _selectedIndex == 1 ? Colors.green[600] : Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -387,37 +437,51 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                     ],
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '\$${order.price.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 20,
-                        color: Colors.green[600],
-                        fontFamily: 'Inter',
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(order.status),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        order.status.toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'Inter',
-                          letterSpacing: 0.5,
+                Consumer<CurrencyService>(
+                  builder: (context, currencyService, child) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          currencyService.formatPrice(order.price * order.quantity),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 20,
+                            color: Colors.green[600],
+                            fontFamily: 'Inter',
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                        const SizedBox(height: 4),
+                        Text(
+                          '${order.quantity} × ${currencyService.formatPrice(order.price)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(order.status),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _formatStatusText(order.status),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                                    },
                 ),
               ],
             ),
@@ -478,6 +542,72 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                       ),
                     ),
                   ),
+                if (order.status == 'delivered')
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Report Not Delivered button (smaller)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.orange[50],
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.orange[200]!,
+                            width: 1,
+                          ),
+                        ),
+                        child: TextButton(
+                          onPressed: () => _reportNotDelivered(order.id),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.orange[600],
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Report',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Confirm Delivery button (bigger)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.green[600],
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.green[600]!.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: TextButton(
+                          onPressed: () => _confirmDelivery(order.id),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Confirm Delivery',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ],
@@ -492,6 +622,10 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
     int totalSteps = 4;
 
     switch (status) {
+      case 'ordered':
+        progress = 0.25;
+        currentStep = 1;
+        break;
       case 'pending':
         progress = 0.25;
         currentStep = 1;
@@ -505,6 +639,14 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
         currentStep = 3;
         break;
       case 'delivered':
+        progress = 1.0;
+        currentStep = 4;
+        break;
+      case 'confirmed_delivered':
+        progress = 1.0;
+        currentStep = 4;
+        break;
+      case 'disputed_delivery':
         progress = 1.0;
         currentStep = 4;
         break;
@@ -1045,6 +1187,8 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
 
   Color _getStatusColor(String status) {
     switch (status) {
+      case 'ordered':
+        return Colors.amber;
       case 'pending':
         return Colors.orange;
       case 'confirmed':
@@ -1053,10 +1197,25 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
         return Colors.purple;
       case 'delivered':
         return Colors.green;
+      case 'confirmed_delivered':
+        return Colors.green[800]!;
+      case 'disputed_delivery':
+        return Colors.orange[800]!;
       case 'cancelled':
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  String _formatStatusText(String status) {
+    switch (status) {
+      case 'confirmed_delivered':
+        return 'CONFIRMED DELIVERED';
+      case 'disputed_delivery':
+        return 'DISPUTED DELIVERY';
+      default:
+        return status.toUpperCase();
     }
   }
 
@@ -1219,6 +1378,202 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _confirmDelivery(String orderId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Confirm Delivery',
+          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+        ),
+        content: const Text(
+          'Are you sure you want to confirm that this order has been delivered?',
+          style: TextStyle(fontFamily: 'Inter'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green[600],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text(
+              'Confirm',
+              style: TextStyle(
+                color: Colors.white,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await DatabaseService().updateOrderStatus(orderId, 'confirmed_delivered');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Delivery confirmed successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Show product review dialog after confirming delivery
+        await _showProductReviewDialog(orderId);
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to confirm delivery: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _reportNotDelivered(String orderId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Report Not Delivered',
+          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+        ),
+        content: const Text(
+          'Are you sure you want to report that this order was not delivered? This will notify the seller and may require further action.',
+          style: TextStyle(fontFamily: 'Inter'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[600],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text(
+              'Report',
+              style: TextStyle(
+                color: Colors.white,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await DatabaseService().updateOrderStatus(orderId, 'disputed_delivery');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Delivery issue reported successfully'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to report delivery issue: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showProductReviewDialog(String orderId) async {
+    try {
+      // Get order details to find the product
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final user = authService.currentUser;
+      if (user == null) return;
+
+      // Get all user orders to find the specific order
+      final orders = await DatabaseService().getUserOrders(user.id).first;
+      final order = orders.firstWhere((o) => o.id == orderId);
+      
+      // Get the product details
+      final product = await DatabaseService().getStoreProduct(order.productId);
+      if (product == null) return;
+
+      final result = await showDialog<Map<String, dynamic>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => ProductReviewDialog(
+          productName: product.name,
+          productImageUrl: product.imageUrls.isNotEmpty ? product.imageUrls.first : '',
+          productPrice: product.price,
+        ),
+      );
+
+      if (result != null) {
+        await _submitProductReview(order.productId, result['rating'], result['comment']);
+      }
+    } catch (e) {
+      print('Error showing product review dialog: $e');
+    }
+  }
+
+  Future<void> _submitProductReview(String productId, int rating, String comment) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final user = authService.currentUser;
+      if (user == null) return;
+
+      await DatabaseService().addProductReview(
+        productId: productId,
+        userId: user.id,
+        userName: user.displayName ?? 'Anonymous',
+        rating: rating,
+        comment: comment,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thank you for your review!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit review: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

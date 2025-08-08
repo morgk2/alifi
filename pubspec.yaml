@@ -54,6 +54,7 @@ dependencies:
   fl_chart: ^0.68.0  # Added for beautiful interactive charts
   firebase_messaging: ^15.2.10  # Updated to compatible version
   flutter_local_notifications: ^17.2.2  # Added for local notifications
+  cloud_functions: ^5.6.2  # Added for Firebase Functions
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -143,6 +144,10 @@ flutter:
     - assets/images/products.png
     - assets/images/orders.png
     - assets/images/messages.png
+    - assets/images/dzd_symbol.png
+    - assets/images/notification_icon.png
+    - assets/images/back_icon.png
+    - assets/images/menu.svg
     - assets/fonts/Inter-Italic-VariableFont_opsz,wght.ttf
     - assets/fonts/Inter-VariableFont_opsz,wght.ttf
     - assets/fonts/InterDisplay-Regular.ttf

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/navigation_service.dart';
 import '../models/user.dart';
 import '../dialogs/report_problem_dialog.dart';
 import 'edit_profile_page.dart';
@@ -10,8 +11,14 @@ import 'help_center_page.dart';
 import 'admin/add_product_page.dart';
 import 'admin/bulk_import_page.dart';
 import 'admin/user_management_page.dart';
+import 'subscription_management_page.dart';
 import '../utils/locale_notifier.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/ios_toggle.dart';
+import '../widgets/notification_settings_widget.dart';
+import '../services/currency_service.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -45,6 +52,18 @@ class _SettingsPageState extends State<SettingsPage> {
         foregroundColor: Colors.black,
         elevation: 0,
         centerTitle: true,
+        leading: GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Image.asset(
+              'assets/images/back_icon.png',
+              width: 24,
+              height: 24,
+              color: Colors.black,
+            ),
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -108,7 +127,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: Icons.dark_mode_outlined,
                   iconColor: Colors.purple,
                   title: 'Dark Mode',
-                  trailing: Switch(
+                  trailing: IOSToggle(
                     value: false, // TODO: Implement dark mode
                     onChanged: (value) {
                       // TODO: Implement dark mode toggle
@@ -120,7 +139,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       );
                     },
                   ),
-                  onTap: () {}, // Empty onTap since we're using the switch
+                  onTap: () {}, // Empty onTap since we're using the toggle
                 ),
                 _SettingsTile(
                   icon: Icons.notifications_outlined,
@@ -128,11 +147,19 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: 'Notifications',
                   subtitle: 'Manage your notifications',
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Coming soon!'),
-                        duration: Duration(seconds: 1),
-                      ),
+                    _showNotificationSettings();
+                  },
+                ),
+                Consumer<CurrencyService>(
+                  builder: (context, currencyService, child) {
+                    return _SettingsTile(
+                      icon: Icons.attach_money,
+                      iconColor: Colors.green,
+                      title: 'Currency',
+                      subtitle: currencyService.currencyName,
+                      onTap: () {
+                        _showCurrencyDialog(context);
+                      },
                     );
                   },
                 ),
@@ -151,11 +178,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: 'Edit Profile',
                   subtitle: 'Update your information',
                   onTap: () {
-                    Navigator.push(
+                    NavigationService.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const EditProfilePage(),
-                      ),
+                      const EditProfilePage(),
                     );
                   },
                 ),
@@ -165,11 +190,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: 'Privacy & Security',
                   subtitle: 'Manage your privacy settings',
                   onTap: () {
-                    Navigator.push(
+                    NavigationService.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const PrivacySecurityPage(),
-                      ),
+                      const PrivacySecurityPage(),
                     );
                   },
                 ),
@@ -188,11 +211,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: 'Help Center',
                   subtitle: 'Get help and support',
                   onTap: () {
-                    Navigator.push(
+                    NavigationService.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const HelpCenterPage(),
-                      ),
+                      const HelpCenterPage(),
                     );
                   },
                 ),
@@ -228,11 +249,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: 'About',
                   subtitle: 'App version and info',
                   onTap: () {
-                    Navigator.push(
+                    NavigationService.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const AboutPage(),
-                      ),
+                      const AboutPage(),
                     );
                   },
                 ),
@@ -252,11 +271,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: 'Add AliExpress Product',
                     subtitle: 'Add new products to the store',
                     onTap: () {
-                      Navigator.push(
+                      NavigationService.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const AddProductPage(),
-                        ),
+                        const AddProductPage(),
                       );
                     },
                   ),
@@ -266,11 +283,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: 'Bulk Import Products',
                     subtitle: 'Import multiple products at once',
                     onTap: () {
-                      Navigator.push(
+                      NavigationService.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const BulkImportPage(),
-                        ),
+                        const BulkImportPage(),
                       );
                     },
                   ),
@@ -280,11 +295,9 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: 'User Management',
                     subtitle: 'Manage user accounts',
                     onTap: () {
-                      Navigator.push(
+                      NavigationService.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const UserManagementPage(),
-                        ),
+                        const UserManagementPage(),
                       );
                     },
                   ),
@@ -334,11 +347,63 @@ class _SettingsPageState extends State<SettingsPage> {
                     subtitle: AppLocalizations.of(context)?.myPets ?? 'My Pets (fallback)',
                     onTap: () {},
                   ),
+                  _SettingsTile(
+                    icon: Icons.calendar_today,
+                    iconColor: Colors.blue,
+                    title: 'Add Test Appointment',
+                    subtitle: 'Create appointment in 1h 30min for testing',
+                    onTap: () => _createTestAppointment(),
+                  ),
                 ],
               ),
             
             const SizedBox(height: 24),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showNotificationSettings() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: double.maxFinite,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.notifications,
+                    color: Theme.of(context).primaryColor,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  const                   Text(
+                    'Notification Settings',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'InterDisplay',
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const NotificationSettingsWidget(),
+            ],
+          ),
         ),
       ),
     );
@@ -403,8 +468,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     user.displayName ?? user.email,
                     style: const TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'InterDisplay',
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -413,6 +478,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],
+                      fontFamily: 'InterDisplay',
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -433,8 +499,59 @@ class _SettingsPageState extends State<SettingsPage> {
                         _getAccountTypeLabel(user.accountType),
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                           color: _getAccountTypeColor(user.accountType),
+                          fontFamily: 'InterDisplay',
+                        ),
+                      ),
+                    ),
+                  ],
+                  
+                  // Subscription Info (for vet and store accounts)
+                  if (user.accountType == 'vet' || user.accountType == 'store') ...[
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: () {
+                        NavigationService.push(
+                          context,
+                          const SubscriptionManagementPage(),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF6B35).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFFF6B35).withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.star,
+                              size: 16,
+                              color: const Color(0xFFFF6B35),
+                            ),
+                            const SizedBox(width: 8),
+                                                         Text(
+                               'alifi favorite',
+                               style: TextStyle(
+                                 fontSize: 12,
+                                 fontWeight: FontWeight.w600,
+                                 color: const Color(0xFFFF6B35),
+                                 fontFamily: 'InterDisplay',
+                               ),
+                             ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 12,
+                              color: const Color(0xFFFF6B35),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -446,11 +563,9 @@ class _SettingsPageState extends State<SettingsPage> {
             // Edit Button
             IconButton(
               onPressed: () {
-                Navigator.push(
+                NavigationService.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const EditProfilePage(),
-                  ),
+                  const EditProfilePage(),
                 );
               },
               icon: Icon(
@@ -479,9 +594,10 @@ class _SettingsPageState extends State<SettingsPage> {
               title.toUpperCase(),
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
                 color: Colors.grey[600],
                 letterSpacing: 0.5,
+                fontFamily: 'InterDisplay',
               ),
             ),
           ),
@@ -525,6 +641,91 @@ class _SettingsPageState extends State<SettingsPage> {
         return 'Store Owner';
       default:
         return 'User';
+    }
+  }
+
+  Future<void> _createTestAppointment() async {
+    try {
+      final authService = context.read<AuthService>();
+      final currentUser = authService.currentUser;
+      
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No user logged in'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Calculate appointment time (1 hour and 30 minutes from now)
+      final now = DateTime.now();
+      final appointmentTime = now.add(const Duration(hours: 1, minutes: 30));
+      
+      // Format time slot (e.g., "14:30-15:00")
+      final hour = appointmentTime.hour.toString().padLeft(2, '0');
+      final minute = appointmentTime.minute.toString().padLeft(2, '0');
+      
+      // Calculate end time (30 minutes later)
+      final endMinute = (appointmentTime.minute + 30) % 60;
+      final endHour = appointmentTime.minute + 30 >= 60 
+          ? (appointmentTime.hour + 1) % 24 
+          : appointmentTime.hour;
+      final endHourStr = endHour.toString().padLeft(2, '0');
+      final endMinuteStr = endMinute.toString().padLeft(2, '0');
+      
+      final timeSlot = '$hour:$minute-$endHourStr:$endMinuteStr';
+
+      print('🔍 [TestAppointment] Creating appointment for today at $timeSlot');
+      print('🔍 [TestAppointment] User ID: ${currentUser.id}');
+
+      // Create appointment data directly for Firestore
+      final appointmentData = {
+        'vetId': 'test_vet_id',
+        'userId': currentUser.id,
+        'petId': 'test_pet_id',
+        'petName': 'Test Pet',
+        'appointmentDate': Timestamp.fromDate(DateTime.now()), // Use Timestamp for Firestore
+        'timeSlot': timeSlot,
+        'type': 'checkup',
+        'status': 'confirmed',
+        'notes': 'Test appointment for today',
+        'reason': 'Testing appointment reminder functionality',
+        'price': 50.0,
+        'createdAt': Timestamp.fromDate(DateTime.now()),
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      };
+
+      // Add directly to Firestore collection
+      final docRef = await FirebaseFirestore.instance
+          .collection('appointments')
+          .add(appointmentData);
+      
+      print('🔍 [TestAppointment] Appointment created with ID: ${docRef.id}');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Test appointment created! ID: ${docRef.id}\nTime: ${appointmentTime.hour}:${appointmentTime.minute.toString().padLeft(2, '0')}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        
+        // Force a rebuild of the home page
+        setState(() {});
+      }
+    } catch (e) {
+      print('🔍 [TestAppointment] Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating test appointment: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }
@@ -583,9 +784,9 @@ class _SettingsTile extends StatelessWidget {
                     title,
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w400,
                       color: titleColor ?? Colors.black,
-                      fontFamily: 'Montserrat',
+                      fontFamily: 'InterDisplay',
                     ),
                   ),
                   if (subtitle != null) ...[
@@ -595,6 +796,7 @@ class _SettingsTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
+                        fontFamily: 'InterDisplay',
                       ),
                     ),
                   ],
@@ -628,5 +830,144 @@ String _getLanguageName(BuildContext context) {
     case 'en':
     default:
       return 'English';
+  }
+}
+
+String _getCurrencyName(BuildContext context) {
+  final currencyService = Provider.of<CurrencyService>(context, listen: false);
+  return currencyService.currencyName;
+}
+
+void _showCurrencyDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: const Text(
+        'Select Currency',
+        style: TextStyle(
+          fontFamily: 'Montserrat',
+          fontWeight: FontWeight.w600,
+          color: Colors.black,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _CurrencyOption(
+            currency: Currency.USD,
+            symbol: '\$',
+            name: 'USD',
+            onTap: () {
+              final currencyService = Provider.of<CurrencyService>(context, listen: false);
+              currencyService.changeCurrency(Currency.USD);
+              Navigator.pop(context);
+            },
+          ),
+          const SizedBox(height: 12),
+          _CurrencyOption(
+            currency: Currency.DZD,
+            symbol: '£',
+            name: 'DZD',
+            onTap: () {
+              final currencyService = Provider.of<CurrencyService>(context, listen: false);
+              currencyService.changeCurrency(Currency.DZD);
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _CurrencyOption extends StatelessWidget {
+  final Currency currency;
+  final String symbol;
+  final String name;
+  final VoidCallback onTap;
+
+  const _CurrencyOption({
+    required this.currency,
+    required this.symbol,
+    required this.name,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<CurrencyService>(
+      builder: (context, currencyService, child) {
+        final isSelected = currencyService.currentCurrency == currency;
+        
+        return InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.green[50] : Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? Colors.green : Colors.grey[300]!,
+                width: isSelected ? 2 : 1,
+              ),
+              boxShadow: isSelected ? [
+                BoxShadow(
+                  color: Colors.green.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ] : null,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.green : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    symbol,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected ? Colors.white : Colors.grey[700],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  name,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.green : Colors.grey[700],
+                  ),
+                ),
+                const Spacer(),
+                if (isSelected)
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 } 

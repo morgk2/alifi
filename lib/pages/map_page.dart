@@ -2596,19 +2596,19 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(24),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.45),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.8), width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
+                              child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.85),
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(color: Colors.white.withOpacity(0.9), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2739,6 +2739,40 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                                 ),
                               ),
                               const SizedBox(height: 16),
+                              // Reward display if available
+                              if (pet.reward != null && pet.reward! > 0) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF4CAF50).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: const Color(0xFF4CAF50),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.monetization_on,
+                                        color: const Color(0xFF4CAF50),
+                                        size: 24,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '\$${pet.reward!.toStringAsFixed(0)} Reward',
+                                        style: TextStyle(
+                                          color: const Color(0xFF4CAF50),
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
                               // Description
                               if (pet.additionalInfo != null && pet.additionalInfo!.isNotEmpty) ...[
                                 Text(
@@ -2818,16 +2852,17 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.blue.withOpacity(0.9),
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    minimumSize: const Size(0, 56), // Increased height
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
                                   ),
-                                  icon: const Icon(Icons.person),
+                                  icon: const Icon(Icons.person, size: 20),
                                   label: const Text(
                                     'Visit Owner\'s Profile',
                                     style: TextStyle(
-                                      fontSize: 15,
+                                      fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),

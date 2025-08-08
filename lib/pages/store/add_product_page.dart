@@ -3,6 +3,7 @@ import 'package:alifi/models/store_product.dart';
 import 'package:alifi/services/auth_service.dart';
 import 'package:alifi/services/database_service.dart';
 import 'package:alifi/services/storage_service.dart';
+import 'package:alifi/services/currency_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -63,12 +64,15 @@ class _AddProductPageState extends State<AddProductPage> {
         _images.map((image) => storageService.uploadPetPhoto(File(image.path))),
       );
 
+      final currencyService = Provider.of<CurrencyService>(context, listen: false);
+      final priceInUsd = currencyService.parsePrice(_priceController.text);
+      
       final newProduct = StoreProduct(
         id: '', // Firestore will generate
         name: _nameController.text,
         description: _descriptionController.text,
-        price: double.parse(_priceController.text),
-        currency: 'USD', // Added currency
+        price: priceInUsd, // Convert to USD for storage
+        currency: 'USD', // Store in USD
         stockQuantity: int.parse(_stockController.text),
         category: _category,
         shippingTime: _shippingTimeController.text,
@@ -130,10 +134,14 @@ class _AddProductPageState extends State<AddProductPage> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildTextField(
-                      controller: _priceController,
-                      label: 'Price (USD)',
-                      keyboardType: TextInputType.number,
+                    child: Consumer<CurrencyService>(
+                      builder: (context, currencyService, child) {
+                        return _buildTextField(
+                          controller: _priceController,
+                          label: 'Price (${currencyService.currencyName})',
+                          keyboardType: TextInputType.number,
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 16),

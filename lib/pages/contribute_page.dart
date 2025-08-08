@@ -219,7 +219,12 @@ class _ContributePageState extends State<ContributePage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 24,
+          height: 24,
+          color: Colors.black,
+        ),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),

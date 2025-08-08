@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:latlong2/latlong.dart' as latlong;
+import 'package:latlong2/latlong.dart' show Distance, LengthUnit;
 import '../models/user.dart';
 import '../models/pet.dart';
 import '../models/lost_pet.dart';
 import '../models/store_product.dart';
 import 'local_storage_service.dart';
 import 'package:uuid/uuid.dart';
-import 'package:latlong2/latlong.dart';
 import '../models/aliexpress_product.dart';
 import '../models/marketplace_product.dart';
 import 'package:rxdart/rxdart.dart';
@@ -19,11 +19,51 @@ import 'notification_service.dart';
 import '../models/notification.dart';
 import '../models/appointment.dart';
 import '../models/time_slot.dart';
+import '../services/device_performance.dart';
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final LocalStorageService _localStorage = LocalStorageService();
   final _uuid = const Uuid();
+  late final DevicePerformance _devicePerformance;
+  late bool _isLowEndDevice;
+  
+  // Cache for frequently accessed data
+  final Map<String, dynamic> _cache = {};
+  final Duration _cacheExpiry = const Duration(minutes: 5);
+
+  DatabaseService() {
+    _devicePerformance = DevicePerformance();
+    _isLowEndDevice = _devicePerformance.performanceTier == PerformanceTier.low;
+  }
+
+  // Get appropriate limit based on device performance
+  int _getOptimizedLimit(int defaultLimit) {
+    return _isLowEndDevice ? (defaultLimit ~/ 2) : defaultLimit;
+  }
+
+  // Cache management
+  void _setCache(String key, dynamic data) {
+    _cache[key] = {
+      'data': data,
+      'timestamp': DateTime.now(),
+    };
+  }
+
+  dynamic _getCache(String key) {
+    final cached = _cache[key];
+    if (cached != null) {
+      final timestamp = cached['timestamp'] as DateTime;
+      if (DateTime.now().difference(timestamp) < _cacheExpiry) {
+        return cached['data'];
+      }
+    }
+    return null;
+  }
+
+  void _clearCache() {
+    _cache.clear();
+  }
 
   // Collections
   CollectionReference get _usersCollection => _db.collection('users');
@@ -35,6 +75,51 @@ class DatabaseService {
   CollectionReference get _ordersCollection => _db.collection('orders');
   CollectionReference get _appointmentsCollection => _db.collection('appointments');
   CollectionReference get _vetSchedulesCollection => _db.collection('vetSchedules');
+
+  // Wishlist operations
+  Future<void> toggleWishlistItem({
+    required String userId,
+    required String productId,
+    required String productType, // 'store' | 'aliexpress'
+  }) async {
+    try {
+      final userDoc = _usersCollection.doc(userId);
+      final userSnapshot = await userDoc.get();
+      final data = userSnapshot.data() as Map<String, dynamic>? ?? {};
+      final List<dynamic> current = (data['wishlist'] as List<dynamic>?) ?? [];
+
+      final entry = {'id': productId, 'type': productType};
+      final exists = current.any((e) => e is Map && e['id'] == productId && e['type'] == productType);
+
+      if (exists) {
+        // Remove
+        final updated = current.where((e) => !(e is Map && e['id'] == productId && e['type'] == productType)).toList();
+        await userDoc.update({'wishlist': updated});
+      } else {
+        // Add
+        current.add(entry);
+        await userDoc.set({'wishlist': current}, SetOptions(merge: true));
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> isInWishlist({
+    required String userId,
+    required String productId,
+    required String productType,
+  }) async {
+    try {
+      final snap = await _usersCollection.doc(userId).get();
+      final data = snap.data() as Map<String, dynamic>?;
+      if (data == null) return false;
+      final List<dynamic> current = (data['wishlist'] as List<dynamic>?) ?? [];
+      return current.any((e) => e is Map && e['id'] == productId && e['type'] == productType);
+    } catch (e) {
+      return false;
+    }
+  }
 
   // Single document for all locations in 'locations' collection
   DocumentReference get _vetLocationsDoc => _db.collection('locations').doc('vets');
@@ -294,6 +379,10 @@ class DatabaseService {
     });
   }
 
+  Future<void> updateUserField(String userId, Map<String, dynamic> fields) async {
+    await _usersCollection.doc(userId).update(fields);
+  }
+
   Future<void> updateUserAccountType(String userId, String accountType) async {
     if (!['normal', 'store', 'vet'].contains(accountType)) {
       throw ArgumentError('Invalid account type. Must be one of: normal, store, vet');
@@ -338,6 +427,50 @@ class DatabaseService {
       print('🔍 [DatabaseService] getUser ERROR: $e');
       print('🔍 [DatabaseService] getUser ERROR stack trace: ${StackTrace.current}');
       return null;
+    }
+  }
+
+  // Get random vets and stores for recommendations
+  Future<List<User>> getRandomVetsAndStores({int limit = 10}) async {
+    try {
+      final vetQuery = _usersCollection
+          .where('accountType', isEqualTo: 'vet')
+          .limit(limit ~/ 2);
+      
+      final storeQuery = _usersCollection
+          .where('accountType', isEqualTo: 'store')
+          .limit(limit ~/ 2);
+      
+      final vetSnapshot = await vetQuery.get();
+      final storeSnapshot = await storeQuery.get();
+      
+      final List<User> results = [];
+      
+      // Add vets
+      for (final doc in vetSnapshot.docs) {
+        try {
+          results.add(User.fromFirestore(doc));
+        } catch (e) {
+          print('Error parsing vet user: $e');
+        }
+      }
+      
+      // Add stores
+      for (final doc in storeSnapshot.docs) {
+        try {
+          results.add(User.fromFirestore(doc));
+        } catch (e) {
+          print('Error parsing store user: $e');
+        }
+      }
+      
+      // Shuffle for randomness
+      results.shuffle();
+      
+      return results;
+    } catch (e) {
+      print('Error getting random vets and stores: $e');
+      return [];
     }
   }
 
@@ -811,11 +944,13 @@ class DatabaseService {
     required latlong.LatLng userLocation,
     double radiusInKm = 10,
   }) {
+    print('Getting nearby lost pets for user location: ${userLocation.latitude}, ${userLocation.longitude}');
     return _lostPetsCollection
         .where('isFound', isEqualTo: false)
         .snapshots()
         .asyncMap((snapshot) async {
           final pets = <LostPet>[];
+          print('Processing ${snapshot.docs.length} lost pet documents');
           for (var doc in snapshot.docs) {
             try {
             final lostPet = await LostPet.fromFirestore(doc, _db);
@@ -826,14 +961,19 @@ class DatabaseService {
                   userLocation,
                   lostPet.location,
                 );
+                print('Pet ${lostPet.pet.name} at ${lostPet.location.latitude}, ${lostPet.location.longitude} - distance: ${distance.toStringAsFixed(2)}km');
                 if (distance <= radiusInKm) {
                   pets.add(lostPet);
+                  print('Added pet ${lostPet.pet.name} to nearby list');
+                } else {
+                  print('Pet ${lostPet.pet.name} is too far (${distance.toStringAsFixed(2)}km > ${radiusInKm}km)');
                 }
               }
             } catch (e) {
               print('Error converting lost pet doc ${doc.id}: $e'); // Debug log
             }
           }
+          print('Returning ${pets.length} nearby pets');
           return pets;
         });
   }
@@ -985,10 +1125,14 @@ class DatabaseService {
     bool onlyDiscounted = false,
     int limit = 10,
   }) {
+    final optimizedLimit = _getOptimizedLimit(limit);
+    final cacheKey = 'aliexpress_${category}_${isFreeShipping}_${onlyDiscounted}_$optimizedLimit';
+    
     print('Fetching AliExpress listings with filters:');
     print('- Category: ${category ?? 'All'}');
     print('- Free Shipping Only: $isFreeShipping');
     print('- Discounted Only: $onlyDiscounted');
+    print('- Optimized Limit: $optimizedLimit');
 
     Query query = _db.collection('aliexpresslistings');
 
@@ -1006,11 +1150,11 @@ class DatabaseService {
 
     return query
         .orderBy('createdAt', descending: true)
-        .limit(limit)
+        .limit(optimizedLimit)
         .snapshots()
         .map((snapshot) {
           print('Found ${snapshot.docs.length} listings');
-          return snapshot.docs.map((doc) {
+          final products = snapshot.docs.map((doc) {
             final data = doc.data() as Map<String, dynamic>;
             print('Processing listing: ${data['title']}');
             try {
@@ -1037,17 +1181,24 @@ class DatabaseService {
               rethrow;
             }
           }).toList();
+          
+          // Cache the results
+          _setCache(cacheKey, products);
+          return products;
         });
   }
 
   Stream<List<AliexpressProduct>> getRecommendedListings({int limit = 10}) {
+    final optimizedLimit = _getOptimizedLimit(limit);
+    final cacheKey = 'recommended_aliexpress_$optimizedLimit';
+    
     return _db
         .collection('aliexpresslistings')
         .orderBy('orders', descending: true)
-        .limit(limit)
+        .limit(optimizedLimit)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) {
+          final products = snapshot.docs.map((doc) {
             final data = doc.data() as Map<String, dynamic>;
             return AliexpressProduct(
               id: doc.id,
@@ -1067,6 +1218,10 @@ class DatabaseService {
               lastUpdatedAt: (data['lastUpdatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
             );
           }).toList();
+          
+          // Cache the results
+          _setCache(cacheKey, products);
+          return products;
         });
   }
 
@@ -1184,12 +1339,28 @@ class DatabaseService {
     }
   }
 
+  Future<StoreProduct?> getStoreProduct(String productId) async {
+    try {
+      final doc = await _storeProductsCollection.doc(productId).get();
+      if (doc.exists) {
+        return StoreProduct.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting store product: $e');
+      return null;
+    }
+  }
+
   Stream<List<StoreProduct>> getStoreProducts({
     String? category,
     bool? isFreeShipping,
     String? storeId,
     int limit = 10,
   }) {
+    final optimizedLimit = _getOptimizedLimit(limit);
+    final cacheKey = 'store_products_${category}_${isFreeShipping}_${storeId}_$optimizedLimit';
+    
     Query query = _storeProductsCollection
         .where('isActive', isEqualTo: true)
         .orderBy('createdAt', descending: true);
@@ -1207,22 +1378,37 @@ class DatabaseService {
     }
 
     return query
-        .limit(limit)
+        .limit(optimizedLimit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => StoreProduct.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+          final products = snapshot.docs
+              .map((doc) => StoreProduct.fromFirestore(doc))
+              .toList();
+          
+          // Cache the results
+          _setCache(cacheKey, products);
+          return products;
+        });
   }
 
   Stream<List<StoreProduct>> getPopularStoreProducts({int limit = 10}) {
+    final optimizedLimit = _getOptimizedLimit(limit);
+    final cacheKey = 'popular_store_products_$optimizedLimit';
+    
     return _storeProductsCollection
         .where('isActive', isEqualTo: true)
         .orderBy('totalOrders', descending: true)
-        .limit(limit)
+        .limit(optimizedLimit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => StoreProduct.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+          final products = snapshot.docs
+              .map((doc) => StoreProduct.fromFirestore(doc))
+              .toList();
+          
+          // Cache the results
+          _setCache(cacheKey, products);
+          return products;
+        });
   }
 
   Future<List<StoreProduct>> getStoreProductsByIds(List<String> productIds) async {
@@ -1238,6 +1424,167 @@ class DatabaseService {
       products.addAll(snapshot.docs.map((doc) => StoreProduct.fromFirestore(doc)));
     }
     return products;
+  }
+
+  Future<void> addProductReview({
+    required String productId,
+    required String userId,
+    required String userName,
+    required int rating,
+    required String comment,
+  }) async {
+    try {
+      // Add review to product's reviews subcollection
+      await _storeProductsCollection
+          .doc(productId)
+          .collection('reviews')
+          .add({
+        'userId': userId,
+        'userName': userName,
+        'rating': rating,
+        'comment': comment,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update product's average rating
+      await _updateProductRating(productId);
+
+      // Update seller's overall rating based on all product reviews
+      final product = await getStoreProduct(productId);
+      if (product != null) {
+        await _updateSellerRating(product.storeId);
+      }
+
+      print('Product review added successfully');
+    } catch (e) {
+      print('Error adding product review: $e');
+      throw e;
+    }
+  }
+
+  Future<void> _updateProductRating(String productId) async {
+    try {
+      // Get all reviews for this product
+      final reviewsSnapshot = await _storeProductsCollection
+          .doc(productId)
+          .collection('reviews')
+          .get();
+
+      if (reviewsSnapshot.docs.isEmpty) return;
+
+      // Calculate average rating
+      double totalRating = 0;
+      for (var doc in reviewsSnapshot.docs) {
+        final data = doc.data();
+        totalRating += (data['rating'] ?? 0).toDouble();
+      }
+      
+      final averageRating = totalRating / reviewsSnapshot.docs.length;
+
+      // Update product with new average rating
+      await _storeProductsCollection.doc(productId).update({
+        'rating': averageRating,
+        'reviewCount': reviewsSnapshot.docs.length,
+      });
+
+      print('Product rating updated to $averageRating');
+    } catch (e) {
+      print('Error updating product rating: $e');
+      throw e;
+    }
+  }
+
+  Future<void> _updateSellerRating(String sellerId) async {
+    try {
+      final sellerReviews = await getSellerReviews(sellerId);
+      final averageRating = sellerReviews['averageRating'] as double;
+      
+      // Update seller's rating in their user document
+      await _usersCollection.doc(sellerId).update({
+        'rating': averageRating,
+      });
+
+      print('Seller rating updated to $averageRating');
+    } catch (e) {
+      print('Error updating seller rating: $e');
+      throw e;
+    }
+  }
+
+  Stream<List<Map<String, dynamic>>> getProductReviews(String productId) {
+    return _storeProductsCollection
+        .doc(productId)
+        .collection('reviews')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'id': doc.id,
+            'userId': data['userId'] ?? '',
+            'userName': data['userName'] ?? 'Anonymous',
+            'rating': data['rating'] ?? 0,
+            'comment': data['comment'] ?? '',
+            'createdAt': data['createdAt'] ?? Timestamp.now(),
+          };
+        }).toList());
+  }
+
+  Future<Map<String, dynamic>> getSellerReviews(String sellerId) async {
+    try {
+      // Get all products by this seller
+      final productsSnapshot = await _storeProductsCollection
+          .where('storeId', isEqualTo: sellerId)
+          .get();
+
+      List<Map<String, dynamic>> allReviews = [];
+      double totalRating = 0;
+      int totalReviewCount = 0;
+
+      for (var productDoc in productsSnapshot.docs) {
+        final product = StoreProduct.fromFirestore(productDoc);
+        
+        // Get reviews for this product
+        final reviewsSnapshot = await _storeProductsCollection
+            .doc(productDoc.id)
+            .collection('reviews')
+            .orderBy('createdAt', descending: true)
+            .get();
+
+        for (var reviewDoc in reviewsSnapshot.docs) {
+          final reviewData = reviewDoc.data();
+          allReviews.add({
+            'id': reviewDoc.id,
+            'userId': reviewData['userId'] ?? '',
+            'userName': reviewData['userName'] ?? 'Anonymous',
+            'rating': reviewData['rating'] ?? 0,
+            'comment': reviewData['comment'] ?? '',
+            'createdAt': reviewData['createdAt'] ?? Timestamp.now(),
+            'productId': productDoc.id,
+            'productName': product.name,
+            'productImage': product.imageUrls.isNotEmpty ? product.imageUrls.first : '',
+          });
+          
+          totalRating += (reviewData['rating'] ?? 0).toDouble();
+          totalReviewCount++;
+        }
+      }
+
+      final averageRating = totalReviewCount > 0 ? totalRating / totalReviewCount : 0.0;
+
+      return {
+        'reviews': allReviews,
+        'averageRating': averageRating,
+        'totalReviews': totalReviewCount,
+      };
+    } catch (e) {
+      print('Error getting seller reviews: $e');
+      return {
+        'reviews': <Map<String, dynamic>>[],
+        'averageRating': 0.0,
+        'totalReviews': 0,
+      };
+    }
   }
 
   // Update store rating and total orders
@@ -1273,23 +1620,54 @@ class DatabaseService {
     }
   }
 
+  // Update all store stats (utility function for fixing existing data)
+  Future<void> updateAllStoreStats() async {
+    try {
+      print('Starting update of all store stats...');
+      
+      // Get all store users
+      final storeUsersSnapshot = await _usersCollection
+          .where('accountType', isEqualTo: 'store')
+          .get();
+      
+      int updatedCount = 0;
+      for (var doc in storeUsersSnapshot.docs) {
+        try {
+          await updateStoreStats(doc.id);
+          updatedCount++;
+          print('Updated store stats for: ${doc.id}');
+        } catch (e) {
+          print('Error updating store stats for ${doc.id}: $e');
+          // Continue with next store
+        }
+      }
+      
+      print('Store stats update completed. Updated $updatedCount stores.');
+    } catch (e) {
+      print('Error in updateAllStoreStats: $e');
+      rethrow;
+    }
+  }
+
   Stream<List<MarketplaceProduct>> getMarketplaceProducts({
     String? category,
     bool? isFreeShipping,
     String? storeId,
     int limit = 10,
   }) {
+    final optimizedLimit = _getOptimizedLimit(limit);
+    
     // Combine AliExpress and store products
     return CombineLatestStream.combine2(
       getAliexpressListings(
         category: category,
-        limit: limit ~/ 2,  // Split limit between both sources
+        limit: optimizedLimit ~/ 2,  // Split limit between both sources
       ),
       getStoreProducts(
         category: category,
         isFreeShipping: isFreeShipping,
         storeId: storeId,
-        limit: limit ~/ 2,
+        limit: optimizedLimit ~/ 2,
       ),
       (List<AliexpressProduct> aliProducts, List<StoreProduct> storeProducts) {
         final products = [
@@ -1304,10 +1682,12 @@ class DatabaseService {
   }
 
   Stream<List<MarketplaceProduct>> getRecommendedMarketplaceProducts({int limit = 10}) {
+    final optimizedLimit = _getOptimizedLimit(limit);
+    
     // For now, just combine recommended AliExpress products and top-rated store products
     return CombineLatestStream.combine2(
-      getRecommendedListings(limit: limit ~/ 2),
-      getStoreProducts(limit: limit ~/ 2),
+      getRecommendedListings(limit: optimizedLimit ~/ 2),
+      getStoreProducts(limit: optimizedLimit ~/ 2),
       (List<AliexpressProduct> aliProducts, List<StoreProduct> storeProducts) {
         final products = [
           ...aliProducts.map(MarketplaceProduct.fromAliexpress),
@@ -1327,10 +1707,12 @@ class DatabaseService {
   }
 
   Stream<List<MarketplaceProduct>> getNewMarketplaceProducts({int limit = 10}) {
+    final optimizedLimit = _getOptimizedLimit(limit);
+    
     // For now, just combine new AliExpress products and store products
     return CombineLatestStream.combine2(
-      getAliexpressListings(limit: limit ~/ 2),
-      getStoreProducts(limit: limit ~/ 2),
+      getAliexpressListings(limit: optimizedLimit ~/ 2),
+      getStoreProducts(limit: optimizedLimit ~/ 2),
       (List<AliexpressProduct> aliProducts, List<StoreProduct> storeProducts) {
         final products = [
           ...aliProducts.map(MarketplaceProduct.fromAliexpress),
@@ -1392,19 +1774,19 @@ class DatabaseService {
       for (var doc in snapshot.docs) {
         final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         final status = data['status'] as String? ?? 'pending';
-        final price = (data['price'] ?? 0) as num;
+        final price = (data['productPrice'] ?? data['price'] ?? 0) as num;
         final quantity = (data['quantity'] ?? 1) as num;
         
-        // Calculate total sales from completed orders
-        if (status == 'delivered') {
+        // Calculate total sales from shipped and delivered orders (revenue is earned when shipped)
+        if (['shipped', 'delivered'].contains(status)) {
           totalSales += price * quantity;
         }
         
         // Count all orders
         ordersCount++;
         
-        // Count active orders (pending, confirmed, shipped)
-        if (['pending', 'confirmed', 'shipped'].contains(status)) {
+        // Count active orders (ordered, pending, confirmed, shipped)
+        if (['ordered', 'pending', 'confirmed', 'shipped'].contains(status)) {
           activeOrders++;
         }
       }
@@ -1446,10 +1828,10 @@ class DatabaseService {
     
     return _ordersCollection
         .where('storeId', isEqualTo: storeId)
-        .where('status', isEqualTo: 'delivered')
+        .where('status', whereIn: ['shipped', 'delivered'])
         .snapshots()
         .map((snapshot) {
-      print('🔍 [DatabaseService] getStoreSalesAnalytics received ${snapshot.docs.length} delivered orders');
+      print('🔍 [DatabaseService] getStoreSalesAnalytics received ${snapshot.docs.length} shipped/delivered orders');
       
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
@@ -1463,8 +1845,9 @@ class DatabaseService {
       
       for (var doc in snapshot.docs) {
         final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        final createdAt = (data['createdAt'] as Timestamp).toDate();
-        final price = (data['price'] ?? 0) as num;
+        final timestamp = data['timestamp'] ?? data['createdAt'];
+        final createdAt = timestamp != null ? (timestamp as Timestamp).toDate() : DateTime.now();
+        final price = (data['productPrice'] ?? data['price'] ?? 0) as num;
         final quantity = (data['quantity'] ?? 1) as num;
         final orderTotal = (price * quantity).clamp(0, double.infinity); // Ensure non-negative
         
@@ -1516,10 +1899,10 @@ class DatabaseService {
     
     return _ordersCollection
         .where('storeId', isEqualTo: storeId)
-        .where('status', isEqualTo: 'delivered')
+        .where('status', whereIn: ['shipped', 'delivered'])
         .snapshots()
         .map((snapshot) {
-      print('🔍 [DatabaseService] getStoreSalesChartData received ${snapshot.docs.length} delivered orders');
+      print('🔍 [DatabaseService] getStoreSalesChartData received ${snapshot.docs.length} shipped/delivered orders');
       
       final now = DateTime.now();
       final Map<String, double> dailyData = {};
@@ -1549,8 +1932,9 @@ class DatabaseService {
       
       for (var doc in snapshot.docs) {
         final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        final createdAt = (data['createdAt'] as Timestamp).toDate();
-        final price = (data['price'] ?? 0) as num;
+        final timestamp = data['timestamp'] ?? data['createdAt'];
+        final createdAt = timestamp != null ? (timestamp as Timestamp).toDate() : DateTime.now();
+        final price = (data['productPrice'] ?? data['price'] ?? 0) as num;
         final quantity = (data['quantity'] ?? 1) as num;
         final orderTotal = (price * quantity).clamp(0, double.infinity); // Ensure non-negative
         
@@ -1883,6 +2267,24 @@ class DatabaseService {
     }
   }
 
+  Future<void> markOrderAsRead(String userId, String orderId, String accountType) async {
+    try {
+      if (accountType == 'store') {
+        await _ordersCollection
+            .doc(orderId)
+            .update({'isRead': true});
+      } else {
+        await _usersCollection
+            .doc(userId)
+            .collection('orders')
+            .doc(orderId)
+            .update({'isRead': true});
+      }
+    } catch (e) {
+      print('Error marking order as read: $e');
+    }
+  }
+
   Future<void> updateChatMessageAttachment(String messageId, Map<String, dynamic> attachment) async {
     try {
       await _chatMessagesCollection.doc(messageId).update({
@@ -1897,7 +2299,49 @@ class DatabaseService {
   // Order Operations
   Future<String> createOrder(store_order.StoreOrder order) async {
     try {
-      final docRef = await _ordersCollection.add(order.toFirestore());
+      final orderData = order.toFirestore();
+      orderData['isRead'] = false;
+      final docRef = await _ordersCollection.add(orderData);
+      final orderId = docRef.id;
+      
+      // Also create the order in user's subcollection for buyer
+      await _usersCollection
+          .doc(order.customerId)
+          .collection('orders')
+          .doc(orderId)
+          .set({
+        'id': orderId,
+        'userId': order.customerId,
+        'productId': order.productId,
+        'productName': order.productName,
+        'productImage': order.productImageUrl,
+        'productPrice': order.price,
+        'storeId': order.storeId,
+        'quantity': order.quantity,
+        'status': order.status,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+
+      // Also create the order in store's subcollection for seller
+      await _usersCollection
+          .doc(order.storeId)
+          .collection('orders')
+          .doc(orderId)
+          .set({
+        'id': orderId,
+        'userId': order.customerId,
+        'productId': order.productId,
+        'productName': order.productName,
+        'productImage': order.productImageUrl,
+        'productPrice': order.price,
+        'storeId': order.storeId,
+        'quantity': order.quantity,
+        'status': order.status,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+
       // Increment totalOrders for the store product if this is a store product order
       if (order.productId.isNotEmpty) {
         final productDoc = await _storeProductsCollection.doc(order.productId).get();
@@ -1905,13 +2349,16 @@ class DatabaseService {
           await productDoc.reference.update({
             'totalOrders': FieldValue.increment(1),
           });
+          
+          // Update store's total orders in user profile
+          await updateStoreStats(order.storeId);
         }
       }
 
       // Send order placed notification to store owner
       _sendOrderPlacedNotification(order);
 
-      return docRef.id;
+      return orderId;
     } catch (e) {
       print('Error creating order: $e');
       throw e;
@@ -1959,15 +2406,143 @@ class DatabaseService {
 
   Future<void> updateOrderStatus(String orderId, String status) async {
     try {
+      // Update the main orders collection
       await _ordersCollection.doc(orderId).update({
         'status': status,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      // Also update the order in user subcollections (for new Payment on Delivery orders)
+      final orderDoc = await _ordersCollection.doc(orderId).get();
+      if (orderDoc.exists) {
+        final orderData = orderDoc.data() as Map<String, dynamic>;
+        final customerId = orderData['customerId'];
+        final storeId = orderData['storeId'];
+        
+        if (customerId != null && storeId != null) {
+          // Update in buyer's subcollection
+          await _usersCollection
+              .doc(customerId)
+              .collection('orders')
+              .doc(orderId)
+              .update({
+            'status': status,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+          
+          // Update in seller's subcollection
+          await _usersCollection
+              .doc(storeId)
+              .collection('orders')
+              .doc(orderId)
+              .update({
+            'status': status,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      // If order is marked as shipped, update seller revenue and product order count
+      if (status == 'shipped') {
+        final orderData = orderDoc.data() as Map<String, dynamic>;
+        final storeId = orderData['storeId'] as String?;
+        final productId = orderData['productId'] as String?;
+        final productPrice = (orderData['price'] ?? 0.0).toDouble();
+        final quantity = (orderData['quantity'] ?? 1).toInt();
+        final orderTotal = productPrice * quantity;
+        
+        if (storeId != null && orderTotal > 0) {
+          print('🔍 [DatabaseService] Order marked as shipped, updating seller revenue: storeId=$storeId, amount=$orderTotal');
+          await updateSellerRevenue(storeId, orderTotal);
+        }
+        
+        // Update product's shipped orders count when order is shipped
+        if (productId != null && productId.isNotEmpty) {
+          final productDoc = await _storeProductsCollection.doc(productId).get();
+          if (productDoc.exists) {
+            await productDoc.reference.update({
+              'shippedOrders': FieldValue.increment(1),
+            });
+            print('🔍 [DatabaseService] Updated product shipped orders count for product: $productId');
+          }
+        }
+      }
+      
+      // If order is cancelled or refunded, decrement shipped orders count
+      if (status == 'cancelled' || status == 'refunded') {
+        final orderData = orderDoc.data() as Map<String, dynamic>;
+        final productId = orderData['productId'] as String?;
+        final previousStatus = orderData['status'] as String?;
+        
+        // Only decrement if the order was previously shipped
+        if (productId != null && productId.isNotEmpty && previousStatus == 'shipped') {
+          final productDoc = await _storeProductsCollection.doc(productId).get();
+          if (productDoc.exists) {
+            await productDoc.reference.update({
+              'shippedOrders': FieldValue.increment(-1),
+            });
+            print('🔍 [DatabaseService] Decremented product shipped orders count for cancelled/refunded order: $productId');
+          }
+        }
+      }
+
+      // Update store stats when order status changes (for accurate total orders)
+      final orderData = orderDoc.data() as Map<String, dynamic>;
+      final storeId = orderData['storeId'] as String?;
+      if (storeId != null) {
+        await updateStoreStats(storeId);
+      }
+
       // Send order status notification
       _sendOrderStatusNotification(orderId, status);
     } catch (e) {
       print('Error updating order status: $e');
+      throw e;
+    }
+  }
+
+  // Update seller revenue when order is shipped
+  Future<void> updateSellerRevenue(String sellerId, double orderAmount) async {
+    try {
+      final sellerDoc = await _usersCollection.doc(sellerId).get();
+      if (!sellerDoc.exists) {
+        print('🔍 [DatabaseService] Seller document not found: $sellerId');
+        return;
+      }
+
+      final sellerData = sellerDoc.data() as Map<String, dynamic>;
+      final currentTotalRevenue = (sellerData['totalRevenue'] ?? 0.0).toDouble();
+      final currentDailyRevenue = (sellerData['dailyRevenue'] ?? 0.0).toDouble();
+      final lastRevenueUpdate = (sellerData['lastRevenueUpdate'] as Timestamp?)?.toDate();
+      
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      
+      // Check if we need to reset daily revenue (new day)
+      double newDailyRevenue = currentDailyRevenue;
+      if (lastRevenueUpdate == null || 
+          DateTime(lastRevenueUpdate.year, lastRevenueUpdate.month, lastRevenueUpdate.day).isBefore(today)) {
+        // Reset daily revenue for new day
+        newDailyRevenue = orderAmount;
+        print('🔍 [DatabaseService] Resetting daily revenue for new day. Previous: $currentDailyRevenue, New: $newDailyRevenue');
+      } else {
+        // Add to existing daily revenue
+        newDailyRevenue = currentDailyRevenue + orderAmount;
+        print('🔍 [DatabaseService] Adding to existing daily revenue. Previous: $currentDailyRevenue, Adding: $orderAmount, New: $newDailyRevenue');
+      }
+      
+      final newTotalRevenue = currentTotalRevenue + orderAmount;
+      
+      // Update seller revenue
+      await _usersCollection.doc(sellerId).update({
+        'dailyRevenue': newDailyRevenue,
+        'totalRevenue': newTotalRevenue,
+        'lastRevenueUpdate': FieldValue.serverTimestamp(),
+      });
+      
+      print('🔍 [DatabaseService] Updated seller revenue for $sellerId - Daily: $newDailyRevenue, Total: $newTotalRevenue');
+    } catch (e) {
+      print('🔍 [DatabaseService] Error updating seller revenue: $e');
       throw e;
     }
   }
@@ -2022,39 +2597,89 @@ class DatabaseService {
     }
   }
 
-  Stream<List<store_order.StoreOrder>> getStoreOrders(String storeId) {
+    Stream<List<store_order.StoreOrder>> getStoreOrders(String storeId) {
     print('🔍 [DatabaseService] getStoreOrders called with storeId: $storeId');
     try {
+      // Query both the main orders collection and the store owner's subcollection
+      // for maximum compatibility
       return _ordersCollection
           .where('storeId', isEqualTo: storeId)
-          .orderBy('createdAt', descending: true)
           .snapshots()
           .map((snapshot) {
-            print('🔍 [DatabaseService] Firestore snapshot received');
-            print('🔍 [DatabaseService] Snapshot docs count: ${snapshot.docs.length}');
-            print('🔍 [DatabaseService] Snapshot metadata: ${snapshot.metadata}');
+            print('🔍 [DatabaseService] getStoreOrders Firestore snapshot received');
+            print('🔍 [DatabaseService] getStoreOrders Snapshot docs count: ${snapshot.docs.length}');
+            print('🔍 [DatabaseService] getStoreOrders Snapshot metadata: ${snapshot.metadata}');
             
-            final orders = snapshot.docs.map((doc) {
+            // Sort manually to avoid index issues for now
+            final sortedDocs = snapshot.docs..sort((a, b) {
+              final aData = a.data() as Map<String, dynamic>;
+              final bData = b.data() as Map<String, dynamic>;
+              final aTime = aData['createdAt'] ?? aData['timestamp'];
+              final bTime = bData['createdAt'] ?? bData['timestamp'];
+              
+              if (aTime == null && bTime == null) return 0;
+              if (aTime == null) return 1;
+              if (bTime == null) return -1;
+              
+              final aTimestamp = aTime is Timestamp ? aTime.toDate() : DateTime.now();
+              final bTimestamp = bTime is Timestamp ? bTime.toDate() : DateTime.now();
+              
+              return bTimestamp.compareTo(aTimestamp); // descending order
+            });
+            
+            final orders = sortedDocs.map((doc) {
               try {
-                final order = store_order.StoreOrder.fromFirestore(doc);
-                print('🔍 [DatabaseService] Successfully parsed order: ${order.id} - ${order.productName} (${order.status})');
+                final data = doc.data() as Map<String, dynamic>;
+                print('🔍 [DatabaseService] getStoreOrders Raw order data: $data');
+                
+                // Convert the order data to StoreOrder format
+                final order = store_order.StoreOrder(
+                  id: data['id'] ?? doc.id,
+                  customerId: data['customerId'] ?? data['userId'] ?? '',
+                  customerName: data['customerName'] ?? 'Customer',
+                  storeId: data['storeId'] ?? storeId,
+                  storeName: data['storeName'] ?? 'Store',
+                  productId: data['productId'] ?? '',
+                  productName: data['productName'] ?? '',
+                  productImageUrl: data['productImageUrl'] ?? data['productImage'] ?? '',
+                  price: (data['price'] ?? data['productPrice'] ?? 0.0).toDouble(),
+                  quantity: data['quantity'] ?? 1,
+                  status: data['status'] ?? 'pending',
+                  createdAt: data['createdAt'] != null 
+                      ? (data['createdAt'] as Timestamp).toDate()
+                      : (data['timestamp'] != null 
+                          ? (data['timestamp'] as Timestamp).toDate()
+                          : DateTime.now()),
+                  updatedAt: data['updatedAt'] != null 
+                      ? (data['updatedAt'] as Timestamp).toDate()
+                      : (data['timestamp'] != null 
+                          ? (data['timestamp'] as Timestamp).toDate()
+                          : DateTime.now()),
+                  chatMessageId: data['chatMessageId'] ?? '',
+                );
+                
+                print('🔍 [DatabaseService] getStoreOrders Successfully parsed order: ${order.id} - ${order.productName} (${order.status})');
                 return order;
               } catch (e) {
-                print('🔍 [DatabaseService] Error parsing order document ${doc.id}: $e');
-                print('🔍 [DatabaseService] Document data: ${doc.data()}');
+                print('🔍 [DatabaseService] getStoreOrders Error parsing order document ${doc.id}: $e');
+                print('🔍 [DatabaseService] getStoreOrders Document data: ${doc.data()}');
                 throw e;
               }
             }).toList();
             
-            print('🔍 [DatabaseService] Successfully parsed ${orders.length} orders');
+            print('🔍 [DatabaseService] getStoreOrders Successfully parsed ${orders.length} orders');
             return orders;
           }).handleError((error) {
-            print('🔍 [DatabaseService] Error in getStoreOrders stream: $error');
-            print('🔍 [DatabaseService] Error type: ${error.runtimeType}');
+            print('🔍 [DatabaseService] getStoreOrders Error in stream: $error');
+            print('🔍 [DatabaseService] getStoreOrders Error type: ${error.runtimeType}');
+            if (error.toString().contains('indexes?create_composite=')) {
+              print('🔗 [DatabaseService] Index creation URL:');
+              print('https://console.firebase.google.com/v1/r/${error.toString().split('indexes?create_composite=')[1].split("'")[0]}');
+            }
             throw error;
           });
     } catch (e) {
-      print('🔍 [DatabaseService] Error setting up getStoreOrders query: $e');
+      print('🔍 [DatabaseService] getStoreOrders Error setting up query: $e');
       rethrow;
     }
   }
@@ -2062,9 +2687,11 @@ class DatabaseService {
   Stream<List<store_order.StoreOrder>> getUserOrders(String userId) {
     print('🔍 [DatabaseService] getUserOrders called with userId: $userId');
     try {
-      return _ordersCollection
-          .where('customerId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
+      // Query the user's orders subcollection for new payment on delivery orders
+      return _usersCollection
+          .doc(userId)
+          .collection('orders')
+          .orderBy('timestamp', descending: true)
           .snapshots()
           .map((snapshot) {
             print('🔍 [DatabaseService] getUserOrders Firestore snapshot received');
@@ -2073,7 +2700,31 @@ class DatabaseService {
             
             final orders = snapshot.docs.map((doc) {
               try {
-                final order = store_order.StoreOrder.fromFirestore(doc);
+                final data = doc.data() as Map<String, dynamic>;
+                print('🔍 [DatabaseService] getUserOrders Raw order data: $data');
+                
+                // Convert the order data to StoreOrder format
+                final order = store_order.StoreOrder(
+                  id: data['id'] ?? doc.id,
+                  customerId: data['userId'] ?? userId,
+                  customerName: data['customerName'] ?? 'Customer',
+                  storeId: data['storeId'] ?? '',
+                  storeName: data['storeName'] ?? 'Store',
+                  productId: data['productId'] ?? '',
+                  productName: data['productName'] ?? '',
+                  productImageUrl: data['productImage'] ?? '',
+                  price: (data['productPrice'] ?? 0.0).toDouble(),
+                  quantity: data['quantity'] ?? 1,
+                  status: data['status'] ?? 'pending',
+                  createdAt: data['timestamp'] != null 
+                      ? (data['timestamp'] as Timestamp).toDate()
+                      : DateTime.now(),
+                  updatedAt: data['timestamp'] != null 
+                      ? (data['timestamp'] as Timestamp).toDate()
+                      : DateTime.now(),
+                  chatMessageId: data['chatMessageId'] ?? '',
+                );
+                
                 print('🔍 [DatabaseService] getUserOrders Successfully parsed order: ${order.id} - ${order.productName} (${order.status})');
                 return order;
               } catch (e) {
@@ -2172,11 +2823,56 @@ class DatabaseService {
   Stream<List<store_order.StoreOrder>> getActiveStoreOrders(String storeId) {
     return _ordersCollection
         .where('storeId', isEqualTo: storeId)
-        .where('status', whereIn: ['pending', 'confirmed', 'shipped'])
-        .orderBy('createdAt', descending: true)
+        .where('status', whereIn: ['ordered', 'pending', 'confirmed', 'shipped'])
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => store_order.StoreOrder.fromFirestore(doc)).toList());
+        .map((snapshot) {
+          // Sort manually to avoid index issues and handle both new and old order formats
+          final sortedDocs = snapshot.docs..sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>;
+            final bData = b.data() as Map<String, dynamic>;
+            final aTime = aData['timestamp'] ?? aData['createdAt'];
+            final bTime = bData['timestamp'] ?? bData['createdAt'];
+            
+            if (aTime == null && bTime == null) return 0;
+            if (aTime == null) return 1;
+            if (bTime == null) return -1;
+            
+            final aTimestamp = aTime is Timestamp ? aTime.toDate() : DateTime.now();
+            final bTimestamp = bTime is Timestamp ? bTime.toDate() : DateTime.now();
+            
+            return bTimestamp.compareTo(aTimestamp); // descending order
+          });
+          
+          return sortedDocs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            
+            // Convert new order format to StoreOrder format for compatibility
+            return store_order.StoreOrder(
+              id: data['id'] ?? doc.id,
+              customerId: data['userId'] ?? data['customerId'] ?? '',
+              customerName: 'Customer',
+              storeId: data['storeId'] ?? storeId,
+              storeName: 'Store',
+              productId: data['productId'] ?? '',
+              productName: data['productName'] ?? '',
+              productImageUrl: data['productImage'] ?? data['productImageUrl'] ?? '',
+              price: (data['productPrice'] ?? data['price'] ?? 0.0).toDouble(),
+              quantity: data['quantity'] ?? 1,
+              status: data['status'] ?? 'pending',
+              createdAt: data['timestamp'] != null 
+                  ? (data['timestamp'] as Timestamp).toDate()
+                  : data['createdAt'] != null
+                    ? (data['createdAt'] as Timestamp).toDate()
+                    : DateTime.now(),
+              updatedAt: data['timestamp'] != null 
+                  ? (data['timestamp'] as Timestamp).toDate()
+                  : data['updatedAt'] != null
+                    ? (data['updatedAt'] as Timestamp).toDate()
+                    : DateTime.now(),
+              chatMessageId: data['chatMessageId'] ?? '',
+            );
+          }).toList();
+        });
   }
 
   Future<void> updateGiftIsRead(String giftId, bool isRead) async {
@@ -2268,7 +2964,7 @@ class DatabaseService {
 
   // ==================== APPOINTMENT METHODS ====================
 
-    // Create a new appointment
+  // Create a new appointment
   Future<String> createAppointment(Appointment appointment) async {
     try {
       print('🔍 [DatabaseService] Creating appointment for ${appointment.petName} on ${appointment.appointmentDate}');
@@ -2298,7 +2994,7 @@ class DatabaseService {
       );
       await NotificationService().sendNotification(notification);
       print('🔍 [DatabaseService] Notification sent to vet');
-      
+
       return docRef.id;
     } catch (e) {
       print('Error creating appointment: $e');
@@ -2308,54 +3004,153 @@ class DatabaseService {
 
   // Get appointments for a vet
   Stream<List<Appointment>> getVetAppointments(String vetId, {AppointmentStatus? status}) {
-    Query query = _appointmentsCollection
-        .where('vetId', isEqualTo: vetId)
-        .orderBy('appointmentDate', descending: false);
+    print('🔍 [DatabaseService] getVetAppointments called - vetId: $vetId, status: $status');
     
-    if (status != null) {
-      query = query.where('status', isEqualTo: status.name);
+    try {
+      return _appointmentsCollection
+          .where('vetId', isEqualTo: vetId)
+          .orderBy('appointmentDate', descending: false)
+          .snapshots()
+          .handleError((error) {
+            print('❌ [DatabaseService] getVetAppointments ERROR: $error');
+            if (error.toString().contains('indexes?create_composite=')) {
+              print('🔗 [DatabaseService] Index creation URL:');
+              print('https://console.firebase.google.com/v1/r/${error.toString().split('indexes?create_composite=')[1].split("'")[0]}');
+            }
+            throw error;
+          })
+          .map((snapshot) {
+            print('🔍 [DatabaseService] getVetAppointments - Found ${snapshot.docs.length} appointments');
+            return snapshot.docs.map((doc) {
+              try {
+                final data = doc.data() as Map<String, dynamic>;
+                print('🔍 [DatabaseService] Raw appointment data for ${doc.id}: $data');
+                final appointment = Appointment.fromFirestore(doc);
+                print('🔍 [DatabaseService] Parsed appointment: ${appointment.id} - ${appointment.status.name} - ${appointment.appointmentDate} - ${appointment.timeSlot}');
+                return appointment;
+              } catch (e) {
+                print('🔍 [DatabaseService] Error parsing appointment ${doc.id}: $e');
+                return null;
+              }
+            }).where((apt) => apt != null).cast<Appointment>().toList()
+              .where((apt) => status == null || apt.status == status)
+              .toList();
+          });
+    } catch (e) {
+      print('❌ [DatabaseService] getVetAppointments EXCEPTION: $e');
+      rethrow;
     }
-
-    return query.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        try {
-          final data = doc.data() as Map<String, dynamic>;
-          print('🔍 [DatabaseService] Raw appointment data for ${doc.id}: $data');
-          final appointment = Appointment.fromFirestore(doc);
-          print('🔍 [DatabaseService] Parsed appointment: ${appointment.id} - ${appointment.status.name} - ${appointment.appointmentDate} - ${appointment.timeSlot}');
-          return appointment;
-        } catch (e) {
-          print('🔍 [DatabaseService] Error parsing appointment ${doc.id}: $e');
-          return null;
-        }
-      }).where((apt) => apt != null).cast<Appointment>().toList();
-    });
   }
 
   // Get appointments for a user
   Stream<List<Appointment>> getUserAppointments(String userId, {AppointmentStatus? status}) {
-    Query query = _appointmentsCollection
-        .where('userId', isEqualTo: userId)
-        .orderBy('appointmentDate', descending: false);
+    print('🔍 [DatabaseService] getUserAppointments called - userId: $userId, status: $status');
     
-    if (status != null) {
-      query = query.where('status', isEqualTo: status.name);
+    try {
+      return _appointmentsCollection
+          .where('userId', isEqualTo: userId)
+          .orderBy('appointmentDate', descending: false)
+          .snapshots()
+          .handleError((error) {
+            print('❌ [DatabaseService] getUserAppointments ERROR: $error');
+            if (error.toString().contains('indexes?create_composite=')) {
+              print('🔗 [DatabaseService] Index creation URL:');
+              print('https://console.firebase.google.com/v1/r/${error.toString().split('indexes?create_composite=')[1].split("'")[0]}');
+            }
+            throw error;
+          })
+          .map((snapshot) {
+            print('🔍 [DatabaseService] getUserAppointments - Found ${snapshot.docs.length} appointments');
+            return snapshot.docs.map((doc) {
+              try {
+                final data = doc.data() as Map<String, dynamic>;
+                print('🔍 [DatabaseService] Raw appointment data for ${doc.id}: $data');
+                final appointment = Appointment.fromFirestore(doc);
+                print('🔍 [DatabaseService] Parsed appointment: ${appointment.id} - ${appointment.status.name} - ${appointment.appointmentDate} - ${appointment.timeSlot}');
+                return appointment;
+              } catch (e) {
+                print('🔍 [DatabaseService] Error parsing appointment ${doc.id}: $e');
+                return null;
+              }
+            }).where((apt) => apt != null).cast<Appointment>().toList()
+              .where((apt) => status == null || apt.status == status)
+              .toList();
+          });
+    } catch (e) {
+      print('❌ [DatabaseService] getUserAppointments EXCEPTION: $e');
+      rethrow;
     }
+  }
 
-    return query.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        try {
-          final data = doc.data() as Map<String, dynamic>;
-          print('🔍 [DatabaseService] Raw appointment data for ${doc.id}: $data');
-          final appointment = Appointment.fromFirestore(doc);
-          print('🔍 [DatabaseService] Parsed appointment: ${appointment.id} - ${appointment.status.name} - ${appointment.appointmentDate} - ${appointment.timeSlot}');
-          return appointment;
-        } catch (e) {
-          print('🔍 [DatabaseService] Error parsing appointment ${doc.id}: $e');
-          return null;
-        }
-      }).where((apt) => apt != null).cast<Appointment>().toList();
-    });
+  // Get today's appointments for a user
+  Stream<List<Appointment>> getUserTodayAppointments(String userId) {
+    print('🔍 [DatabaseService] getUserTodayAppointments called - userId: $userId');
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    
+    print('🔍 [DatabaseService] Date range: $today to $tomorrow');
+
+    try {
+      return _appointmentsCollection
+          .where('userId', isEqualTo: userId)
+          .where('appointmentDate', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
+          .where('appointmentDate', isLessThan: Timestamp.fromDate(tomorrow))
+          .snapshots()
+          .handleError((error) {
+            print('❌ [DatabaseService] getUserTodayAppointments ERROR: $error');
+            if (error.toString().contains('indexes?create_composite=')) {
+              print('🔗 [DatabaseService] Index creation URL:');
+              print('https://console.firebase.google.com/v1/r/${error.toString().split('indexes?create_composite=')[1].split("'")[0]}');
+            }
+            throw error;
+          })
+          .map((snapshot) {
+            print('🔍 [DatabaseService] getUserTodayAppointments - Found ${snapshot.docs.length} appointments in date range');
+            return snapshot.docs.map((doc) {
+              try {
+                final appointment = Appointment.fromFirestore(doc);
+                // Filter by status in memory to avoid composite index requirement
+                if (appointment.status == AppointmentStatus.pending || 
+                    appointment.status == AppointmentStatus.confirmed) {
+                  print('🔍 [DatabaseService] Today\'s appointment: ${appointment.petName} at ${appointment.formattedTime}');
+                  return appointment;
+                }
+                return null;
+              } catch (e) {
+                print('🔍 [DatabaseService] Error parsing today\'s appointment ${doc.id}: $e');
+                return null;
+              }
+            }).where((apt) => apt != null).cast<Appointment>().toList()
+              ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+          });
+    } catch (e) {
+      print('❌ [DatabaseService] getUserTodayAppointments EXCEPTION: $e');
+      rethrow;
+    }
+  }
+
+  // Update appointment
+  Future<void> updateAppointment(Appointment appointment) async {
+    try {
+      await _appointmentsCollection.doc(appointment.id).update(appointment.toFirestore());
+      print('🔍 [DatabaseService] Appointment ${appointment.id} updated successfully');
+    } catch (e) {
+      print('Error updating appointment: $e');
+      rethrow;
+    }
+  }
+
+  // Delete appointment
+  Future<void> deleteAppointment(String appointmentId) async {
+    try {
+      await _appointmentsCollection.doc(appointmentId).delete();
+      print('🔍 [DatabaseService] Appointment $appointmentId deleted successfully');
+    } catch (e) {
+      print('Error deleting appointment: $e');
+      rethrow;
+    }
   }
 
   // Update appointment status
@@ -2562,7 +3357,7 @@ class DatabaseService {
         // Count appointments for today
         final appointmentsToday = vetAppointments.where((apt) {
           try {
-            final aptDate = DateTime(apt.appointmentDate.year, apt.appointmentDate.month, apt.appointmentDate.day);
+          final aptDate = DateTime(apt.appointmentDate.year, apt.appointmentDate.month, apt.appointmentDate.day);
             final isToday = aptDate.isAtSameMomentAs(today);
             final isValidStatus = apt.status == AppointmentStatus.pending || apt.status == AppointmentStatus.confirmed;
             return isToday && isValidStatus;
@@ -2588,14 +3383,14 @@ class DatabaseService {
         String nextAppointment = 'No upcoming';
         if (upcomingAppointments.isNotEmpty) {
           try {
-            final next = upcomingAppointments.first;
-            final nextDate = DateTime(next.appointmentDate.year, next.appointmentDate.month, next.appointmentDate.day);
-            if (nextDate.isAtSameMomentAs(today)) {
-              nextAppointment = 'Today at ${next.formattedTime}';
-            } else if (nextDate.isAtSameMomentAs(tomorrow)) {
-              nextAppointment = 'Tomorrow at ${next.formattedTime}';
-            } else {
-              nextAppointment = '${_formatDate(next.appointmentDate)} at ${next.formattedTime}';
+          final next = upcomingAppointments.first;
+          final nextDate = DateTime(next.appointmentDate.year, next.appointmentDate.month, next.appointmentDate.day);
+          if (nextDate.isAtSameMomentAs(today)) {
+            nextAppointment = 'Today at ${next.formattedTime}';
+          } else if (nextDate.isAtSameMomentAs(tomorrow)) {
+            nextAppointment = 'Tomorrow at ${next.formattedTime}';
+          } else {
+            nextAppointment = '${_formatDate(next.appointmentDate)} at ${next.formattedTime}';
             }
           } catch (e) {
             print('🔍 [DatabaseService] Error formatting next appointment: $e');
@@ -2610,7 +3405,7 @@ class DatabaseService {
         // Calculate revenue for today from completed appointments (real-time)
         final revenueToday = vetAppointments.where((apt) {
           try {
-            final aptDate = DateTime(apt.appointmentDate.year, apt.appointmentDate.month, apt.appointmentDate.day);
+          final aptDate = DateTime(apt.appointmentDate.year, apt.appointmentDate.month, apt.appointmentDate.day);
             final isToday = aptDate.isAtSameMomentAs(today);
             final isCompleted = apt.status == AppointmentStatus.completed;
             return isToday && isCompleted;
@@ -2760,38 +3555,43 @@ class DatabaseService {
 
   // Get appointments for vet dashboard (all appointments, filtered by UI)
   Stream<List<Appointment>> getVetAppointmentsForDashboard(String vetId) {
-    print('🔍 [DatabaseService] getVetAppointments called for vetId: $vetId');
+    print('🔍 [DatabaseService] getVetAppointmentsForDashboard called for vetId: $vetId');
 
-    return _appointmentsCollection
-        .where('vetId', isEqualTo: vetId)
-        .orderBy('appointmentDate', descending: false)
-        .snapshots()
-        .handleError((error) {
-          if (error.toString().contains('indexes?create_composite=')) {
-            print('\n🔍 [DatabaseService] Index creation URL:');
-            print('https://console.firebase.google.com/v1/r/${error.toString().split('indexes?create_composite=')[1].split("'")[0]}');
-          }
-          print('🔍 [DatabaseService] getVetAppointments error: $error');
-          throw error;
-        })
-        .map((snapshot) {
-          print('🔍 [DatabaseService] Found ${snapshot.docs.length} appointments for vet');
-          final appointments = snapshot.docs.map((doc) {
-            try {
-              final data = doc.data() as Map<String, dynamic>;
-              print('🔍 [DatabaseService] Raw appointment data for ${doc.id}: $data');
-              final appointment = Appointment.fromFirestore(doc);
-              print('🔍 [DatabaseService] Parsed appointment: ${appointment.id} - ${appointment.status.name} - ${appointment.appointmentDate} - ${appointment.timeSlot}');
-              return appointment;
-            } catch (e) {
-              print('🔍 [DatabaseService] Error parsing appointment ${doc.id}: $e');
-              return null;
+    try {
+      return _appointmentsCollection
+          .where('vetId', isEqualTo: vetId)
+          .orderBy('appointmentDate', descending: false)
+          .snapshots()
+          .handleError((error) {
+            print('❌ [DatabaseService] getVetAppointmentsForDashboard ERROR: $error');
+            if (error.toString().contains('indexes?create_composite=')) {
+              print('🔗 [DatabaseService] Index creation URL:');
+              print('https://console.firebase.google.com/v1/r/${error.toString().split('indexes?create_composite=')[1].split("'")[0]}');
             }
-          }).where((apt) => apt != null).cast<Appointment>().toList();
-          
-          print('🔍 [DatabaseService] Returning ${appointments.length} valid appointments');
-          return appointments;
-        });
+            throw error;
+          })
+          .map((snapshot) {
+            print('🔍 [DatabaseService] getVetAppointmentsForDashboard - Found ${snapshot.docs.length} appointments for vet');
+            final appointments = snapshot.docs.map((doc) {
+              try {
+                final data = doc.data() as Map<String, dynamic>;
+                print('🔍 [DatabaseService] Raw appointment data for ${doc.id}: $data');
+                final appointment = Appointment.fromFirestore(doc);
+                print('🔍 [DatabaseService] Parsed appointment: ${appointment.id} - ${appointment.status.name} - ${appointment.appointmentDate} - ${appointment.timeSlot}');
+                return appointment;
+              } catch (e) {
+                print('🔍 [DatabaseService] Error parsing appointment ${doc.id}: $e');
+                return null;
+              }
+            }).where((apt) => apt != null).cast<Appointment>().toList();
+            
+            print('🔍 [DatabaseService] Returning ${appointments.length} valid appointments');
+            return appointments;
+          });
+    } catch (e) {
+      print('❌ [DatabaseService] getVetAppointmentsForDashboard EXCEPTION: $e');
+      rethrow;
+    }
   }
 
   // Cancel appointment
@@ -2849,6 +3649,37 @@ class DatabaseService {
       print('🔍 [DatabaseService] Updated appointment $appointmentId with price: \$${price.toStringAsFixed(2)}');
     } catch (e) {
       print('🔍 [DatabaseService] Error updating appointment price: $e');
+      throw e;
+    }
+  }
+
+  // Update appointment progress (start/end appointment)
+  Future<void> updateAppointmentProgress({
+    required String appointmentId,
+    required bool isInProgress,
+    DateTime? startedAt,
+    DateTime? endedAt,
+  }) async {
+    try {
+      final updateData = <String, dynamic>{
+        'isInProgress': isInProgress,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (startedAt != null) {
+        updateData['startedAt'] = Timestamp.fromDate(startedAt);
+      }
+
+      if (endedAt != null) {
+        updateData['endedAt'] = Timestamp.fromDate(endedAt);
+      }
+
+      await _appointmentsCollection.doc(appointmentId).update(updateData);
+      
+      final action = isInProgress ? 'started' : 'ended';
+      print('🔍 [DatabaseService] Appointment $appointmentId $action');
+    } catch (e) {
+      print('🔍 [DatabaseService] Error updating appointment progress: $e');
       throw e;
     }
   }
@@ -3095,5 +3926,249 @@ class DatabaseService {
     });
   }
 
+  // Review and rating methods
+  Future<void> submitReview({
+    required String appointmentId,
+    required String vetId,
+    required String patientId,
+    required int rating,
+    required String comment,
+    required String appointmentType,
+  }) async {
+    try {
+      print('🔍 [DatabaseService] Submitting review for appointment: $appointmentId');
+      print('🔍 [DatabaseService] Vet ID: $vetId, Patient ID: $patientId');
+      print('🔍 [DatabaseService] Rating: $rating, Comment: $comment');
 
+      // Skip the test step and proceed directly
+      print('🔍 [DatabaseService] Proceeding with review submission...');
+
+      // 1. Get current vet document to access existing reviews
+      print('🔍 [DatabaseService] Fetching vet document...');
+      final vetDoc = await _usersCollection.doc(vetId).get();
+      if (!vetDoc.exists) {
+        print('❌ [DatabaseService] Vet document not found: $vetId');
+        throw Exception('Vet not found');
+      }
+
+      print('🔍 [DatabaseService] Vet document found, processing data...');
+      final vetData = vetDoc.data() as Map<String, dynamic>;
+      final existingReviews = List<Map<String, dynamic>>.from(vetData['reviews'] ?? []);
+      print('🔍 [DatabaseService] Existing reviews count: ${existingReviews.length}');
+
+      // 2. Create new review object
+      final newReview = {
+        'appointmentId': appointmentId,
+        'vetId': vetId,
+        'patientId': patientId,
+        'rating': rating,
+        'comment': comment,
+        'appointmentType': appointmentType,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+      print('🔍 [DatabaseService] Created new review object');
+
+      // 3. Add new review to the list
+      existingReviews.add(newReview);
+      print('🔍 [DatabaseService] Added review to list, total: ${existingReviews.length}');
+
+      // 4. Calculate new average rating
+      double totalRating = 0;
+      int reviewCount = 0;
+      for (final review in existingReviews) {
+        final reviewRating = review['rating'] as int?;
+        if (reviewRating != null && reviewRating > 0) {
+          totalRating += reviewRating;
+          reviewCount++;
+        }
+      }
+      final averageRating = reviewCount > 0 ? totalRating / reviewCount : 0.0;
+      print('🔍 [DatabaseService] Calculated average rating: $averageRating');
+
+      // 5. Update vet's document with new reviews and rating
+      print('🔍 [DatabaseService] Updating vet document...');
+      
+      // Try a simpler approach first - just add the review without complex data conversion
+      try {
+        await _usersCollection.doc(vetId).update({
+          'reviews': existingReviews,
+          'rating': averageRating,
+        });
+        print('✅ [DatabaseService] Update successful with existingReviews');
+      } catch (e) {
+        print('❌ [DatabaseService] First update attempt failed: $e');
+        
+        // Fallback: try with converted data
+        final firestoreReviews = existingReviews.map((review) {
+          return {
+            'appointmentId': review['appointmentId'] as String,
+            'vetId': review['vetId'] as String,
+            'patientId': review['patientId'] as String,
+            'rating': review['rating'] as int,
+            'comment': review['comment'] as String,
+            'appointmentType': review['appointmentType'] as String,
+            'createdAt': review['createdAt'],
+          };
+        }).toList();
+        
+        await _usersCollection.doc(vetId).update({
+          'reviews': firestoreReviews,
+          'rating': averageRating,
+        });
+        print('✅ [DatabaseService] Update successful with firestoreReviews');
+      }
+
+      print('✅ [DatabaseService] Review submitted successfully');
+      print('🔍 [DatabaseService] New average rating: $averageRating');
+      print('🔍 [DatabaseService] Total reviews: ${existingReviews.length}');
+    } catch (e) {
+      print('❌ [DatabaseService] Error submitting review: $e');
+      print('❌ [DatabaseService] Error stack trace: ${StackTrace.current}');
+      throw e;
+    }
+  }
+
+
+
+  // Test method to verify vet document access
+  Future<bool> testVetDocumentAccess(String vetId) async {
+    try {
+      print('🔍 [DatabaseService] Testing vet document access for: $vetId');
+      
+      // Test read access
+      final vetDoc = await _usersCollection.doc(vetId).get();
+      if (!vetDoc.exists) {
+        print('❌ [DatabaseService] Vet document does not exist: $vetId');
+        return false;
+      }
+      
+      print('✅ [DatabaseService] Vet document read access successful');
+      
+      // Test write access with minimal data
+      await _usersCollection.doc(vetId).update({
+        'lastTested': FieldValue.serverTimestamp(),
+      });
+      
+      print('✅ [DatabaseService] Vet document write access successful');
+      return true;
+    } catch (e) {
+      print('❌ [DatabaseService] Vet document access test failed: $e');
+      return false;
+    }
+  }
+
+  // Direct review submission - simplified version
+  Future<void> addSimpleReview({
+    required String vetId,
+    required int rating,
+    required String comment,
+  }) async {
+    try {
+      print('🔍 [DatabaseService] Adding simple review for vet: $vetId');
+      print('🔍 [DatabaseService] Rating: $rating, Comment: $comment');
+      
+      // Get the vet document
+      final vetDoc = await _usersCollection.doc(vetId).get();
+      if (!vetDoc.exists) {
+        throw Exception('Vet not found');
+      }
+      
+      // Create a simple review object
+      final review = {
+        'rating': rating,
+        'comment': comment,
+        'timestamp': Timestamp.now(),
+      };
+      
+      // Add the review directly to the vet document
+      await _db.runTransaction((transaction) async {
+        // Get the current reviews array or create a new one
+        final currentData = vetDoc.data() as Map<String, dynamic>;
+        final reviews = List<Map<String, dynamic>>.from(currentData['simpleReviews'] ?? []);
+        
+        // Add the new review
+        reviews.add(review);
+        
+        // Update the document
+        transaction.update(_usersCollection.doc(vetId), {
+          'simpleReviews': reviews,
+        });
+      });
+      
+      print('✅ [DatabaseService] Simple review added successfully');
+    } catch (e) {
+      print('❌ [DatabaseService] Error adding simple review: $e');
+      print('❌ [DatabaseService] Error details: ${e.toString()}');
+      throw e;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getVetReviews(String vetId) async {
+    try {
+      print('🔍 [DatabaseService] Getting reviews for vet: $vetId');
+      
+      // Get vet's user document
+      final vetDoc = await _usersCollection.doc(vetId).get();
+      if (!vetDoc.exists) {
+        print('🔍 [DatabaseService] Vet not found: $vetId');
+        return [];
+      }
+
+      final vetData = vetDoc.data() as Map<String, dynamic>;
+      
+      // Try to get simple reviews first
+      if (vetData.containsKey('simpleReviews')) {
+        final simpleReviews = List<Map<String, dynamic>>.from(vetData['simpleReviews'] ?? []);
+        print('🔍 [DatabaseService] Found ${simpleReviews.length} simple reviews');
+        
+        // Convert to the expected format
+        final formattedReviews = simpleReviews.map((review) {
+          return {
+            'id': 'simple-review-${simpleReviews.indexOf(review)}',
+            'rating': review['rating'] as int,
+            'comment': review['comment'] as String,
+            'appointmentType': 'Consultation',
+            'createdAt': (review['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            'patientId': 'unknown',
+          };
+        }).toList();
+        
+        return formattedReviews;
+      }
+      
+      // Fallback to old reviews format
+      final reviews = List<Map<String, dynamic>>.from(vetData['reviews'] ?? []);
+      
+      // Sort reviews by createdAt (newest first)
+      reviews.sort((a, b) {
+        final aCreatedAt = a['createdAt'] as Timestamp?;
+        final bCreatedAt = b['createdAt'] as Timestamp?;
+        
+        if (aCreatedAt == null && bCreatedAt == null) return 0;
+        if (aCreatedAt == null) return 1;
+        if (bCreatedAt == null) return -1;
+        
+        return bCreatedAt.compareTo(aCreatedAt); // Descending order
+      });
+
+      // Convert to the expected format
+      final formattedReviews = reviews.map((review) {
+        return {
+          'id': review['appointmentId'] as String? ?? '',
+          'rating': review['rating'] as int,
+          'comment': review['comment'] as String,
+          'appointmentType': review['appointmentType'] as String? ?? 'Consultation',
+          'createdAt': (review['createdAt'] as Timestamp?)?.toDate(),
+          'patientId': review['patientId'] as String? ?? 'unknown',
+        };
+      }).toList();
+
+      print('🔍 [DatabaseService] Found ${formattedReviews.length} reviews for vet: $vetId');
+      return formattedReviews;
+    } catch (e) {
+      print('❌ [DatabaseService] Error getting vet reviews: $e');
+      print('❌ [DatabaseService] Error details: ${e.toString()}');
+      return [];
+    }
+  }
 } 

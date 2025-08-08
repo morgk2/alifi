@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/notification.dart';
 import '../services/notification_service.dart';
 import '../services/auth_service.dart';
+import '../services/navigation_service.dart';
 import '../widgets/notification_card.dart';
 import 'discussion_chat_page.dart';
 import 'detailed_seller_dashboard_page.dart';
@@ -38,7 +39,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Image.asset(
+          'assets/images/back_icon.png',
+          width: 24,
+          height: 24,
+          color: Colors.black,
+        ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -292,21 +298,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
         // Check if user is a seller (store account)
         if (currentUser.accountType == 'store') {
           // Navigate to seller dashboard for store users
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const DetailedSellerDashboardPage(),
-            ),
+          NavigationService.push(
+            context,
+            const DetailedSellerDashboardPage(),
           );
         } else {
           // Navigate to chat with the sender for regular users
           try {
             final senderUser = await DatabaseService().getUser(notification.senderId!);
             if (senderUser != null && mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => DiscussionChatPage(
-                    storeUser: senderUser,
-                  ),
+              NavigationService.push(
+                context,
+                DiscussionChatPage(
+                  storeUser: senderUser,
                 ),
               );
             } else {
@@ -350,17 +354,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
         // Check if user is a seller (has store) or buyer
         if (currentUser.accountType == 'store') {
           // Navigate to seller's order management page
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const DetailedSellerDashboardPage(),
-            ),
+          NavigationService.push(
+            context,
+            const DetailedSellerDashboardPage(),
           );
         } else {
           // Navigate to buyer's orders page
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const UserOrdersPage(),
-            ),
+          NavigationService.push(
+            context,
+            const UserOrdersPage(),
           );
         }
       }
@@ -380,11 +382,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
       try {
         final user = await DatabaseService().getUser(notification.senderId!);
         if (user != null && mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => UserProfilePage(
-                user: user,
-              ),
+          NavigationService.push(
+            context,
+            UserProfilePage(
+              user: user,
             ),
           );
         } else {
