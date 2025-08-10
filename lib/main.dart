@@ -701,10 +701,10 @@ class _LoginPageState extends State<LoginPage>
     }
   }
 
-  Future<void> _handleAppleSignIn(BuildContext context) async {
+  Future<void> _handleGuestSignIn(BuildContext context) async {
     final authService = context.read<AuthService>();
-    final user = await authService.signInWithApple();
-    if (user != null && mounted) {
+    await authService.signInAsGuest();
+    if (mounted) {
       _navigateToHome(context);
     }
   }
@@ -833,13 +833,13 @@ class _LoginPageState extends State<LoginPage>
                           ),
                           const SizedBox(height: 16),
                           _SocialButton(
-                            text: 'Continue with Apple',
+                            text: localizations.continueAsGuest,
                             icon: AppIcons.appleIcon,
                             iconSize: 20,
                             color: Colors.white,
                             textColor: Colors.black87,
                             borderColor: Colors.grey[300],
-                            onPressed: () => _handleAppleSignIn(context),
+                            onPressed: () => _handleGuestSignIn(context),
                           ),
                           const SizedBox(height: 32),
                           Row(
