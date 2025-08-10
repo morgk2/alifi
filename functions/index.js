@@ -3,35 +3,64 @@ const admin = require('firebase-admin');
 
 admin.initializeApp();
 
-// Send push notification to specific user
+// Send push notification function
 exports.sendNotification = functions.https.onCall(async (data, context) => {
+  // Check if user is authenticated
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'The function must be called while authenticated.'
+    );
+  }
+
+  const { token, title, body, data: notificationData, type } = data;
+
+  // Validate required fields
+  if (!token || !title || !body) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Missing required fields: token, title, body'
+    );
+  }
+
   try {
-    const { token, title, body, data: notificationData } = data;
-
-    if (!token || !title || !body) {
-      throw new functions.https.HttpsError('invalid-argument', 'Missing required parameters');
-    }
-
     const message = {
       token: token,
       notification: {
         title: title,
         body: body,
       },
-      data: notificationData || {},
+      data: {
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        type: type || 'general',
+        ...(notificationData || {}),
+      },
       android: {
         notification: {
           channelId: 'alifi_notifications',
           priority: 'high',
           defaultSound: true,
+          defaultVibrateTimings: true,
         },
       },
       apns: {
         payload: {
           aps: {
-            sound: 'default',
+            alert: {
+              title: title,
+              body: body,
+            },
             badge: 1,
+            sound: 'default',
           },
+        },
+      },
+      webpush: {
+        notification: {
+          title: title,
+          body: body,
+          icon: '/icons/Icon-192.png',
+          badge: '/icons/Icon-192.png',
         },
       },
     };
@@ -41,36 +70,54 @@ exports.sendNotification = functions.https.onCall(async (data, context) => {
     
     return { success: true, messageId: response };
   } catch (error) {
-    console.error('Error sending notification:', error);
-    throw new functions.https.HttpsError('internal', 'Error sending notification');
+    console.error('Error sending message:', error);
+    throw new functions.https.HttpsError(
+      'internal',
+      'Failed to send notification',
+      error
+    );
   }
 });
 
-// Send notification to multiple users
+// Send notification to multiple devices
 exports.sendNotificationToUsers = functions.https.onCall(async (data, context) => {
-  try {
-    const { userIds, title, body, data: notificationData } = data;
+  // Check if user is authenticated
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'The function must be called while authenticated.'
+    );
+  }
 
-    if (!userIds || !Array.isArray(userIds) || !title || !body) {
-      throw new functions.https.HttpsError('invalid-argument', 'Missing required parameters');
+  const { userIds, title, body, data: notificationData, type } = data;
+
+  if (!userIds || !Array.isArray(userIds) || !title || !body) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Missing required fields: userIds (array), title, body'
+    );
+  }
+
+  try {
+    // Get FCM tokens for all users
+    const userTokens = [];
+    
+    for (const userId of userIds) {
+      const userDoc = await admin.firestore()
+        .collection('users')
+        .doc(userId)
+        .get();
+      
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        if (userData.fcmToken) {
+          userTokens.push(userData.fcmToken);
+        }
+      }
     }
 
-    // Get FCM tokens for all users
-    const userDocs = await admin.firestore()
-      .collection('users')
-      .where(admin.firestore.FieldPath.documentId(), 'in', userIds)
-      .get();
-
-    const tokens = [];
-    userDocs.forEach(doc => {
-      const userData = doc.data();
-      if (userData.fcmToken) {
-        tokens.push(userData.fcmToken);
-      }
-    });
-
-    if (tokens.length === 0) {
-      return { success: true, message: 'No valid tokens found' };
+    if (userTokens.length === 0) {
+      return { success: true, message: 'No valid FCM tokens found' };
     }
 
     const message = {
@@ -78,237 +125,130 @@ exports.sendNotificationToUsers = functions.https.onCall(async (data, context) =
         title: title,
         body: body,
       },
-      data: notificationData || {},
+      data: {
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        type: type || 'general',
+        ...(notificationData || {}),
+      },
       android: {
         notification: {
           channelId: 'alifi_notifications',
           priority: 'high',
           defaultSound: true,
+          defaultVibrateTimings: true,
         },
       },
       apns: {
         payload: {
           aps: {
-            sound: 'default',
+            alert: {
+              title: title,
+              body: body,
+            },
             badge: 1,
+            sound: 'default',
           },
         },
       },
-      tokens: tokens,
+      webpush: {
+        notification: {
+          title: title,
+          body: body,
+          icon: '/icons/Icon-192.png',
+          badge: '/icons/Icon-192.png',
+        },
+      },
+      tokens: userTokens,
     };
 
     const response = await admin.messaging().sendMulticast(message);
-    console.log('Successfully sent messages:', response);
+    console.log('Successfully sent multicast message:', response);
     
     return { 
       success: true, 
       successCount: response.successCount,
       failureCount: response.failureCount,
+      responses: response.responses 
     };
   } catch (error) {
-    console.error('Error sending notifications:', error);
-    throw new functions.https.HttpsError('internal', 'Error sending notifications');
+    console.error('Error sending multicast message:', error);
+    throw new functions.https.HttpsError(
+      'internal',
+      'Failed to send notifications',
+      error
+    );
   }
 });
 
-// Trigger notification when new chat message is created
-exports.onChatMessageCreated = functions.firestore
-  .document('chatMessages/{messageId}')
+// Background function to handle new chat messages
+exports.onNewChatMessage = functions.firestore
+  .document('chats/{chatId}/messages/{messageId}')
   .onCreate(async (snap, context) => {
+    const messageData = snap.data();
+    const chatId = context.params.chatId;
+    
     try {
-      const messageData = snap.data();
-      const { senderId, receiverId, message } = messageData;
-
+      // Get chat participants
+      const chatDoc = await admin.firestore()
+        .collection('chats')
+        .doc(chatId)
+        .get();
+      
+      if (!chatDoc.exists) return;
+      
+      const chatData = chatDoc.data();
+      const participants = chatData.participants || [];
+      const senderId = messageData.senderId;
+      
       // Get sender info
-      const senderDoc = await admin.firestore().collection('users').doc(senderId).get();
-      const senderData = senderDoc.data();
-
-      // Get receiver's FCM token
-      const receiverDoc = await admin.firestore().collection('users').doc(receiverId).get();
-      const receiverData = receiverDoc.data();
-
-      if (!receiverData?.fcmToken) {
-        console.log('No FCM token found for receiver');
-        return;
-      }
-
-      const notificationMessage = {
-        token: receiverData.fcmToken,
-        notification: {
-          title: 'New Message',
-          body: message.length > 50 ? `${message.substring(0, 50)}...` : message,
-        },
-        data: {
-          type: 'chatMessage',
-          senderId: senderId,
-          senderName: senderData?.displayName || 'User',
-          message: message,
-        },
-        android: {
+      const senderDoc = await admin.firestore()
+        .collection('users')
+        .doc(senderId)
+        .get();
+      
+      const senderName = senderDoc.exists ? 
+        (senderDoc.data().displayName || 'Someone') : 'Someone';
+      
+      // Send notification to all participants except sender
+      const recipientIds = participants.filter(id => id !== senderId);
+      
+      if (recipientIds.length > 0) {
+        await admin.messaging().sendMulticast({
+          tokens: await getTokensForUsers(recipientIds),
           notification: {
-            channelId: 'alifi_notifications',
-            priority: 'high',
-            defaultSound: true,
+            title: `New message from ${senderName}`,
+            body: messageData.content || 'Sent a message',
           },
-        },
-        apns: {
-          payload: {
-            aps: {
-              sound: 'default',
-              badge: 1,
-            },
+          data: {
+            chatId: chatId,
+            senderId: senderId,
+            type: 'chat_message',
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
           },
-        },
-      };
-
-      const response = await admin.messaging().send(notificationMessage);
-      console.log('Successfully sent chat notification:', response);
+        });
+      }
     } catch (error) {
       console.error('Error sending chat notification:', error);
     }
   });
 
-// Trigger notification when new order is created
-exports.onOrderCreated = functions.firestore
-  .document('orders/{orderId}')
-  .onCreate(async (snap, context) => {
-    try {
-      const orderData = snap.data();
-      const { storeId, customerId, productName } = orderData;
-
-      // Get customer info
-      const customerDoc = await admin.firestore().collection('users').doc(customerId).get();
-      const customerData = customerDoc.data();
-
-      // Get store's FCM token
-      const storeDoc = await admin.firestore().collection('users').doc(storeId).get();
-      const storeData = storeDoc.data();
-
-      if (!storeData?.fcmToken) {
-        console.log('No FCM token found for store');
-        return;
+// Helper function to get FCM tokens for users
+async function getTokensForUsers(userIds) {
+  const tokens = [];
+  
+  for (const userId of userIds) {
+    const userDoc = await admin.firestore()
+      .collection('users')
+      .doc(userId)
+      .get();
+    
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      if (userData.fcmToken) {
+        tokens.push(userData.fcmToken);
       }
-
-      const notificationMessage = {
-        token: storeData.fcmToken,
-        notification: {
-          title: 'New Order Received',
-          body: `You received a new order for ${productName}`,
-        },
-        data: {
-          type: 'orderPlaced',
-          customerId: customerId,
-          customerName: customerData?.displayName || 'Customer',
-          productName: productName,
-          orderId: context.params.orderId,
-        },
-        android: {
-          notification: {
-            channelId: 'alifi_notifications',
-            priority: 'high',
-            defaultSound: true,
-          },
-        },
-        apns: {
-          payload: {
-            aps: {
-              sound: 'default',
-              badge: 1,
-            },
-          },
-        },
-      };
-
-      const response = await admin.messaging().send(notificationMessage);
-      console.log('Successfully sent order notification:', response);
-    } catch (error) {
-      console.error('Error sending order notification:', error);
     }
-  });
-
-// Trigger notification when order status is updated
-exports.onOrderStatusUpdated = functions.firestore
-  .document('orders/{orderId}')
-  .onUpdate(async (change, context) => {
-    try {
-      const beforeData = change.before.data();
-      const afterData = change.after.data();
-      
-      // Only trigger if status changed
-      if (beforeData.status === afterData.status) {
-        return;
-      }
-
-      const { storeId, customerId, productName, status } = afterData;
-
-      // Get store info
-      const storeDoc = await admin.firestore().collection('users').doc(storeId).get();
-      const storeData = storeDoc.data();
-
-      // Get customer's FCM token
-      const customerDoc = await admin.firestore().collection('users').doc(customerId).get();
-      const customerData = customerDoc.data();
-
-      if (!customerData?.fcmToken) {
-        console.log('No FCM token found for customer');
-        return;
-      }
-
-      let title, body;
-      switch (status) {
-        case 'confirmed':
-          title = 'Order Confirmed';
-          body = `Your order for ${productName} has been confirmed`;
-          break;
-        case 'shipped':
-          title = 'Order Shipped';
-          body = `Your order for ${productName} has been shipped`;
-          break;
-        case 'delivered':
-          title = 'Order Delivered';
-          body = `Your order for ${productName} has been delivered`;
-          break;
-        case 'cancelled':
-          title = 'Order Cancelled';
-          body = `Your order for ${productName} has been cancelled`;
-          break;
-        default:
-          return; // Don't send notification for other statuses
-      }
-
-      const notificationMessage = {
-        token: customerData.fcmToken,
-        notification: {
-          title: title,
-          body: body,
-        },
-        data: {
-          type: status,
-          storeId: storeId,
-          storeName: storeData?.displayName || 'Store',
-          productName: productName,
-          orderId: context.params.orderId,
-        },
-        android: {
-          notification: {
-            channelId: 'alifi_notifications',
-            priority: 'high',
-            defaultSound: true,
-          },
-        },
-        apns: {
-          payload: {
-            aps: {
-              sound: 'default',
-              badge: 1,
-            },
-          },
-        },
-      };
-
-      const response = await admin.messaging().send(notificationMessage);
-      console.log('Successfully sent order status notification:', response);
-    } catch (error) {
-      console.error('Error sending order status notification:', error);
-    }
-  }); 
+  }
+  
+  return tokens;
+}

@@ -7,6 +7,7 @@ import '../models/time_slot.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../widgets/spinning_loader.dart';
+import '../widgets/custom_snackbar.dart';
 
 class AppointmentBookingDialog extends StatefulWidget {
   final User vetUser;
@@ -66,8 +67,9 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading pets: $e')),
+        CustomSnackBarHelper.showError(
+          context,
+          'Error loading pets: $e',
         );
       }
     } finally {
@@ -90,8 +92,9 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading time slots: $e')),
+        CustomSnackBarHelper.showError(
+          context,
+          'Error loading time slots: $e',
         );
       }
     } finally {
@@ -103,8 +106,9 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
 
   Future<void> _bookAppointment() async {
     if (_selectedDate == null || _selectedTimeSlot == null || _selectedPet == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all required fields')),
+      CustomSnackBarHelper.showInfo(
+        context,
+        'Please fill in all required fields',
       );
       return;
     }
@@ -137,21 +141,17 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
 
         if (mounted) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Appointment request sent successfully!'),
-              backgroundColor: Colors.green,
-            ),
+          CustomSnackBarHelper.showSuccess(
+            context,
+            'Appointment request sent successfully!',
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error booking appointment: $e'),
-            backgroundColor: Colors.red,
-          ),
+        CustomSnackBarHelper.showError(
+          context,
+          'Error booking appointment: $e',
         );
       }
     } finally {

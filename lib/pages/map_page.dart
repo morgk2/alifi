@@ -26,6 +26,8 @@ import '../services/auth_service.dart';
 import '../models/user.dart';
 import '../pages/user_profile_page.dart';
 import 'package:intl/intl.dart';
+import '../widgets/custom_snackbar.dart';
+import '../services/map_focus_service.dart';
 
 
 class _PhotoCarousel extends StatefulWidget {
@@ -204,7 +206,9 @@ class _PhotoCarouselState extends State<_PhotoCarousel> {
 }
 
 class MapPage extends StatefulWidget {
-  const MapPage({super.key});
+  final User? focusUser;
+  
+  const MapPage({super.key, this.focusUser});
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -243,6 +247,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
   List<Marker> _vetMarkers = [];
   List<Marker> _storeMarkers = [];
   List<Marker> _userMarkers = [];
+  List<LatLng> _specialMarkerLocations = []; // Store locations of vet/store markers
   bool _isLoadingVets = false;
   bool _isLoadingStores = false;
   double _currentZoom = 15.0;
@@ -317,6 +322,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
       }
     });
     _setupMarkerControllers();
+    
+    // Handle focus user if provided
+    if (widget.focusUser != null) {
+      _handleFocusUser();
+    }
   }
 
   void _setupMarkerControllers() {
@@ -327,6 +337,53 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
         });
       }
     });
+  }
+  
+  void _handleFocusUser() {
+    final focusUser = widget.focusUser!;
+    print('MapPage: Handling focus user ${focusUser.displayName}, location: ${focusUser.location}, accountType: ${focusUser.accountType}');
+    
+    // If user has location, center map on their location
+    if (focusUser.location != null) {
+      // Wait a bit longer for the map and user markers to initialize
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted) {
+          print('MapPage: Moving map to ${focusUser.location!.latitude}, ${focusUser.location!.longitude}');
+          _mapController.move(
+            LatLng(focusUser.location!.latitude, focusUser.location!.longitude),
+            15.0,
+          );
+          
+          // Show business dialog for vet/store accounts after another short delay
+          if (focusUser.accountType == 'vet' || focusUser.accountType == 'store') {
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) {
+                print('MapPage: Showing business dialog for ${focusUser.displayName}');
+                _showBusinessDialog(focusUser);
+                // Clear the focus user after handling
+                Provider.of<MapFocusService>(context, listen: false).clearFocusUser();
+              }
+            });
+          } else {
+            // Clear the focus user even if not showing dialog
+            Provider.of<MapFocusService>(context, listen: false).clearFocusUser();
+          }
+        }
+      });
+    } else {
+      print('MapPage: Focus user has no location');
+      Provider.of<MapFocusService>(context, listen: false).clearFocusUser();
+    }
+  }
+
+  @override
+  void didUpdateWidget(MapPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Check if focusUser changed and handle it
+    if (widget.focusUser != null && widget.focusUser != oldWidget.focusUser) {
+      print('MapPage: Focus user changed to ${widget.focusUser?.displayName}');
+      _handleFocusUser();
+    }
   }
 
   @override
@@ -383,12 +440,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Location permission is required to use this feature'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 3),
-            ),
+          CustomSnackBarHelper.showError(
+            context,
+            'Location permission is required to use this feature',
+            duration: const Duration(seconds: 3),
           );
           setState(() => _isLoading = false);
       return;
@@ -490,35 +545,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
       print('Error getting location: $e');
       if (!mounted) return;
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Expanded(
-                child: Text('Error getting location: ${e.toString()}'),
-              ),
-              TextButton(
-                onPressed: () {
+      CustomSnackBarHelper.showError(
+        context,
+        'Error getting location: ${e.toString()}',
+        duration: const Duration(seconds: 10),
+        actionLabel: 'Enter Manually',
+        onAction: () {
                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   _showManualLocationInput();
                 },
-                child: const Text(
-                  'Enter Manually',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-              TextButton(
-                onPressed: _initializeLocation,
-                child: const Text(
-                  'Retry',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 10),
-        ),
       );
       
       setState(() {
@@ -680,11 +715,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                         }
                       } catch (e) {
                         setState(() => isSearching = false);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error finding location: ${e.toString()}'),
-                            backgroundColor: Colors.red,
-                          ),
+                        CustomSnackBarHelper.showError(
+                          context,
+                          'Error finding location: ${e.toString()}',
                         );
                       }
                     }
@@ -721,11 +754,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
 
       // Show confirmation
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Location set to: $address'),
-          backgroundColor: Colors.green,
-        ),
+      CustomSnackBarHelper.showSuccess(
+        context,
+        'Location set to: $address',
       );
     }
   }
@@ -1130,11 +1161,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     
     setState(() => _isLoading = false);
     
-                              ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-                                  backgroundColor: Colors.red,
-                                ),
+                              CustomSnackBarHelper.showError(
+                                context,
+                                message,
                               );
                             }
 
@@ -1720,23 +1749,103 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     final lat = user.location?.latitude ?? 0.0;
     final lng = user.location?.longitude ?? 0.0;
     
+    // Make vet and store markers much bigger
+    final isBusinessAccount = user.accountType == 'vet' || user.accountType == 'store';
+    final markerSize = isBusinessAccount ? 60.0 : 30.0;
+    
     return Marker(
       point: LatLng(lat, lng),
-      width: 20,
-      height: 20,
+      width: markerSize,
+      height: markerSize,
       child: RepaintBoundary(
-        child: GestureDetector(
-          onTap: () => Navigator.push(
+        child: _MarkerWithJiggle(
+          onTap: () {
+            final isBusinessAccount = user.accountType == 'vet' || user.accountType == 'store';
+            if (isBusinessAccount) {
+              _showBusinessDialog(user);
+            } else {
+              Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => UserProfilePage(user: user),
             ),
-          ),
+              );
+            }
+          },
+          child: _buildUserMarkerIcon(user),
+        ),
+      ),
+    );
+  }
+
+  Marker _createUserMarkerWithDimming(User user, List<User> allUsers) {
+    final lat = user.location?.latitude ?? 0.0;
+    final lng = user.location?.longitude ?? 0.0;
+    
+    // Make vet and store markers much bigger
+    final isBusinessAccount = user.accountType == 'vet' || user.accountType == 'store';
+    final markerSize = isBusinessAccount ? 60.0 : 30.0;
+    
+    return Marker(
+      point: LatLng(lat, lng),
+      width: markerSize,
+      height: markerSize,
+      child: RepaintBoundary(
+        child: _MarkerWithJiggle(
+          onTap: () {
+            final isBusinessAccount = user.accountType == 'vet' || user.accountType == 'store';
+            if (isBusinessAccount) {
+              _showBusinessDialog(user);
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserProfilePage(user: user),
+                ),
+              );
+            }
+          },
+          child: _buildUserMarkerIconWithDimming(user, allUsers),
+        ),
+      ),
+    );
+  }
+
+    Widget _buildUserMarkerIcon(User user) {
+    // Check if this marker should be dimmed
+    final shouldDim = _shouldDimMarker(user);
+    final opacity = shouldDim ? 0.3 : 1.0;
+    
+    // For vet and store users, use custom icons based on subscription
+    if (user.accountType == 'vet') {
+      final isFavorite = user.subscriptionPlan == 'alifi favorite';
+      return Opacity(
+        opacity: opacity,
+        child: Image.asset(
+          isFavorite ? 'assets/images/vet_fav.png' : 'assets/images/vet_normal.png',
+          width: 60,
+          height: 60,
+        ),
+      );
+    } else if (user.accountType == 'store') {
+      final isFavorite = user.subscriptionPlan == 'alifi favorite';
+      return Opacity(
+        opacity: opacity,
+        child: Image.asset(
+          isFavorite ? 'assets/images/store_fav.png' : 'assets/images/store_normal.png',
+          width: 60,
+          height: 60,
+        ),
+      );
+    } else {
+      // Regular users get a smaller circle
+      return Opacity(
+        opacity: opacity,
           child: Container(
-            width: 16,
-            height: 16,
+          width: 20,
+          height: 20,
             decoration: BoxDecoration(
-              color: Colors.orange,  // Orange for users
+            color: Colors.orange,
               shape: BoxShape.circle,
               border: Border.all(
                 color: Colors.white,
@@ -1744,7 +1853,489 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
               ),
             ),
           ),
+      );
+    }
+  }
+
+  Widget _buildUserMarkerIconWithDimming(User user, List<User> allUsers) {
+    // Check if this marker should be dimmed
+    final shouldDim = _shouldDimMarkerWithUsers(user, allUsers);
+    final opacity = shouldDim ? 0.3 : 1.0;
+    
+    // For vet and store users, use custom icons based on subscription
+    if (user.accountType == 'vet') {
+      final isFavorite = user.subscriptionPlan == 'alifi favorite';
+      return Opacity(
+        opacity: opacity,
+        child: Image.asset(
+          isFavorite ? 'assets/images/vet_fav.png' : 'assets/images/vet_normal.png',
+          width: 60,
+          height: 60,
         ),
+      );
+    } else if (user.accountType == 'store') {
+      final isFavorite = user.subscriptionPlan == 'alifi favorite';
+      return Opacity(
+        opacity: opacity,
+        child: Image.asset(
+          isFavorite ? 'assets/images/store_fav.png' : 'assets/images/store_normal.png',
+          width: 60,
+          height: 60,
+        ),
+      );
+    } else {
+      // Regular users get a smaller circle
+      return Opacity(
+        opacity: opacity,
+        child: Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            color: Colors.orange,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 2,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  bool _shouldDimMarkerWithUsers(User user, List<User> allUsers) {
+    // Don't dim special markers (vet/store)
+    if (user.accountType == 'vet' || user.accountType == 'store') {
+      return false;
+    }
+    
+    // Don't dim if this is the current user's location
+    final authService = context.read<AuthService>();
+    final currentUser = authService.currentUser;
+    if (currentUser != null && user.id == currentUser.id) {
+      return false;
+    }
+    
+    if (user.location == null) return false;
+    
+    // Check if within range of any special markers
+    const double dimRadius = 500.0; // 500 meters radius
+    
+    // Check proximity to vet/store users
+    for (final otherUser in allUsers) {
+      if (otherUser.id == user.id) continue; // Skip self
+      
+      if ((otherUser.accountType == 'vet' || otherUser.accountType == 'store') &&
+          otherUser.location != null) {
+        
+        final distance = Geolocator.distanceBetween(
+          user.location!.latitude,
+          user.location!.longitude,
+          otherUser.location!.latitude,
+          otherUser.location!.longitude,
+        );
+        
+        if (distance <= dimRadius) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+
+  bool _shouldDimMarker(User user) {
+    // Don't dim special markers (vet/store) or user location
+    if (user.accountType == 'vet' || user.accountType == 'store') {
+      return false;
+    }
+    
+    // Don't dim if this is the current user's location
+    final authService = context.read<AuthService>();
+    final currentUser = authService.currentUser;
+    if (currentUser != null && user.id == currentUser.id) {
+      return false;
+    }
+    
+    if (user.location == null) return false;
+    
+    // Check if within range of any special markers
+    const double dimRadius = 500.0; // 500 meters radius
+    
+    // Check proximity to vet/store users
+    for (final marker in _userMarkers) {
+      // Find the user associated with this marker
+      final otherUser = _findUserForMarker(marker);
+      if (otherUser != null && 
+          (otherUser.accountType == 'vet' || otherUser.accountType == 'store') &&
+          otherUser.location != null) {
+        
+        final distance = Geolocator.distanceBetween(
+          user.location!.latitude,
+          user.location!.longitude,
+          otherUser.location!.latitude,
+          otherUser.location!.longitude,
+        );
+        
+        if (distance <= dimRadius) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+
+  bool _shouldDimLostPetMarker(LostPet pet) {
+    // Check if within range of any special markers (vet/store users)
+    const double dimRadius = 500.0; // 500 meters radius
+    
+    // Check proximity to special marker locations
+    for (final specialLocation in _specialMarkerLocations) {
+      final distance = Geolocator.distanceBetween(
+        pet.location.latitude,
+        pet.location.longitude,
+        specialLocation.latitude,
+        specialLocation.longitude,
+      );
+      
+      if (distance <= dimRadius) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  User? _findUserForMarker(Marker marker) {
+    // This is a helper method to find the user associated with a marker
+    // Since we don't have direct access to the user from the marker,
+    // we'll need to implement this differently
+    return null;
+  }
+
+  void _showBusinessDialog(User user) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.transparent, // no global blur/dim
+      builder: (dialogContext) {
+        final bool isVet = user.accountType == 'vet';
+        final bool isFavorite = (user.subscriptionPlan ?? '').toLowerCase() == 'alifi favorite';
+        final String displayName = [user.firstName, user.lastName]
+            .where((p) => (p ?? '').trim().isNotEmpty)
+            .join(' ');
+        final String basicInfo = user.basicInfo ?? '';
+        final int followers = user.followersCount != 0
+            ? user.followersCount
+            : (user.followers).length;
+        final int orders = user.totalOrders;
+        final String rating = user.rating.toStringAsFixed(1);
+
+        return TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 350),
+          tween: Tween(begin: 1.0, end: 0.0),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, child) {
+            return Transform.translate(
+              offset: Offset(0, value * 400), // Slide up from bottom
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Container(
+                  margin: const EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    bottom: 100, // Position above navigation bar
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(28),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                            child: Container(
+                              width: MediaQuery.of(context).size.width * 0.9,
+                              constraints: const BoxConstraints(maxWidth: 520),
+                              padding: const EdgeInsets.all(22),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(28),
+                                border: Border.all(color: Colors.grey.shade300, width: 1),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isVet ? Colors.blue : Colors.orange,
+                                    width: 3,
+                                  ),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(32),
+                                  child: (user.photoURL != null && user.photoURL!.isNotEmpty)
+                                      ? Image.network(
+                                          user.photoURL!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => _buildDefaultProfileImage(user),
+                                        )
+                                      : _buildDefaultProfileImage(user),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      displayName.isNotEmpty
+                                          ? displayName
+                                          : (isVet ? (user.clinicName ?? 'Veterinary Clinic') : (user.storeName ?? 'Pet Store')),
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800,
+                                        fontFamily: 'InterDisplay',
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    if (basicInfo.isNotEmpty)
+                                      Text(
+                                        basicInfo,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[700],
+                                          fontFamily: 'InterDisplay',
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          if (isFavorite)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFFF6B35).withOpacity(0.25),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.verified, color: Colors.white, size: 16),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'ALIFI FAVORITE',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      fontFamily: 'InterDisplay',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          // Alifi Affiliated badge
+                          if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated')
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF3B82F6).withOpacity(0.25),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.verified, color: Colors.white, size: 16),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'ALIFI AFFILIATED',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      fontFamily: 'InterDisplay',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          if (isFavorite || (user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated') const SizedBox(height: 16),
+
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildStatItem('Followers', followers.toString(), Icons.people, Colors.blue),
+                              _buildStatItem('Orders', orders.toString(), Icons.shopping_bag, Colors.green),
+                              _buildStatItem('Rating', rating, Icons.star, Colors.amber),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(dialogContext).pop();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => UserProfilePage(user: user),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isVet ? Colors.blue : Colors.orange,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 0,
+                                shadowColor: Colors.transparent,
+                              ),
+                              child: Text(
+                                'Visit ${isVet ? 'Clinic' : 'Store'} Profile',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  fontFamily: 'InterDisplay',
+                                ),
+                              ),
+                            ),
+                          ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        Positioned(
+                          top: -6,
+                          right: -6,
+                          child: Transform.rotate(
+                            angle: -0.2,
+                            child: Image.asset(
+                              'assets/images/stamp.png',
+                              width: 84,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildDefaultProfileImage(User user) {
+    final bool isVet = user.accountType == 'vet';
+    return Container(
+      color: Colors.transparent,
+      child: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: (isVet ? Colors.blue : Colors.orange).withOpacity(0.1),
+        ),
+        child: Icon(
+          isVet ? Icons.local_hospital : Icons.store,
+          color: isVet ? Colors.blue : Colors.orange,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'InterDisplay',
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontFamily: 'InterDisplay',
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1960,7 +2551,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
       databaseService.getUsersWithLocation().listen((users) {
         if (mounted) {
           setState(() {
-            _userMarkers = users.map(_createUserMarker).toList();
+            _userMarkers = users.map((user) => _createUserMarkerWithDimming(user, users)).toList();
+            
+            // Update special marker locations for proximity checking
+            _specialMarkerLocations = users
+                .where((user) => 
+                    (user.accountType == 'vet' || user.accountType == 'store') && 
+                    user.location != null)
+                .map((user) => user.location!)
+                .toList();
           });
         }
       });
@@ -2132,11 +2731,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     final authService = context.read<AuthService>();
     if (authService.currentUser == null) {
       // Show login prompt if user is not authenticated
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please login to report a missing pet'),
-          duration: Duration(seconds: 2),
-        ),
+      CustomSnackBarHelper.showInfo(
+        context,
+        'Please login to report a missing pet',
+        duration: const Duration(seconds: 2),
       );
       return;
     }
@@ -2183,11 +2781,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
 
       if (existingLocation != null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('This ${isVet ? 'vet' : 'store'} is already in the database'),
-            backgroundColor: Colors.orange,
-          ),
+        CustomSnackBarHelper.showInfo(
+          context,
+          'This ${isVet ? 'vet' : 'store'} is already in the database',
         );
         return;
       }
@@ -2217,11 +2813,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
 
       // Show success message
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Added ${isVet ? 'vet clinic' : 'pet store'} to map'),
-          backgroundColor: Colors.green,
-        ),
+      CustomSnackBarHelper.showSuccess(
+        context,
+        'Added ${isVet ? 'vet clinic' : 'pet store'} to map',
       );
 
       // Move map to new location
@@ -2233,11 +2827,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     } catch (e) {
       print('Error adding business: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error adding business: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomSnackBarHelper.showError(
+        context,
+        'Error adding business: $e',
       );
     } finally {
       if (mounted) {
@@ -2322,12 +2914,17 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                 if (_nearbyLostPets.isNotEmpty)
                   MarkerLayer(
                     markers: _nearbyLostPets.map((pet) {
+                      final shouldDim = _shouldDimLostPetMarker(pet);
+                      final opacity = shouldDim ? 0.3 : 1.0;
+                      
                       return Marker(
                         point: pet.location,
                         width: 20,
                         height: 20,
                         child: GestureDetector(
                           onTap: () => _showLostPetDetails(pet),
+                          child: Opacity(
+                            opacity: opacity,
                           child: Container(
                             width: 16,
                             height: 16,
@@ -2343,6 +2940,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                               Icons.pets,
                               color: Colors.white,
                               size: 10,
+                              ),
                             ),
                           ),
                         ),
@@ -2596,19 +3194,19 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(24),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                              child: Container(
-                  decoration: BoxDecoration(
+              child: Container(
+                decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.85),
                     borderRadius: BorderRadius.circular(32),
                     border: Border.all(color: Colors.white.withOpacity(0.9), width: 1),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3041,6 +3639,85 @@ class _MapLegendState extends State<MapLegend> with TickerProviderStateMixin {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MarkerWithJiggle extends StatefulWidget {
+  final VoidCallback onTap;
+  final Widget child;
+
+  const _MarkerWithJiggle({
+    required this.onTap,
+    required this.child,
+  });
+
+  @override
+  State<_MarkerWithJiggle> createState() => _MarkerWithJiggleState();
+}
+
+class _MarkerWithJiggleState extends State<_MarkerWithJiggle>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _jiggleController;
+  late Animation<double> _jiggleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _jiggleController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _jiggleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: -0.15)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 25.0,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: -0.15, end: 0.15)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 25.0,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.15, end: -0.08)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 25.0,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: -0.08, end: 0.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 25.0,
+      ),
+    ]).animate(_jiggleController);
+  }
+
+  @override
+  void dispose() {
+    _jiggleController.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    _jiggleController.forward(from: 0.0);
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleTap,
+      child: AnimatedBuilder(
+        animation: _jiggleAnimation,
+        builder: (context, child) {
+          return Transform.rotate(
+            angle: _jiggleAnimation.value,
+            alignment: Alignment.bottomCenter, // Pivot at bottom
+            child: widget.child,
+          );
+        },
+      ),
     );
   }
 }

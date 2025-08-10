@@ -572,4 +572,34 @@ class AuthService extends ChangeNotifier {
     _currentUser = user;
     notifyListeners();
   }
+
+  /// Check if the current user needs to set up their business location
+  bool needsLocationSetup() {
+    if (_currentUser == null) return false;
+    
+    return (_currentUser!.accountType == 'vet' || _currentUser!.accountType == 'store') && 
+           _currentUser!.location == null;
+  }
+
+  /// Refresh the current user data from Firestore
+  Future<void> refreshUserData() async {
+    if (_currentUser == null) return;
+    
+    try {
+      final dbService = DatabaseService();
+      final updatedUser = await dbService.getUser(_currentUser!.id);
+      
+      if (updatedUser != null) {
+        _currentUser = updatedUser;
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error refreshing user data: $e');
+    }
+  }
+
+  /// Force check if user needs location setup (useful after account conversion)
+  bool forceCheckLocationSetup() {
+    return needsLocationSetup();
+  }
 } 

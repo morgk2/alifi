@@ -646,6 +646,73 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                         ],
                       ),
                       
+                      // Subscription plan badges
+                      if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi favorite' || 
+                           (user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated') ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi favorite')
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.verified, color: Colors.white, size: 12),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'ALIFI FAVORITE',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'InterDisplay',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated')
+                              Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.verified, color: Colors.white, size: 12),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'ALIFI AFFILIATED',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        fontFamily: 'InterDisplay',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                      
                       // Additional info for vets and stores
                       if ((isVet || isStore) && user.basicInfo != null && user.basicInfo!.isNotEmpty) ...[
                         const SizedBox(height: 8),
@@ -869,7 +936,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                                 borderRadius: BorderRadius.circular(12),
                                               ),
                                               child: Icon(
-                                                Icons.recommend_rounded,
+                                                CupertinoIcons.star_fill,
                                                 color: Colors.purple[600],
                                                 size: 20,
                                               ),

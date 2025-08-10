@@ -2,6 +2,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../models/notification.dart';
 import 'in_app_notification_controller.dart';
 import 'auth_service.dart';
@@ -11,6 +12,7 @@ class PushNotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
   
   // Initialize push notifications
   Future<void> initialize() async {
@@ -132,9 +134,9 @@ class PushNotificationService {
 
       const DarwinInitializationSettings initializationSettingsIOS =
           DarwinInitializationSettings(
-        requestAlertPermission: false, // We'll handle this separately
-        requestBadgePermission: false, // We'll handle this separately
-        requestSoundPermission: false, // We'll handle this separately
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
       );
 
       const InitializationSettings initializationSettings =
@@ -147,11 +149,39 @@ class PushNotificationService {
         initializationSettings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
       );
+
+      // Create notification channel for Android
+      if (!kIsWeb) {
+        await _createNotificationChannel();
+      }
       
       print('Local notifications initialized successfully');
     } catch (e) {
       print('Error initializing local notifications: $e');
       // Don't rethrow - we don't want to crash the app
+    }
+  }
+
+  // Create notification channel for Android
+  Future<void> _createNotificationChannel() async {
+    try {
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        'alifi_notifications', // id
+        'Alifi Notifications', // title
+        description: 'Notifications for Alifi app',
+        importance: Importance.max,
+        sound: RawResourceAndroidNotificationSound('notification'),
+        enableVibration: true,
+        showBadge: true,
+      );
+
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+      
+      print('Android notification channel created');
+    } catch (e) {
+      print('Error creating notification channel: $e');
     }
   }
 
@@ -295,24 +325,33 @@ class PushNotificationService {
     required String title,
     required String body,
     Map<String, dynamic>? data,
+    String? type,
   }) async {
-    // This would typically be done through a Cloud Function
-    // For now, we'll just print the notification details
-    print('Sending notification to token: $token');
-    print('Title: $title');
-    print('Body: $body');
-    print('Data: $data');
-    
-    // TODO: Implement actual FCM sending through Cloud Functions
-    // Example Cloud Function call:
-    // await FirebaseFunctions.instance
-    //     .httpsCallable('sendNotification')
-    //     .call({
-    //       'token': token,
-    //       'title': title,
-    //       'body': body,
-    //       'data': data,
-    //     });
+    try {
+      print('Sending notification to token: $token');
+      print('Title: $title');
+      print('Body: $body');
+      print('Data: $data');
+      
+      // Call Firebase Cloud Function to send notification
+      final callable = _functions.httpsCallable('sendNotification');
+      final result = await callable.call({
+        'token': token,
+        'title': title,
+        'body': body,
+        'data': data,
+        'type': type ?? 'general',
+      });
+      
+      if (result.data['success'] == true) {
+        print('Notification sent successfully: ${result.data['messageId']}');
+      } else {
+        print('Failed to send notification: ${result.data}');
+      }
+    } catch (e) {
+      print('Error calling sendNotification function: $e');
+      rethrow;
+    }
   }
 
   // Check if notifications are enabled

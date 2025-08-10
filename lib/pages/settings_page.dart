@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/navigation_service.dart';
@@ -12,11 +13,14 @@ import 'admin/add_product_page.dart';
 import 'admin/bulk_import_page.dart';
 import 'admin/user_management_page.dart';
 import 'subscription_management_page.dart';
+import 'notification_settings_page.dart';
 import '../utils/locale_notifier.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/ios_toggle.dart';
 import '../widgets/notification_settings_widget.dart';
 import '../services/currency_service.dart';
+import '../services/database_service.dart';
+import '../widgets/custom_snackbar.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -28,6 +32,43 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  Map<String, dynamic>? _subscriptionData;
+  bool _isLoadingSubscription = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSubscriptionData();
+  }
+
+  Future<void> _loadSubscriptionData() async {
+    final authService = context.read<AuthService>();
+    final user = authService.currentUser;
+    
+    if (user == null || (user.accountType != 'vet' && user.accountType != 'store')) return;
+
+    setState(() {
+      _isLoadingSubscription = true;
+    });
+
+    try {
+      final subscription = await DatabaseService().getSubscription(user.id);
+      if (mounted) {
+        setState(() {
+          _subscriptionData = subscription;
+          _isLoadingSubscription = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading subscription data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingSubscription = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
@@ -80,7 +121,7 @@ class _SettingsPageState extends State<SettingsPage> {
               title: 'App Settings',
               children: [
                 _SettingsTile(
-                  icon: Icons.language,
+                  icon: CupertinoIcons.globe,
                   iconColor: Colors.blue,
                   title: 'Language',
                   subtitle: _getLanguageName(context),
@@ -124,36 +165,38 @@ class _SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 _SettingsTile(
-                  icon: Icons.dark_mode_outlined,
+                  icon: CupertinoIcons.moon,
                   iconColor: Colors.purple,
                   title: 'Dark Mode',
                   trailing: IOSToggle(
                     value: false, // TODO: Implement dark mode
                     onChanged: (value) {
                       // TODO: Implement dark mode toggle
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Coming soon!'),
-                          duration: Duration(seconds: 1),
-                        ),
+                      CustomSnackBarHelper.showInfo(
+                        context,
+                        'Coming soon!',
+                        duration: const Duration(seconds: 1),
                       );
                     },
                   ),
                   onTap: () {}, // Empty onTap since we're using the toggle
                 ),
                 _SettingsTile(
-                  icon: Icons.notifications_outlined,
+                  icon: CupertinoIcons.bell,
                   iconColor: Colors.orange,
                   title: 'Notifications',
                   subtitle: 'Manage your notifications',
                   onTap: () {
-                    _showNotificationSettings();
+                    NavigationService.push(
+                      context,
+                      const NotificationSettingsPage(),
+                    );
                   },
                 ),
                 Consumer<CurrencyService>(
                   builder: (context, currencyService, child) {
                     return _SettingsTile(
-                      icon: Icons.attach_money,
+                      icon: CupertinoIcons.money_dollar,
                       iconColor: Colors.green,
                       title: 'Currency',
                       subtitle: currencyService.currencyName,
@@ -173,7 +216,7 @@ class _SettingsPageState extends State<SettingsPage> {
               title: 'Account',
               children: [
                 _SettingsTile(
-                  icon: Icons.person_outline,
+                  icon: CupertinoIcons.person_circle,
                   iconColor: Colors.green,
                   title: 'Edit Profile',
                   subtitle: 'Update your information',
@@ -185,7 +228,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 _SettingsTile(
-                  icon: Icons.security,
+                  icon: CupertinoIcons.lock_shield,
                   iconColor: Colors.red,
                   title: 'Privacy & Security',
                   subtitle: 'Manage your privacy settings',
@@ -206,7 +249,7 @@ class _SettingsPageState extends State<SettingsPage> {
               title: 'Support',
               children: [
                 _SettingsTile(
-                  icon: Icons.help_outline,
+                  icon: CupertinoIcons.question_circle,
                   iconColor: Colors.blue,
                   title: 'Help Center',
                   subtitle: 'Get help and support',
@@ -218,7 +261,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 _SettingsTile(
-                  icon: Icons.bug_report_outlined,
+                  icon: CupertinoIcons.exclamationmark_triangle,
                   iconColor: Colors.orange,
                   title: 'Report a Bug',
                   subtitle: 'Help us improve the app',
@@ -230,21 +273,20 @@ class _SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 _SettingsTile(
-                  icon: Icons.star_border,
+                  icon: CupertinoIcons.star,
                   iconColor: Colors.amber,
                   title: 'Rate the App',
                   subtitle: 'Share your feedback',
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Coming soon!'),
-                        duration: Duration(seconds: 1),
-                      ),
+                    CustomSnackBarHelper.showInfo(
+                      context,
+                      'Coming soon!',
+                      duration: const Duration(seconds: 1),
                     );
                   },
                 ),
                 _SettingsTile(
-                  icon: Icons.info_outline,
+                  icon: CupertinoIcons.info_circle,
                   iconColor: Colors.grey,
                   title: 'About',
                   subtitle: 'App version and info',
@@ -266,7 +308,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 title: 'Admin Tools',
                 children: [
                   _SettingsTile(
-                    icon: Icons.add_shopping_cart,
+                    icon: CupertinoIcons.cart_badge_plus,
                     iconColor: Colors.green,
                     title: 'Add AliExpress Product',
                     subtitle: 'Add new products to the store',
@@ -278,7 +320,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     },
                   ),
                   _SettingsTile(
-                    icon: Icons.upload_file,
+                    icon: CupertinoIcons.arrow_up_doc,
                     iconColor: Colors.blue,
                     title: 'Bulk Import Products',
                     subtitle: 'Import multiple products at once',
@@ -290,7 +332,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     },
                   ),
                   _SettingsTile(
-                    icon: Icons.manage_accounts,
+                    icon: CupertinoIcons.person_2,
                     iconColor: Colors.purple,
                     title: 'User Management',
                     subtitle: 'Manage user accounts',
@@ -312,7 +354,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 title: '',
                 children: [
                   _SettingsTile(
-                    icon: Icons.logout,
+                    icon: CupertinoIcons.square_arrow_right,
                     iconColor: Colors.red,
                     title: 'Sign Out',
                     titleColor: Colors.red,
@@ -334,21 +376,21 @@ class _SettingsPageState extends State<SettingsPage> {
                 title: 'Debug Info',
                 children: [
                   _SettingsTile(
-                    icon: Icons.info_outline,
+                    icon: CupertinoIcons.info_circle,
                     iconColor: Colors.grey,
                     title: 'Current Locale',
                     subtitle: '${currentLocale.languageCode} (${currentLocale.countryCode ?? 'no country'})',
                     onTap: () {},
                   ),
                   _SettingsTile(
-                    icon: Icons.translate,
+                    icon: CupertinoIcons.text_bubble,
                     iconColor: Colors.grey,
                     title: 'Localized Text Test',
                     subtitle: AppLocalizations.of(context)?.myPets ?? 'My Pets (fallback)',
                     onTap: () {},
                   ),
                   _SettingsTile(
-                    icon: Icons.calendar_today,
+                    icon: CupertinoIcons.calendar,
                     iconColor: Colors.blue,
                     title: 'Add Test Appointment',
                     subtitle: 'Create appointment in 1h 30min for testing',
@@ -364,50 +406,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showNotificationSettings() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          width: double.maxFinite,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.notifications,
-                    color: Theme.of(context).primaryColor,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 12),
-                  const                   Text(
-                    'Notification Settings',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      fontFamily: 'InterDisplay',
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const NotificationSettingsWidget(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildUserProfileCard(User user) {
     return Container(
@@ -451,7 +450,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     )
                   : Icon(
-                      Icons.person,
+                      CupertinoIcons.person,
                       size: 30,
                       color: Colors.grey[600],
                     ),
@@ -531,13 +530,15 @@ class _SettingsPageState extends State<SettingsPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.star,
+                              CupertinoIcons.star_fill,
                               size: 16,
                               color: const Color(0xFFFF6B35),
                             ),
                             const SizedBox(width: 8),
                                                          Text(
-                               'alifi favorite',
+                               _isLoadingSubscription 
+                                 ? 'Loading...'
+                                 : _subscriptionData?['plan'] ?? 'No Subscription',
                                style: TextStyle(
                                  fontSize: 12,
                                  fontWeight: FontWeight.w600,
@@ -547,7 +548,7 @@ class _SettingsPageState extends State<SettingsPage> {
                              ),
                             const SizedBox(width: 4),
                             Icon(
-                              Icons.arrow_forward_ios,
+                              CupertinoIcons.chevron_right,
                               size: 12,
                               color: const Color(0xFFFF6B35),
                             ),
@@ -569,7 +570,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 );
               },
               icon: Icon(
-                Icons.edit_outlined,
+                CupertinoIcons.pencil,
                 color: Colors.grey[600],
                 size: 20,
               ),
@@ -650,11 +651,9 @@ class _SettingsPageState extends State<SettingsPage> {
       final currentUser = authService.currentUser;
       
       if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No user logged in'),
-            backgroundColor: Colors.red,
-          ),
+        CustomSnackBarHelper.showError(
+          context,
+          'No user logged in',
         );
         return;
       }
@@ -705,12 +704,10 @@ class _SettingsPageState extends State<SettingsPage> {
       print('🔍 [TestAppointment] Appointment created with ID: ${docRef.id}');
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Test appointment created! ID: ${docRef.id}\nTime: ${appointmentTime.hour}:${appointmentTime.minute.toString().padLeft(2, '0')}'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 5),
-          ),
+        CustomSnackBarHelper.showSuccess(
+          context,
+          'Test appointment created! ID: ${docRef.id}\nTime: ${appointmentTime.hour}:${appointmentTime.minute.toString().padLeft(2, '0')}',
+          duration: const Duration(seconds: 5),
         );
         
         // Force a rebuild of the home page
@@ -719,11 +716,9 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (e) {
       print('🔍 [TestAppointment] Error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error creating test appointment: $e'),
-            backgroundColor: Colors.red,
-          ),
+        CustomSnackBarHelper.showError(
+          context,
+          'Error creating test appointment: $e',
         );
       }
     }
@@ -807,7 +802,7 @@ class _SettingsTile extends StatelessWidget {
             // Trailing Widget
             trailing ??
                 Icon(
-                  Icons.chevron_right,
+                  CupertinoIcons.chevron_right,
                   color: Colors.grey[400],
                   size: 20,
                 ),
@@ -958,7 +953,7 @@ class _CurrencyOption extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.check,
+                      CupertinoIcons.check_mark,
                       color: Colors.white,
                       size: 16,
                     ),

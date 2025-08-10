@@ -75,6 +75,7 @@ class DatabaseService {
   CollectionReference get _ordersCollection => _db.collection('orders');
   CollectionReference get _appointmentsCollection => _db.collection('appointments');
   CollectionReference get _vetSchedulesCollection => _db.collection('vetSchedules');
+  CollectionReference get _subscriptionsCollection => _db.collection('subscriptions');
 
   // Wishlist operations
   Future<void> toggleWishlistItem({
@@ -390,6 +391,119 @@ class DatabaseService {
     await _usersCollection.doc(userId).update({
       'accountType': accountType,
     });
+  }
+
+  Future<void> updateUserLocation(String userId, latlong.LatLng location) async {
+    try {
+      await _usersCollection.doc(userId).update({
+        'location': {
+          'latitude': location.latitude,
+          'longitude': location.longitude,
+        },
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      print('✅ [DatabaseService] User location updated successfully');
+    } catch (e) {
+      print('❌ [DatabaseService] Error updating user location: $e');
+      rethrow;
+    }
+  }
+
+  /// Convert a normal user to a vet or store account and create their subscription
+  Future<void> convertUserToVetOrStore({
+    required String userId,
+    required String accountType,
+    required String firstName,
+    required String lastName,
+    required String businessName,
+    required String businessLocation,
+    required String city,
+    required String phone,
+    required String subscriptionPlan,
+    required double amount,
+    required String currency,
+    required String paymentMethod,
+  }) async {
+    if (!['vet', 'store'].contains(accountType)) {
+      throw ArgumentError('Invalid account type. Must be one of: vet, store');
+    }
+
+    try {
+      // Start a transaction to ensure data consistency
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        // Get the user document
+        final userDoc = await transaction.get(_usersCollection.doc(userId));
+        if (!userDoc.exists) {
+          throw Exception('User not found');
+        }
+
+        final userData = userDoc.data() as Map<String, dynamic>;
+        if (userData['accountType'] != 'normal') {
+          throw Exception('User is already a ${userData['accountType']} account');
+        }
+
+        // Update user account type and add business information
+        final nextBilling = DateTime.now().add(const Duration(days: 30));
+        final updates = <String, dynamic>{
+          'accountType': accountType,
+          'businessFirstName': firstName,
+          'businessLastName': lastName,
+          'businessName': businessName,
+          'businessLocation': businessLocation,
+          'city': city,
+          'phone': phone,
+          'basicInfo': 'Professional ${accountType == 'vet' ? 'veterinarian' : 'pet store'} in $city',
+          'isVerified': true,
+          'subscriptionPlan': subscriptionPlan,
+          'subscriptionStatus': 'active',
+          'subscriptionStartDate': FieldValue.serverTimestamp(),
+          'nextBillingDate': Timestamp.fromDate(nextBilling),
+          'lastBillingDate': FieldValue.serverTimestamp(),
+          'paymentMethod': paymentMethod,
+          'subscriptionAmount': amount,
+          'subscriptionCurrency': currency,
+          'subscriptionInterval': 'monthly',
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+
+        // Add account-specific fields
+        if (accountType == 'vet') {
+          updates['clinicName'] = businessName;
+          updates['clinicLocation'] = businessLocation;
+          updates['patients'] = [];
+          updates['rating'] = 0.0;
+        } else if (accountType == 'store') {
+          updates['storeName'] = businessName;
+          updates['storeLocation'] = businessLocation;
+          updates['rating'] = 0.0;
+        }
+
+        transaction.update(_usersCollection.doc(userId), updates);
+
+        // Create subscription
+        final subscriptionData = {
+          'userId': userId,
+          'plan': subscriptionPlan,
+          'status': 'active',
+          'amount': amount,
+          'currency': currency,
+          'interval': 'monthly',
+          'paymentMethod': paymentMethod,
+          'startDate': FieldValue.serverTimestamp(),
+          'nextBillingDate': Timestamp.fromDate(DateTime.now().add(const Duration(days: 30))),
+          'lastBillingDate': FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+
+        transaction.set(_subscriptionsCollection.doc(userId), subscriptionData);
+      });
+
+      print('✅ [DatabaseService] Successfully converted user $userId to $accountType account');
+    } catch (e) {
+      print('❌ [DatabaseService] Error converting user to $accountType: $e');
+      rethrow;
+    }
   }
 
   Future<List<User>> getAllUsers({int limit = 50, DocumentSnapshot? startAfter}) async {
@@ -4170,5 +4284,194 @@ class DatabaseService {
       print('❌ [DatabaseService] Error details: ${e.toString()}');
       return [];
     }
+  }
+
+  // ==================== SUBSCRIPTION METHODS ====================
+
+  /// Create or update a user's subscription
+  Future<void> createOrUpdateSubscription({
+    required String userId,
+    required String plan, // 'alifi verified', 'alifi affiliated', 'alifi favorite'
+    required String status, // 'active', 'cancelled', 'expired', 'pending'
+    required double amount,
+    required String currency, // 'DZD', 'USD', etc.
+    required String interval, // 'monthly', 'yearly'
+    required String paymentMethod, // 'Cash payment', 'Credit Card', etc.
+    DateTime? startDate,
+    DateTime? nextBillingDate,
+  }) async {
+    try {
+      print('🔍 [DatabaseService] Creating/updating subscription for user: $userId');
+      print('🔍 [DatabaseService] Plan: $plan, Status: $status, Amount: $amount $currency');
+      
+      final now = DateTime.now();
+      final subscriptionData = {
+        'subscriptionPlan': plan,
+        'subscriptionStatus': status,
+        'subscriptionStartDate': startDate != null ? Timestamp.fromDate(startDate) : Timestamp.fromDate(now),
+        'nextBillingDate': nextBillingDate != null ? Timestamp.fromDate(nextBillingDate) : Timestamp.fromDate(now.add(const Duration(days: 30))),
+        'lastBillingDate': Timestamp.fromDate(now),
+        'paymentMethod': paymentMethod,
+        'subscriptionAmount': amount,
+        'subscriptionCurrency': currency,
+        'subscriptionInterval': interval,
+      };
+
+      await _usersCollection.doc(userId).update(subscriptionData);
+      print('✅ [DatabaseService] Subscription created/updated successfully');
+    } catch (e) {
+      print('❌ [DatabaseService] Error creating/updating subscription: $e');
+      throw e;
+    }
+  }
+
+  /// Cancel a user's subscription
+  Future<void> cancelSubscription(String userId) async {
+    try {
+      print('🔍 [DatabaseService] Cancelling subscription for user: $userId');
+      
+      await _usersCollection.doc(userId).update({
+        'subscriptionStatus': 'cancelled',
+        'nextBillingDate': null,
+      });
+      
+      print('✅ [DatabaseService] Subscription cancelled successfully');
+    } catch (e) {
+      print('❌ [DatabaseService] Error cancelling subscription: $e');
+      throw e;
+    }
+  }
+
+  /// Get subscription information for a user
+  Future<Map<String, dynamic>?> getSubscription(String userId) async {
+    try {
+      print('🔍 [DatabaseService] Getting subscription for user: $userId');
+      
+      final userDoc = await _usersCollection.doc(userId).get();
+      if (!userDoc.exists) {
+        print('🔍 [DatabaseService] User not found: $userId');
+        return null;
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      
+      // Check if user has subscription data
+      if (userData['subscriptionPlan'] == null) {
+        print('🔍 [DatabaseService] User has no subscription: $userId');
+        return null;
+      }
+
+      return {
+        'plan': userData['subscriptionPlan'],
+        'status': userData['subscriptionStatus'],
+        'startDate': (userData['subscriptionStartDate'] as Timestamp?)?.toDate(),
+        'nextBillingDate': (userData['nextBillingDate'] as Timestamp?)?.toDate(),
+        'lastBillingDate': (userData['lastBillingDate'] as Timestamp?)?.toDate(),
+        'paymentMethod': userData['paymentMethod'],
+        'amount': userData['subscriptionAmount'],
+        'currency': userData['subscriptionCurrency'],
+        'interval': userData['subscriptionInterval'],
+      };
+    } catch (e) {
+      print('❌ [DatabaseService] Error getting subscription: $e');
+      return null;
+    }
+  }
+
+  /// Update next billing date (for recurring billing)
+  Future<void> updateNextBillingDate(String userId, DateTime nextBillingDate) async {
+    try {
+      print('🔍 [DatabaseService] Updating next billing date for user: $userId');
+      print('🔍 [DatabaseService] New billing date: $nextBillingDate');
+      
+      await _usersCollection.doc(userId).update({
+        'nextBillingDate': Timestamp.fromDate(nextBillingDate),
+        'lastBillingDate': Timestamp.fromDate(DateTime.now()),
+      });
+      
+      print('✅ [DatabaseService] Next billing date updated successfully');
+    } catch (e) {
+      print('❌ [DatabaseService] Error updating next billing date: $e');
+      throw e;
+    }
+  }
+
+  /// Check if a user has an active subscription
+  Future<bool> hasActiveSubscription(String userId) async {
+    try {
+      final subscription = await getSubscription(userId);
+      if (subscription == null) return false;
+      
+      final status = subscription['status'] as String?;
+      final nextBillingDate = subscription['nextBillingDate'] as DateTime?;
+      
+      // Check if subscription is active and not expired
+      return status == 'active' && 
+             (nextBillingDate == null || nextBillingDate.isAfter(DateTime.now()));
+    } catch (e) {
+      print('❌ [DatabaseService] Error checking active subscription: $e');
+      return false;
+    }
+  }
+
+  /// Get subscription plan details (pricing, features, etc.)
+  Map<String, dynamic> getSubscriptionPlanDetails(String plan) {
+    final plans = {
+      'alifi verified': {
+        'name': 'alifi verified',
+        'price': 900.0,
+        'currency': 'DZD',
+        'interval': 'monthly',
+        'features': [
+          'Adds your clinic/store to our map',
+          'Get special marking for your clinic/store in the map',
+          'Get patients/customers to book appointments/find your store through the app',
+          'Manage your schedule and appointments through the app',
+          'Have a verification badge on your profile and on the map',
+        ],
+      },
+      'alifi affiliated': {
+        'name': 'alifi affiliated',
+        'price': 1200.0,
+        'currency': 'DZD',
+        'interval': 'monthly',
+        'features': [
+          'Adds your clinic/store to our map',
+          'Get the most special marking for your clinic/store in the map',
+          'Get patients/customers to book appointments/find your store through the app',
+          'Manage your schedule and appointments through the app',
+          'Have a verification badge on your profile and on the map',
+          'Appear on the homescreen when close',
+          'Appear first on the search',
+        ],
+      },
+      'alifi favorite': {
+        'name': 'alifi favorite',
+        'price': 2000.0,
+        'currency': 'DZD',
+        'interval': 'monthly',
+        'features': [
+          'Adds your clinic/store to our map',
+          'Get the most special marking for your clinic/store in the map',
+          'Get patients/customers to book appointments/find your store through the app',
+          'Manage your schedule and appointments through the app',
+          'Have a verification badge on your profile and on the map',
+          'Appear on the homescreen when close',
+          'Appear first on the search',
+          'Get to post on homescreen',
+        ],
+      },
+    };
+
+    return plans[plan] ?? {};
+  }
+
+  /// Get all available subscription plans
+  List<Map<String, dynamic>> getAvailableSubscriptionPlans() {
+    return [
+      getSubscriptionPlanDetails('alifi verified'),
+      getSubscriptionPlanDetails('alifi affiliated'),
+      getSubscriptionPlanDetails('alifi favorite'),
+    ];
   }
 } 

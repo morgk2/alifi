@@ -138,6 +138,11 @@ flutter:
     - assets/images/vet_3d.png
     - assets/images/vet_3d2.png
     - assets/images/stamp.png
+    - assets/images/vet_normal.png
+    - assets/images/vet_fav.png
+    - assets/images/store_normal.png
+    - assets/images/store_fav.png
+    - assets/images/header_title.png
     - assets/images/store_3d.png
     - assets/images/store_3d2.png
     - assets/images/overview.png

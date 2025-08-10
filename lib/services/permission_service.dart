@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'push_notification_service.dart';
 
 class PermissionService {
   static final PermissionService _instance = PermissionService._internal();
@@ -26,14 +27,23 @@ class PermissionService {
 
   /// Check if notification permission is granted
   Future<bool> isNotificationPermissionGranted() async {
-    if (kIsWeb) {
-      // On web, notifications are handled differently and may not be available
-      return false;
-    }
-    
     try {
-      final status = await Permission.notification.status;
-      return status.isGranted;
+      if (kIsWeb) {
+        // On web, check Firebase Messaging permission
+        final messaging = FirebaseMessaging.instance;
+        final settings = await messaging.getNotificationSettings();
+        return settings.authorizationStatus == AuthorizationStatus.authorized ||
+               settings.authorizationStatus == AuthorizationStatus.provisional;
+      } else {
+        // On mobile, check both permission_handler and Firebase Messaging
+        final permissionStatus = await Permission.notification.status;
+        if (!permissionStatus.isGranted) return false;
+        
+        final messaging = FirebaseMessaging.instance;
+        final settings = await messaging.getNotificationSettings();
+        return settings.authorizationStatus == AuthorizationStatus.authorized ||
+               settings.authorizationStatus == AuthorizationStatus.provisional;
+      }
     } catch (e) {
       print('Error checking notification permission: $e');
       return false;
@@ -59,15 +69,56 @@ class PermissionService {
 
   /// Request notification permission
   Future<bool> requestNotificationPermission() async {
-    if (kIsWeb) {
-      // On web, notification permissions are handled differently
-      // We'll return false as web notifications may not be available
-      return false;
-    }
-    
     try {
-      final status = await Permission.notification.request();
-      return status.isGranted;
+      if (kIsWeb) {
+        // On web, use Firebase Messaging directly
+        final messaging = FirebaseMessaging.instance;
+        final settings = await messaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          provisional: false,
+        );
+        
+        final granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
+                       settings.authorizationStatus == AuthorizationStatus.provisional;
+        
+        if (granted) {
+          // Initialize the push notification service
+          final pushService = PushNotificationService();
+          await pushService.initialize();
+        }
+        
+        return granted;
+      } else {
+        // On mobile, use both permission_handler and Firebase Messaging
+        // First request through permission_handler for Android
+        final permissionStatus = await Permission.notification.request();
+        
+        if (permissionStatus.isGranted) {
+          // Then initialize Firebase Messaging
+          final messaging = FirebaseMessaging.instance;
+          final settings = await messaging.requestPermission(
+            alert: true,
+            badge: true,
+            sound: true,
+            provisional: false,
+          );
+          
+          final firebaseGranted = settings.authorizationStatus == AuthorizationStatus.authorized ||
+                                 settings.authorizationStatus == AuthorizationStatus.provisional;
+          
+          if (firebaseGranted) {
+            // Initialize the push notification service
+            final pushService = PushNotificationService();
+            await pushService.initialize();
+          }
+          
+          return firebaseGranted;
+        }
+        
+        return false;
+      }
     } catch (e) {
       print('Error requesting notification permission: $e');
       return false;

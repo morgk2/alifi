@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification.dart';
 
@@ -107,7 +108,7 @@ class NotificationCard extends StatelessWidget {
                   IconButton(
                     onPressed: onDelete,
                     icon: Icon(
-                      Icons.close,
+                      CupertinoIcons.xmark,
                       color: Colors.grey[400],
                       size: 20,
                     ),
@@ -133,47 +134,47 @@ class NotificationCard extends StatelessWidget {
     
     switch (notification.type) {
       case NotificationType.chatMessage:
-        iconData = Icons.chat_bubble_outline;
+        iconData = CupertinoIcons.chat_bubble_text;
         iconColor = Colors.blue;
         break;
       case NotificationType.orderPlaced:
-        iconData = Icons.shopping_cart;
+        iconData = CupertinoIcons.cart;
         iconColor = Colors.green;
         break;
       case NotificationType.orderConfirmed:
-        iconData = Icons.check_circle_outline;
+        iconData = CupertinoIcons.checkmark_circle;
         iconColor = Colors.blue;
         break;
       case NotificationType.orderShipped:
-        iconData = Icons.local_shipping_outlined;
+        iconData = CupertinoIcons.car_detailed;
         iconColor = Colors.orange;
         break;
       case NotificationType.orderDelivered:
-        iconData = Icons.done_all;
+        iconData = CupertinoIcons.checkmark_circle_fill;
         iconColor = Colors.green;
         break;
       case NotificationType.orderCancelled:
-        iconData = Icons.cancel_outlined;
+        iconData = CupertinoIcons.xmark_circle;
         iconColor = Colors.red;
         break;
       case NotificationType.follow:
-        iconData = Icons.person_add_outlined;
+        iconData = CupertinoIcons.person_add;
         iconColor = Colors.purple;
         break;
       case NotificationType.unfollow:
-        iconData = Icons.person_remove_outlined;
+        iconData = CupertinoIcons.person_badge_minus;
         iconColor = Colors.grey;
         break;
       case NotificationType.appointmentRequest:
-        iconData = Icons.calendar_today;
+        iconData = CupertinoIcons.calendar;
         iconColor = Colors.blue;
         break;
       case NotificationType.appointmentUpdate:
-        iconData = Icons.update;
+        iconData = CupertinoIcons.arrow_clockwise;
         iconColor = Colors.orange;
         break;
       case NotificationType.appointmentReminder:
-        iconData = Icons.alarm;
+        iconData = CupertinoIcons.alarm;
         iconColor = Colors.green;
         break;
     }

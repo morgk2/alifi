@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../models/user.dart';
 import '../services/navigation_service.dart';
+import '../services/database_service.dart';
 
 class SubscriptionManagementPage extends StatefulWidget {
   const SubscriptionManagementPage({super.key});
@@ -12,34 +13,47 @@ class SubscriptionManagementPage extends StatefulWidget {
 }
 
 class _SubscriptionManagementPageState extends State<SubscriptionManagementPage> {
-  // Real subscription data based on actual alifi plans
-  Map<String, dynamic> _subscriptionData = {
-    'currentPlan': 'alifi favorite',
-    'planType': 'monthly',
-    'nextBillingDate': DateTime.now().add(const Duration(days: 15)),
-    'amount': 2000,
-    'currency': 'DZD',
-    'paymentMethod': 'Cash payment',
-    'status': 'active',
-  };
+  Map<String, dynamic>? _subscriptionData;
+  bool _isLoading = true;
 
   List<String> get _features {
+    if (_subscriptionData == null) return [];
+    
+    final plan = _subscriptionData!['plan'] as String?;
+    if (plan == null) return [];
+    
+    final planDetails = DatabaseService().getSubscriptionPlanDetails(plan);
+    return List<String>.from(planDetails['features'] ?? []);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSubscriptionData();
+  }
+
+  Future<void> _loadSubscriptionData() async {
     final authService = context.read<AuthService>();
     final user = authService.currentUser;
-    final accountType = user?.accountType == 'vet' ? 'clinic' : 'store';
-    final customerType = user?.accountType == 'vet' ? 'patients' : 'customers';
-    final actionType = user?.accountType == 'vet' ? 'book appointments' : 'find your store';
     
-    return [
-      'Adds your $accountType to our map',
-      'Get the most special marking for your $accountType in the map',
-      'Get $customerType to $actionType through the app',
-      'Manage your schedule and appointments through the app',
-      'Have a verification badge on your profile and on the map',
-      'Appear on the homescreen when close',
-      'Appear first on the search',
-      'Get to post on homescreen',
-    ];
+    if (user == null) return;
+
+    try {
+      final subscription = await DatabaseService().getSubscription(user.id);
+      if (mounted) {
+        setState(() {
+          _subscriptionData = subscription;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading subscription data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -69,6 +83,41 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
         ),
         body: const Center(
           child: Text('This page is only available for vet and store accounts.'),
+        ),
+      );
+    }
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          title: const Text(
+            'Subscription Management',
+            style: TextStyle(
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          centerTitle: true,
+          leading: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Image.asset(
+                'assets/images/back_icon.png',
+                width: 24,
+                height: 24,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
         ),
       );
     }
@@ -176,23 +225,23 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _subscriptionData['currentPlan'],
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'InterDisplay',
-                        ),
-                      ),
+                                             Text(
+                         _subscriptionData?['plan'] ?? 'No Subscription',
+                         style: const TextStyle(
+                           fontSize: 20,
+                           fontWeight: FontWeight.w700,
+                           fontFamily: 'InterDisplay',
+                         ),
+                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        'Active Subscription',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          fontFamily: 'InterDisplay',
-                        ),
-                      ),
+                                             Text(
+                         _subscriptionData?['status'] == 'active' ? 'Active Subscription' : 'Inactive Subscription',
+                         style: TextStyle(
+                           fontSize: 14,
+                           color: Colors.grey[600],
+                           fontFamily: 'InterDisplay',
+                         ),
+                       ),
                     ],
                   ),
                 ),
@@ -206,15 +255,15 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
                       width: 1,
                     ),
                   ),
-                  child: Text(
-                    'Active',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.green[700],
-                      fontFamily: 'InterDisplay',
-                    ),
-                  ),
+                                     child: Text(
+                     _subscriptionData?['status'] == 'active' ? 'Active' : 'Inactive',
+                     style: TextStyle(
+                       fontSize: 12,
+                       fontWeight: FontWeight.w600,
+                       color: _subscriptionData?['status'] == 'active' ? Colors.green[700] : Colors.red[700],
+                       fontFamily: 'InterDisplay',
+                     ),
+                   ),
                 ),
               ],
             ),
@@ -237,14 +286,16 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        _formatDate(_subscriptionData['nextBillingDate']),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'InterDisplay',
-                        ),
-                      ),
+                                             Text(
+                         _subscriptionData?['nextBillingDate'] != null 
+                           ? _formatDate(_subscriptionData!['nextBillingDate'])
+                           : 'No billing date',
+                         style: const TextStyle(
+                           fontSize: 16,
+                           fontWeight: FontWeight.w600,
+                           fontFamily: 'InterDisplay',
+                         ),
+                       ),
                     ],
                   ),
                 ),
@@ -261,14 +312,16 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
                         ),
                       ),
                       const SizedBox(height: 4),
-                                             Text(
-                         '${_subscriptionData['amount']} ${_subscriptionData['currency']}/${_subscriptionData['planType']}',
-                         style: const TextStyle(
-                           fontSize: 16,
-                           fontWeight: FontWeight.w600,
-                           fontFamily: 'InterDisplay',
-                         ),
-                       ),
+                                                                                           Text(
+                          _subscriptionData?['amount'] != null 
+                            ? '${_subscriptionData!['amount']} ${_subscriptionData!['currency']}/${_subscriptionData!['interval']}'
+                            : 'No amount',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'InterDisplay',
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -327,14 +380,14 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        _subscriptionData['paymentMethod'],
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          fontFamily: 'InterDisplay',
-                        ),
-                      ),
+                                             Text(
+                         _subscriptionData?['paymentMethod'] ?? 'No payment method',
+                         style: TextStyle(
+                           fontSize: 14,
+                           color: Colors.grey[600],
+                           fontFamily: 'InterDisplay',
+                         ),
+                       ),
                     ],
                   ),
                 ),
@@ -509,19 +562,83 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
   }
 
   void _showChangePlanDialog() {
+    final availablePlans = DatabaseService().getAvailableSubscriptionPlans();
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Change Plan'),
-        content: const Text('This feature will be available soon.'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: availablePlans.map((plan) {
+              final isCurrentPlan = _subscriptionData?['plan'] == plan['name'];
+              return ListTile(
+                title: Text(plan['name']),
+                subtitle: Text('${plan['price']} ${plan['currency']}/${plan['interval']}'),
+                trailing: isCurrentPlan ? const Icon(Icons.check, color: Colors.green) : null,
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _changeSubscriptionPlan(plan['name']);
+                },
+              );
+            }).toList(),
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: const Text('Cancel'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _changeSubscriptionPlan(String newPlan) async {
+    try {
+      final authService = context.read<AuthService>();
+      final user = authService.currentUser;
+      
+      if (user == null) return;
+
+      final planDetails = DatabaseService().getSubscriptionPlanDetails(newPlan);
+      
+      await DatabaseService().createOrUpdateSubscription(
+        userId: user.id,
+        plan: newPlan,
+        status: 'active',
+        amount: planDetails['price'],
+        currency: planDetails['currency'],
+        interval: planDetails['interval'],
+        paymentMethod: _subscriptionData?['paymentMethod'] ?? 'Cash payment',
+        startDate: DateTime.now(),
+        nextBillingDate: DateTime.now().add(const Duration(days: 30)),
+      );
+
+      // Reload subscription data
+      await _loadSubscriptionData();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Plan changed to $newPlan'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error changing subscription plan: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error changing plan: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showCancelSubscriptionDialog() {
@@ -536,15 +653,9 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
             child: const Text('Keep Subscription'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              // TODO: Implement subscription cancellation
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Subscription cancelled'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+              await _cancelSubscription();
             },
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
@@ -554,5 +665,38 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
         ],
       ),
     );
+  }
+
+  Future<void> _cancelSubscription() async {
+    try {
+      final authService = context.read<AuthService>();
+      final user = authService.currentUser;
+      
+      if (user == null) return;
+
+      await DatabaseService().cancelSubscription(user.id);
+      
+      // Reload subscription data
+      await _loadSubscriptionData();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Subscription cancelled'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error cancelling subscription: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error cancelling subscription: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 } 

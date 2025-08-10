@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'dart:ui';
@@ -13,7 +13,7 @@ import '../models/appointment.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
 import '../services/navigation_service.dart';
-import '../icons.dart';
+
 import '../widgets/placeholder_image.dart';
 import '../widgets/fundraising_card.dart';
 import '../widgets/combined_recommendations_widget.dart';
@@ -111,6 +111,31 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return true;
   }
 
+  // Precache frequently used asset images for better performance
+  void _precacheAssets() {
+    if (!mounted) return;
+    
+    final List<String> assetPaths = [
+      'assets/images/notification_icon.png',
+      'assets/images/menu.svg',
+      'assets/images/header_title.png',
+      'assets/images/logo_cropped.png',
+      'assets/images/ai_pet.png',
+      'assets/images/ai_lufi.png',
+      'assets/images/loading.png',
+      'assets/images/back_icon.png',
+      'assets/images/leaderboard.png',
+    ];
+    
+    for (final path in assetPaths) {
+      try {
+        precacheImage(AssetImage(path), context);
+      } catch (e) {
+        if (kDebugMode) print('Failed to precache $path: $e');
+      }
+    }
+  }
+
   // Removed unused methods and variables for better performance
 
   // Removed unused method _reportFound
@@ -153,7 +178,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       vsync: this,
     );
     
-    // Create the side menu animation
+    // Initialize streams - create once to avoid recreating on rebuilds
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final user = authService.currentUser;
+      if (user != null) {
+        _todayAppointmentsStream = DatabaseService().getUserTodayAppointments(user.id);
+      }
+      
+      // Precache frequently used asset images
+      _precacheAssets();
+    });
+    
+    // Create the side menu animation with throttled progress reporting
     _sideMenuAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -163,9 +200,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       reverseCurve: Curves.easeInCubic,
     ))
       ..addListener(() {
-        // Report progress to parent for moving the bottom nav bar
+        // Throttle progress callbacks to avoid excessive parent rebuilds
         final progress = _sideMenuAnimation.value;
-        widget.onSideMenuProgressChanged?.call(progress);
+        if ((_lastReportedProgress - progress).abs() > 0.01) {
+          _lastReportedProgress = progress;
+          widget.onSideMenuProgressChanged?.call(progress);
+        }
       });
     
     // Initialize page controller with viewportFraction for showing partial next/prev cards
@@ -217,10 +257,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (user != null) {
         final appointments = await DatabaseService().getUserTodayAppointments(user.id).first;
         _todayAppointmentsNotifier.value = appointments;
-        print('🔍 [HomePage] Found ${appointments.length} appointments for today');
+        if (kDebugMode) print('🔍 [HomePage] Found ${appointments.length} appointments for today');
       }
     } catch (e) {
-      print('🔍 [HomePage] Error checking appointments in background: $e');
+      if (kDebugMode) print('🔍 [HomePage] Error checking appointments in background: $e');
     }
   }
 
@@ -228,6 +268,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   
   // Store today's appointments
   final ValueNotifier<List<Appointment>> _todayAppointmentsNotifier = ValueNotifier<List<Appointment>>([]);
+  
+  // Stream for today's appointments - created once in initState
+  Stream<List<Appointment>>? _todayAppointmentsStream;
+  
+  // Throttling for side menu progress callbacks
+  double _lastReportedProgress = -1;
 
   // Initialize location and load pets regardless of appointments
   Future<void> _checkAppointmentsBeforeLoadingPets() async {
@@ -351,7 +397,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       return;
     }
     
-    print('Loading nearby lost pets for location: ${userLocation.latitude}, ${userLocation.longitude}');
+    if (kDebugMode) print('Loading nearby lost pets for location: ${userLocation.latitude}, ${userLocation.longitude}');
     
     // Subscribe to nearby lost pets stream with proper memory management
     _nearbyPetsSubscription = _databaseService.getNearbyLostPets(
@@ -359,7 +405,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       radiusInKm: 50, // Increased radius to 50km for testing
     ).listen((pets) {
       if (mounted) {
-        print('Loaded ${pets.length} nearby lost pets');
+        if (kDebugMode) print('Loaded ${pets.length} nearby lost pets');
         _isLoadingPetsNotifier.value = false;
         if (pets.isEmpty) {
           print('No nearby pets found, falling back to recent pets');
@@ -369,7 +415,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         }
       }
     }, onError: (error) {
-      print('Error loading nearby lost pets: $error');
+      if (kDebugMode) print('Error loading nearby lost pets: $error');
       _isLoadingPetsNotifier.value = false;
       // Fallback to recent pets on error
       _loadRecentLostPets();
@@ -709,14 +755,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  void _navigateToSettings(BuildContext context) {
-    _closeSideMenu();
-    NavigationService.push(
-      context,
-      const SettingsPage(),
-    );
-  }
-
   void _toggleAIAssistant(bool expanded) {
     setState(() {
       _isAIAssistantExpanded = expanded;
@@ -739,14 +777,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             // Side Menu (behind main content)
             AnimatedBuilder(
               animation: _sideMenuAnimation,
-              child: _buildSideMenu(),
+              child: RepaintBoundary(child: _buildSideMenu()),
               builder: (context, child) {
+                final screenWidth = MediaQuery.of(context).size.width;
+                final dx = -screenWidth * 0.65 * (1 - _sideMenuAnimation.value);
                 return Positioned(
                   left: 0,
                   top: 0,
                   bottom: 0,
                   child: Transform.translate(
-                    offset: Offset(-MediaQuery.of(context).size.width * 0.65 * (1 - _sideMenuAnimation.value), 0),
+                    offset: Offset(dx, 0),
                     child: child,
                   ),
                 );
@@ -755,9 +795,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             // Main content with animation and rounded corners
             AnimatedBuilder(
               animation: _sideMenuAnimation,
+              child: RepaintBoundary(child: _buildMainContent()),
               builder: (context, child) {
+                final screenWidth = MediaQuery.of(context).size.width;
+                final dx = screenWidth * 0.65 * _sideMenuAnimation.value;
                 return Transform.translate(
-                  offset: Offset(MediaQuery.of(context).size.width * 0.65 * _sideMenuAnimation.value, 0),
+                  offset: Offset(dx, 0),
                   child: Container(
                     width: double.infinity,
                     height: double.infinity,
@@ -769,14 +812,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15 * _sideMenuAnimation.value),
-                          blurRadius: 25 * _sideMenuAnimation.value,
-                          offset: const Offset(0, 0),
-                          spreadRadius: 0,
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
-                    child: _buildMainContent(),
+                    child: child,
                   ),
                 );
               },
@@ -1163,15 +1205,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Center text
-          const Center(
-            child: Text(
-              'alifi',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFF59E0B),
-              ),
+          // Center image
+          Center(
+            child: Image.asset(
+              'assets/images/header_title.png',
+              height: 48,
+              fit: BoxFit.contain,
             ),
           ),
           // Left and right elements
@@ -1303,23 +1342,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   // Removed unused method _buildHeaderButton
   
-  Widget _buildNavigationArrow({
-    required int direction,
-    required IconData icon,
-  }) {
-    return GestureDetector(
-      onTap: () => _navigateToPetCard(direction),
-      child: Container(
-        padding: const EdgeInsets.all(8.0),
-        child: Icon(
-          icon,
-          size: 24,
-          color: Colors.black,
-        ),
-      ),
-    );
-  }
-
   Widget _buildGreeting() {
     return ValueListenableBuilder<bool>(
       valueListenable: _isLoadingLocationNotifier,
@@ -1392,28 +1414,35 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         }
 
         // Check for today's appointments first - ABSOLUTE PRIORITY
-        return StreamBuilder<List<Appointment>>(
-          stream: DatabaseService().getUserTodayAppointments(user?.id ?? ''),
-          builder: (context, appointmentSnapshot) {
-            if (appointmentSnapshot.connectionState == ConnectionState.waiting) {
-              // Keep UI stable and continue showing lost pets while appointments load
+        if (_todayAppointmentsStream != null) {
+          return StreamBuilder<List<Appointment>>(
+            stream: _todayAppointmentsStream!,
+            builder: (context, appointmentSnapshot) {
+              if (appointmentSnapshot.connectionState == ConnectionState.waiting) {
+                // Keep UI stable and continue showing lost pets while appointments load
+                return _buildSmartLostPetsSection();
+              }
+
+              final todayAppointments = appointmentSnapshot.data ?? [];
+              
+              if (kDebugMode) {
+                print('🔍 [HomePage] Today\'s appointments count: ${todayAppointments.length}');
+                for (final appointment in todayAppointments) {
+                  print('🔍 [HomePage] Appointment found: ${appointment.petName} at ${appointment.formattedTime} (${appointment.status.name})');
+                }
+                
+                // We'll show lost pets regardless of appointments
+                print('🔍 [HomePage] Showing lost pets section regardless of appointments');
+              }
+
+              // Show lost pets section with smart loading
               return _buildSmartLostPetsSection();
-            }
-
-            final todayAppointments = appointmentSnapshot.data ?? [];
-            
-            print('🔍 [HomePage] Today\'s appointments count: ${todayAppointments.length}');
-            for (final appointment in todayAppointments) {
-              print('🔍 [HomePage] Appointment found: ${appointment.petName} at ${appointment.formattedTime} (${appointment.status.name})');
-            }
-            
-            // We'll show lost pets regardless of appointments
-            print('🔍 [HomePage] Showing lost pets section regardless of appointments');
-
-            // Show lost pets section with smart loading
-            return _buildSmartLostPetsSection();
-          },
-        );
+            },
+          );
+        }
+        
+        // Fallback to showing lost pets if stream isn't initialized yet
+        return _buildSmartLostPetsSection();
       },
     );
   }
@@ -1654,191 +1683,179 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget _buildSmartLostPetsSection() {
     return ValueListenableBuilder<List<LostPet>>(
       valueListenable: _lostPetsNotifier,
-      builder: (context, lostPets, child) {
-        return ValueListenableBuilder<bool>(
-          valueListenable: _isLoadingPetsNotifier,
-          builder: (context, isLoadingPets, child) {
-            return ValueListenableBuilder<bool>(
-              valueListenable: _hasAttemptedLoadNotifier,
-              builder: (context, hasAttemptedLoad, child) {
-                return ValueListenableBuilder<bool>(
-                  valueListenable: _isLoadingLocationNotifier,
-                  builder: (context, isLoadingLocation, child) {
-                    return ValueListenableBuilder<latlong.LatLng?>(
-                      valueListenable: _userLocationNotifier,
-                      builder: (context, userLocation, child) {
-                        // Show skeleton only on initial load (no data yet) while loading
-                        if (isLoadingPets && !isLoadingLocation && lostPets.isEmpty) {
-                          return _buildLostPetsSkeleton();
-                        }
-                        
-                        // Show "no pets" message only when we're not loading and have no pets
-                        if (lostPets.isEmpty && !isLoadingPets && hasAttemptedLoad) {
-                          String message;
-                          String subtitle = '';
-                          
-                          if (userLocation != null) {
-                            message = 'No lost pets reported nearby';
-                            subtitle = 'We\'ll notify you when pets are reported in your area';
-                          } else {
-                            message = 'No recent lost pets reported';
-                            subtitle = 'Enable location to see pets in your area';
-                          }
-                          
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.pets_outlined,
-                                    size: 48,
-                                    color: Colors.grey[400],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    message,
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    subtitle,
-                                    style: TextStyle(
-                                      color: Colors.grey[500],
-                                      fontSize: 14,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-                        
-                        // Show pets when we have them
-                        if (lostPets.isNotEmpty) {
-                          return Column(
-                            children: [
-                              // Pet card carousel with navigation arrows
-                              SizedBox(
-                                height: 240,
-                                child: Stack(
-                                  children: [
-                                    PageView.builder(
-                                      controller: _petPageController,
-                                      physics: const BouncingScrollPhysics(),
-                                      itemCount: lostPets.length,
-                                      pageSnapping: true,
-                                      key: const PageStorageKey('pet_carousel'),
-                                      itemBuilder: (context, index) {
-                                        final lostPet = lostPets[index];
-                                        return Container(
-                                          margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 24.0),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(200),
-                                            border: Border.all(color: Colors.grey[300]!, width: 0.5),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black.withOpacity(0.05),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 2),
-                                                spreadRadius: 0,
-                                              ),
-                                            ],
-                                          ),
-                                          child: _buildLostPetCard(lostPet, context),
-                                        );
-                                      },
-                                    ),
-                                                                         // Navigation arrows - only show when there are items to navigate to
-                                     ValueListenableBuilder<int>(
-                                       valueListenable: _currentPetPageNotifier,
-                                       builder: (context, currentPage, child) {
-                                         return Stack(
-                                           children: [
-                                             // Left arrow - only show if not on first page
-                                             if (currentPage > 0)
-                                               Positioned(
-                                                 left: 16,
-                                                 top: 0,
-                                                 bottom: 0,
-                                                 child: Center(
-                                                   child: GestureDetector(
-                                                     onTap: () => _navigateToPetCard(-1),
-                                                     child: Icon(
-                                                       Icons.chevron_left,
-                                                       color: Colors.grey[700],
-                                                       size: 32,
-                                                     ),
-                                                   ),
-                                                 ),
-                                               ),
-                                             // Right arrow - only show if not on last page
-                                             if (currentPage < lostPets.length - 1)
-                                               Positioned(
-                                                 right: 16,
-                                                 top: 0,
-                                                 bottom: 0,
-                                                 child: Center(
-                                                   child: GestureDetector(
-                                                     onTap: () => _navigateToPetCard(1),
-                                                     child: Icon(
-                                                       Icons.chevron_right,
-                                                       color: Colors.grey[700],
-                                                       size: 32,
-                                                     ),
-                                                   ),
-                                                 ),
-                                               ),
-                                           ],
-                                         );
-                                       },
-                                     ),
-                                  ],
-                                ),
-                              ),
-                              // Page indicators
-                              if (lostPets.length > 1) ...[
-                                const SizedBox(height: 16),
-                                ValueListenableBuilder<int>(
-                                  valueListenable: _currentPetPageNotifier,
-                                  builder: (context, currentPage, child) {
-                                    return Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: List.generate(lostPets.length, (index) => Container(
-                                        width: 8,
-                                        height: 8,
-                                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: index == currentPage ? const Color(0xFFF59E0B) : Colors.grey[300],
-                                        ),
-                                      )),
-                                    );
-                                  },
+      builder: (context, lostPets, _) {
+        // Read other notifiers directly to avoid nested rebuilds
+        final isLoadingPets = _isLoadingPetsNotifier.value;
+        final hasAttemptedLoad = _hasAttemptedLoadNotifier.value;
+        final isLoadingLocation = _isLoadingLocationNotifier.value;
+        final userLocation = _userLocationNotifier.value;
+        
+        // Show skeleton only on initial load (no data yet) while loading
+        if (isLoadingPets && !isLoadingLocation && lostPets.isEmpty) {
+          return _buildLostPetsSkeleton();
+        }
+        
+        // Show "no pets" message only when we're not loading and have no pets
+        if (lostPets.isEmpty && !isLoadingPets && hasAttemptedLoad) {
+          String message;
+          String subtitle = '';
+          
+          if (userLocation != null) {
+            message = 'No lost pets reported nearby';
+            subtitle = 'We\'ll notify you when pets are reported in your area';
+          } else {
+            message = 'No recent lost pets reported';
+            subtitle = 'Enable location to see pets in your area';
+          }
+          
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.pets_outlined,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    message,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        // Show pets when we have them
+        if (lostPets.isNotEmpty) {
+          return Column(
+            children: [
+              // Pet card carousel with navigation arrows
+              SizedBox(
+                height: 240,
+                child: Stack(
+                  children: [
+                    PageView.builder(
+                      controller: _petPageController,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: lostPets.length,
+                      pageSnapping: true,
+                      key: const PageStorageKey('pet_carousel'),
+                      itemBuilder: (context, index) {
+                        final lostPet = lostPets[index];
+                        return RepaintBoundary(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 24.0),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(200),
+                              border: Border.all(color: Colors.grey[300]!, width: 0.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                  spreadRadius: 0,
                                 ),
                               ],
-                              const SizedBox(height: 32),
-                            ],
-                          );
-                        }
-                        
-                        // Default case - show nothing while initializing
-                        return const SizedBox.shrink();
+                            ),
+                            child: _buildLostPetCard(lostPet, context),
+                          ),
+                        );
                       },
+                    ),
+                    // Navigation arrows - only show when there are items to navigate to
+                    ValueListenableBuilder<int>(
+                      valueListenable: _currentPetPageNotifier,
+                      builder: (context, currentPage, child) {
+                        return Stack(
+                          children: [
+                            // Left arrow - only show if not on first page
+                            if (currentPage > 0)
+                              Positioned(
+                                left: 16,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: GestureDetector(
+                                    onTap: () => _navigateToPetCard(-1),
+                                    child: Icon(
+                                      Icons.chevron_left,
+                                      color: Colors.grey[700],
+                                      size: 32,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            // Right arrow - only show if not on last page
+                            if (currentPage < lostPets.length - 1)
+                              Positioned(
+                                right: 16,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: GestureDetector(
+                                    onTap: () => _navigateToPetCard(1),
+                                    child: Icon(
+                                      Icons.chevron_right,
+                                      color: Colors.grey[700],
+                                      size: 32,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              // Page indicators
+              if (lostPets.length > 1) ...[
+                const SizedBox(height: 16),
+                ValueListenableBuilder<int>(
+                  valueListenable: _currentPetPageNotifier,
+                  builder: (context, currentPage, child) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(lostPets.length, (index) => Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: index == currentPage ? const Color(0xFFF59E0B) : Colors.grey[300],
+                        ),
+                      )),
                     );
                   },
-                );
-              },
-            );
-          },
-        );
+                ),
+              ],
+              const SizedBox(height: 32),
+            ],
+          );
+        }
+                        
+        // Default case - show nothing while initializing
+        return const SizedBox.shrink();
       },
     );
   }

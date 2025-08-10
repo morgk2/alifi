@@ -3,6 +3,7 @@ import '../models/pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/database_service.dart';
 import 'package:flutter/cupertino.dart';
+import '../widgets/custom_snackbar.dart';
 
 class PetHealthPage extends StatefulWidget {
   final Pet pet;

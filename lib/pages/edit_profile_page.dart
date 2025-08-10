@@ -1,15 +1,19 @@
 import 'package:alifi/pages/store_signup_page.dart';
 import 'package:alifi/pages/vet_signup_page.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path/path.dart' as path;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
-import '../widgets/placeholder_image.dart';
 import '../icons.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../services/navigation_service.dart';
 import '../widgets/spinning_loader.dart';
 import 'package:flutter/services.dart';
+import '../services/storage_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -23,6 +27,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _usernameController;
   late TextEditingController _displayNameController;
   late TextEditingController _basicInfoController;
+  File? _selectedCoverFile;
+  String? _coverPreviewUrl;
   
   // Replace setState variable with ValueNotifier for better performance
   final ValueNotifier<bool> _isSavingNotifier = ValueNotifier<bool>(false);
@@ -34,6 +40,35 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _usernameController = TextEditingController(text: user?.username ?? '@username');
     _displayNameController = TextEditingController(text: user?.displayName ?? 'Display Name');
     _basicInfoController = TextEditingController(text: user?.basicInfo ?? '');
+    _coverPreviewUrl = user?.coverPhotoURL;
+  }
+
+  Future<void> _pickCover() async {
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      final File originalFile = File(image.path);
+      final String dir = path.dirname(image.path);
+      final String newPath = path.join(dir, 'compressed_${path.basename(image.path)}');
+      final compressed = await FlutterImageCompress.compressAndGetFile(
+        originalFile.path,
+        newPath,
+        quality: 70,
+        minWidth: 1200,
+        minHeight: 400,
+      );
+
+      final String chosenPath = compressed != null ? compressed.path : originalFile.path;
+      setState(() {
+        _selectedCoverFile = File(chosenPath);
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error selecting cover: $e')),
+      );
+    }
   }
 
   @override
@@ -89,7 +124,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (user == null) return;
 
     final newUsername = _usernameController.text.trim();
-    final updatedUser = user.copyWith(
+    var updatedUser = user.copyWith(
       username: newUsername,
       displayName: _displayNameController.text.trim(),
       basicInfo: ['vet', 'store'].contains(user.accountType) 
@@ -99,6 +134,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     _isSavingNotifier.value = true;
     try {
+      if (_selectedCoverFile != null) {
+        final storageService = Provider.of<StorageService>(context, listen: false);
+        final coverUrl = await storageService.uploadPetPhoto(_selectedCoverFile!);
+        updatedUser = updatedUser.copyWith(coverPhotoURL: coverUrl);
+      }
       await DatabaseService().updateUser(updatedUser);
       authService.updateCurrentUser(updatedUser);
 
@@ -211,7 +251,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           children: [
                             Stack(
                               children: [
-                                if (user?.photoURL != null && user!.photoURL!.isNotEmpty)
+                                if (user.photoURL != null && user.photoURL!.isNotEmpty)
                                   CircleAvatar(
                                     radius: 60,
                                     backgroundImage: NetworkImage(user.photoURL!),
@@ -279,6 +319,56 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                       
                       const SizedBox(height: 16),
+                      if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi favorite')
+                        Container(
+                          color: Colors.white,
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Cover photo (optional)',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 12),
+                              Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: SizedBox(
+                                      height: 140,
+                                      width: double.infinity,
+                                      child: _selectedCoverFile != null
+                                          ? Image.file(_selectedCoverFile!, fit: BoxFit.cover)
+                                          : (_coverPreviewUrl != null && _coverPreviewUrl!.isNotEmpty)
+                                              ? Image.network(_coverPreviewUrl!, fit: BoxFit.cover)
+                                              : Container(
+                                                  color: Colors.grey[200],
+                                                  alignment: Alignment.center,
+                                                  child: const Icon(Icons.image, color: Colors.grey, size: 40),
+                                                ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: 8,
+                                    bottom: 8,
+                                    child: ElevatedButton.icon(
+                                      onPressed: _pickCover,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFFFF9E42),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        elevation: 0,
+                                      ),
+                                      icon: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                                      label: const Text('Change cover', style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       
                       // Form Fields Section
                       Container(
@@ -400,7 +490,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             _buildLinkedAccountTile(
                               'Google',
                               AppIcons.googleIcon,
-                              user?.linkedAccounts['google'] ?? false,
+                              user.linkedAccounts['google'] ?? false,
                               () {
                                 // Already implemented in AuthService
                               },
@@ -409,7 +499,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             _buildLinkedAccountTile(
                               'Facebook',
                               AppIcons.facebookIcon,
-                              user?.linkedAccounts['facebook'] ?? false,
+                              user.linkedAccounts['facebook'] ?? false,
                               () {
                                 // TODO: Implement Facebook account linking
                               },
@@ -418,7 +508,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             _buildLinkedAccountTile(
                               'Apple',
                               AppIcons.appleIcon,
-                              user?.linkedAccounts['apple'] ?? false,
+                              user.linkedAccounts['apple'] ?? false,
                               () {
                                 // TODO: Implement Apple account linking
                               },

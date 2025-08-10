@@ -53,12 +53,12 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDK5PPrAoHfW-Q25xSle6u83CDPzbMq_lM',
-    appId: '1:261633708467:ios:dc6f5038b839dd87497bc6',
+    apiKey: 'AIzaSyBFsgltzGVEGR0OhsybdDrwTNl62B6gknM',
+    appId: '1:261633708467:ios:3832375e3e36defd497bc6',
     messagingSenderId: '261633708467',
     projectId: 'alifi-924c1',
     storageBucket: 'alifi-924c1.firebasestorage.app',
-    iosClientId: '261633708467-abcdefghijklmnop.apps.googleusercontent.com',
+    iosClientId: '261633708467-bdf1vb4fea9i3638nqdk2kh6dn5ov3s9.apps.googleusercontent.com',
     iosBundleId: 'com.example.alifi',
   );
 } 

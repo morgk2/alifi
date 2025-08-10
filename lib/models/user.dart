@@ -7,6 +7,7 @@ class User {
   final String? displayName;
   final String? username;
   final String? photoURL;
+  final String? coverPhotoURL;
   final DateTime createdAt;
   final DateTime lastLoginAt;
   final Map<String, bool> linkedAccounts;
@@ -31,11 +32,34 @@ class User {
   final double dailyRevenue;  // Daily revenue for sellers
   final double totalRevenue;  // Total lifetime revenue for sellers
   final DateTime? lastRevenueUpdate;  // Last time revenue was updated
+  
+  // Subscription fields
+  final String? subscriptionPlan;  // 'alifi verified', 'alifi affiliated', 'alifi favorite', or null for no subscription
+  final String? subscriptionStatus;  // 'active', 'cancelled', 'expired', 'pending'
+  final DateTime? subscriptionStartDate;  // When the subscription started
+  final DateTime? nextBillingDate;  // Next billing date
+  final DateTime? lastBillingDate;  // Last billing date
+  final String? paymentMethod;  // 'Cash payment', 'Credit Card', 'Bank Transfer', etc.
+  final double? subscriptionAmount;  // Monthly/annual amount
+  final String? subscriptionCurrency;  // 'DZD', 'USD', etc.
+  final String? subscriptionInterval;  // 'monthly', 'yearly'
 
-  String? get firstName => displayName?.split(' ').first;
-  String? get lastName => displayName != null && displayName!.split(' ').length > 1 
+  // Business-related fields for vet and store accounts
+  final String? businessFirstName;  // First name for business accounts
+  final String? businessLastName;   // Last name for business accounts
+  final String? businessName;  // Generic business name (clinic/store name)
+  final String? businessLocation;  // Generic business location
+  final String? city;  // City for business accounts
+  final String? phone;  // Phone for business accounts
+  final String? clinicName;  // Specific to vet accounts
+  final String? clinicLocation;  // Specific to vet accounts
+  final String? storeName;  // Specific to store accounts
+  final String? storeLocation;  // Specific to store accounts
+
+  String? get firstName => businessFirstName ?? displayName?.split(' ').first;
+  String? get lastName => businessLastName ?? (displayName != null && displayName!.split(' ').length > 1 
     ? displayName!.split(' ').sublist(1).join(' ') 
-    : null;
+    : null);
 
   User({
     required this.id,
@@ -43,6 +67,7 @@ class User {
     this.displayName,
     this.username,
     this.photoURL,
+    this.coverPhotoURL,
     required this.createdAt,
     required this.lastLoginAt,
     required this.linkedAccounts,
@@ -67,6 +92,25 @@ class User {
     this.dailyRevenue = 0.0,  // Added daily revenue parameter
     this.totalRevenue = 0.0,  // Added total revenue parameter
     this.lastRevenueUpdate,  // Added last revenue update parameter
+    this.subscriptionPlan,  // Added subscription plan parameter
+    this.subscriptionStatus,  // Added subscription status parameter
+    this.subscriptionStartDate,  // Added subscription start date parameter
+    this.nextBillingDate,  // Added next billing date parameter
+    this.lastBillingDate,  // Added last billing date parameter
+    this.paymentMethod,  // Added payment method parameter
+    this.subscriptionAmount,  // Added subscription amount parameter
+    this.subscriptionCurrency,  // Added subscription currency parameter
+    this.subscriptionInterval,  // Added subscription interval parameter
+    this.businessFirstName,  // Added business first name parameter
+    this.businessLastName,  // Added business last name parameter
+    this.businessName,  // Added business name parameter
+    this.businessLocation,  // Added business location parameter
+    this.city,  // Added city parameter
+    this.phone,  // Added phone parameter
+    this.clinicName,  // Added clinic name parameter
+    this.clinicLocation,  // Added clinic location parameter
+    this.storeName,  // Added store name parameter
+    this.storeLocation,  // Added store location parameter
   }) : 
     this.followers = followers ?? [],
     this.following = following ?? [],
@@ -78,6 +122,7 @@ class User {
       'displayName': displayName,
       'username': username,
       'photoURL': photoURL,
+      'coverPhotoURL': coverPhotoURL,
       'createdAt': Timestamp.fromDate(createdAt),
       'lastLoginAt': Timestamp.fromDate(lastLoginAt),
       'linkedAccounts': linkedAccounts,
@@ -105,6 +150,25 @@ class User {
       'dailyRevenue': dailyRevenue,  // Added daily revenue to Firestore data
       'totalRevenue': totalRevenue,  // Added total revenue to Firestore data
       'lastRevenueUpdate': lastRevenueUpdate != null ? Timestamp.fromDate(lastRevenueUpdate!) : null,  // Added last revenue update to Firestore data
+      'subscriptionPlan': subscriptionPlan,  // Added subscription plan to Firestore data
+      'subscriptionStatus': subscriptionStatus,  // Added subscription status to Firestore data
+      'subscriptionStartDate': subscriptionStartDate != null ? Timestamp.fromDate(subscriptionStartDate!) : null,  // Added subscription start date to Firestore data
+      'nextBillingDate': nextBillingDate != null ? Timestamp.fromDate(nextBillingDate!) : null,  // Added next billing date to Firestore data
+      'lastBillingDate': lastBillingDate != null ? Timestamp.fromDate(lastBillingDate!) : null,  // Added last billing date to Firestore data
+      'paymentMethod': paymentMethod,  // Added payment method to Firestore data
+      'subscriptionAmount': subscriptionAmount,  // Added subscription amount to Firestore data
+      'subscriptionCurrency': subscriptionCurrency,  // Added subscription currency to Firestore data
+      'subscriptionInterval': subscriptionInterval,  // Added subscription interval to Firestore data
+      'businessFirstName': businessFirstName,  // Added business first name to Firestore data
+      'businessLastName': businessLastName,  // Added business last name to Firestore data
+      'businessName': businessName,  // Added business name to Firestore data
+      'businessLocation': businessLocation,  // Added business location to Firestore data
+      'city': city,  // Added city to Firestore data
+      'phone': phone,  // Added phone to Firestore data
+      'clinicName': clinicName,  // Added clinic name to Firestore data
+      'clinicLocation': clinicLocation,  // Added clinic location to Firestore data
+      'storeName': storeName,  // Added store name to Firestore data
+      'storeLocation': storeLocation,  // Added store location to Firestore data
     };
   }
 
@@ -160,6 +224,26 @@ class User {
       dailyRevenue: (data['dailyRevenue'] ?? 0.0).toDouble(),  // Added daily revenue to factory constructor
       totalRevenue: (data['totalRevenue'] ?? 0.0).toDouble(),  // Added total revenue to factory constructor
       lastRevenueUpdate: (data['lastRevenueUpdate'] as Timestamp?)?.toDate(),  // Added last revenue update to factory constructor
+      subscriptionPlan: data['subscriptionPlan'],  // Added subscription plan to factory constructor
+      subscriptionStatus: data['subscriptionStatus'],  // Added subscription status to factory constructor
+      subscriptionStartDate: (data['subscriptionStartDate'] as Timestamp?)?.toDate(),  // Added subscription start date to factory constructor
+      nextBillingDate: (data['nextBillingDate'] as Timestamp?)?.toDate(),  // Added next billing date to factory constructor
+      lastBillingDate: (data['lastBillingDate'] as Timestamp?)?.toDate(),  // Added last billing date to factory constructor
+      paymentMethod: data['paymentMethod'],  // Added payment method to factory constructor
+      subscriptionAmount: (data['subscriptionAmount'] ?? 0.0).toDouble(),  // Added subscription amount to factory constructor
+      subscriptionCurrency: data['subscriptionCurrency'],  // Added subscription currency to factory constructor
+      subscriptionInterval: data['subscriptionInterval'],  // Added subscription interval to factory constructor
+      businessFirstName: data['businessFirstName'],  // Added business first name to factory constructor
+      businessLastName: data['businessLastName'],  // Added business last name to factory constructor
+      businessName: data['businessName'],  // Added business name to factory constructor
+      businessLocation: data['businessLocation'],  // Added business location to factory constructor
+      city: data['city'],  // Added city to factory constructor
+      phone: data['phone'],  // Added phone to factory constructor
+      clinicName: data['clinicName'],  // Added clinic name to factory constructor
+      clinicLocation: data['clinicLocation'],  // Added clinic location to factory constructor
+      storeName: data['storeName'],  // Added store name to factory constructor
+      storeLocation: data['storeLocation'],  // Added store location to factory constructor
+      coverPhotoURL: data['coverPhotoURL'],
     );
   }
 
@@ -169,6 +253,7 @@ class User {
     String? displayName,
     String? username,
     String? photoURL,
+    String? coverPhotoURL,
     DateTime? createdAt,
     DateTime? lastLoginAt,
     Map<String, bool>? linkedAccounts,
@@ -193,6 +278,25 @@ class User {
     double? dailyRevenue,  // Added daily revenue to copyWith
     double? totalRevenue,  // Added total revenue to copyWith
     DateTime? lastRevenueUpdate,  // Added last revenue update to copyWith
+    String? subscriptionPlan,  // Added subscription plan to copyWith
+    String? subscriptionStatus,  // Added subscription status to copyWith
+    DateTime? subscriptionStartDate,  // Added subscription start date to copyWith
+    DateTime? nextBillingDate,  // Added next billing date to copyWith
+    DateTime? lastBillingDate,  // Added last billing date to copyWith
+    String? paymentMethod,  // Added payment method to copyWith
+    double? subscriptionAmount,  // Added subscription amount to copyWith
+    String? subscriptionCurrency,  // Added subscription currency to copyWith
+    String? subscriptionInterval,  // Added subscription interval to copyWith
+    String? businessFirstName,  // Added business first name to copyWith
+    String? businessLastName,  // Added business last name to copyWith
+    String? businessName,  // Added business name to copyWith
+    String? businessLocation,  // Added business location to copyWith
+    String? city,  // Added city to copyWith
+    String? phone,  // Added phone to copyWith
+    String? clinicName,  // Added clinic name to copyWith
+    String? clinicLocation,  // Added clinic location to copyWith
+    String? storeName,  // Added store name to copyWith
+    String? storeLocation,  // Added store location to copyWith
   }) {
     return User(
       id: id ?? this.id,
@@ -200,6 +304,7 @@ class User {
       displayName: displayName ?? this.displayName,
       username: username ?? this.username,
       photoURL: photoURL ?? this.photoURL,
+      coverPhotoURL: coverPhotoURL ?? this.coverPhotoURL,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
       linkedAccounts: linkedAccounts ?? this.linkedAccounts,
@@ -224,6 +329,25 @@ class User {
       dailyRevenue: dailyRevenue ?? this.dailyRevenue,  // Added daily revenue to copyWith
       totalRevenue: totalRevenue ?? this.totalRevenue,  // Added total revenue to copyWith
       lastRevenueUpdate: lastRevenueUpdate ?? this.lastRevenueUpdate,  // Added last revenue update to copyWith
+      subscriptionPlan: subscriptionPlan ?? this.subscriptionPlan,  // Added subscription plan to copyWith
+      subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,  // Added subscription status to copyWith
+      subscriptionStartDate: subscriptionStartDate ?? this.subscriptionStartDate,  // Added subscription start date to copyWith
+      nextBillingDate: nextBillingDate ?? this.nextBillingDate,  // Added next billing date to copyWith
+      lastBillingDate: lastBillingDate ?? this.lastBillingDate,  // Added last billing date to copyWith
+      paymentMethod: paymentMethod ?? this.paymentMethod,  // Added payment method to copyWith
+      subscriptionAmount: subscriptionAmount ?? this.subscriptionAmount,  // Added subscription amount to copyWith
+      subscriptionCurrency: subscriptionCurrency ?? this.subscriptionCurrency,  // Added subscription currency to copyWith
+      subscriptionInterval: subscriptionInterval ?? this.subscriptionInterval,  // Added subscription interval to copyWith
+      businessFirstName: businessFirstName ?? this.businessFirstName,  // Added business first name to copyWith
+      businessLastName: businessLastName ?? this.businessLastName,  // Added business last name to copyWith
+      businessName: businessName ?? this.businessName,  // Added business name to copyWith
+      businessLocation: businessLocation ?? this.businessLocation,  // Added business location to copyWith
+      city: city ?? this.city,  // Added city to copyWith
+      phone: phone ?? this.phone,  // Added phone to copyWith
+      clinicName: clinicName ?? this.clinicName,  // Added clinic name to copyWith
+      clinicLocation: clinicLocation ?? this.clinicLocation,  // Added clinic location to copyWith
+      storeName: storeName ?? this.storeName,  // Added store name to copyWith
+      storeLocation: storeLocation ?? this.storeLocation,  // Added store location to copyWith
     );
   }
 } 

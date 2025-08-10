@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/gestures.dart';
 import 'dart:async';
@@ -15,6 +16,7 @@ import 'dialogs/report_problem_dialog.dart';
 import 'pages/page_container.dart';
 import 'pages/vet_signup_page.dart';
 import 'pages/store_signup_page.dart';
+import 'pages/location_setup_page.dart';
 import 'services/auth_service.dart';
 import 'services/device_performance.dart';
 import 'services/storage_service.dart';
@@ -43,6 +45,7 @@ import 'services/notification_service.dart';
 import 'services/currency_service.dart';
 import 'services/permission_service.dart';
 import 'dialogs/permission_request_dialog.dart';
+import 'services/map_focus_service.dart';
 
 Future<void> main() async {
   try {
@@ -336,6 +339,9 @@ class _MainAppState extends State<MainApp> {
         ChangeNotifierProvider(
           create: (_) => CurrencyService(),
         ),
+        ChangeNotifierProvider(
+          create: (_) => MapFocusService(),
+        ),
       ],
       child: MaterialApp(
         navigatorKey: NavigationService.navigatorKey,
@@ -515,9 +521,13 @@ Firebase Status:
     if (!authService.isInitialized || authService.isLoadingUser) {
       mainContent = const SplashScreen();
     }
-    // If authenticated, show main app
+    // If authenticated, check if vet/store needs location setup
     else if (authService.isAuthenticated) {
-      mainContent = const PageContainer();
+      if (authService.needsLocationSetup()) {
+        mainContent = const LocationSetupRedirect();
+      } else {
+        mainContent = PageContainer(key: pageContainerKey);
+      }
     }
     // If not authenticated, show login page
     else {
@@ -528,8 +538,50 @@ Firebase Status:
   }
 }
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -542,18 +594,27 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Hero(
-              tag: 'logo',
-              child: Image.asset(
-                'assets/images/alifi_logo.png',
-                width: logoWidth,
-                fit: BoxFit.contain,
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: Hero(
+                  tag: 'logo',
+                  child: Image.asset(
+                    'assets/images/alifi_logo.png',
+                    width: logoWidth,
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 32),
-            const SpinningLoader(
-              size: 32,
-              color: Colors.orange,
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: const CupertinoActivityIndicator(
+                radius: 16,
+                color: CupertinoColors.systemOrange,
+              ),
             ),
           ],
         ),
@@ -1358,5 +1419,15 @@ class LanguageSwitcher extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+// Widget to redirect vet/store users to location setup if they don't have a business location
+class LocationSetupRedirect extends StatelessWidget {
+  const LocationSetupRedirect({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const LocationSetupPage();
   }
 }

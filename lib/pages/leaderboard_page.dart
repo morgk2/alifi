@@ -100,6 +100,53 @@ class LeaderboardPage extends StatelessWidget {
                 const SizedBox(width: 4),
                 const VerificationBadge(size: 16),
               ],
+              // Subscription plan badges
+              if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi favorite') ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'FAVORITE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'InterDisplay',
+                    ),
+                  ),
+                ),
+              ],
+              if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated') ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'AFFILIATED',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'InterDisplay',
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           Text(
@@ -194,6 +241,53 @@ class LeaderboardPage extends StatelessWidget {
                       if (user.isVerified) ...[
                         const SizedBox(width: 8),
                         const VerificationBadge(size: 16),
+                      ],
+                      // Subscription plan badges
+                      if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi favorite') ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'FAVORITE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'InterDisplay',
+                            ),
+                          ),
+                        ),
+                      ],
+                      if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated') ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'AFFILIATED',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'InterDisplay',
+                            ),
+                          ),
+                        ),
                       ],
                     ],
                   ),

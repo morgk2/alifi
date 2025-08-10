@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../models/notification.dart';
 import '../services/notification_service.dart';
@@ -10,6 +11,7 @@ import 'detailed_seller_dashboard_page.dart';
 import 'user_orders_page.dart';
 import 'user_profile_page.dart';
 import '../services/database_service.dart';
+import '../widgets/custom_snackbar.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -90,7 +92,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ),
             child: IconButton(
               onPressed: () => _markAllAsRead(currentUser.id),
-              icon: const Icon(Icons.done_all, color: Colors.grey),
+              icon: const Icon(CupertinoIcons.checkmark_circle, color: Colors.grey),
               tooltip: 'Mark all as read',
             ),
           ),
@@ -139,7 +141,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.error_outline,
+                            CupertinoIcons.exclamationmark_circle,
                             size: 64,
                             color: Colors.grey[400],
                           ),
@@ -189,7 +191,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.notifications_none,
+                            CupertinoIcons.bell_slash,
                             size: 64,
                             color: Colors.grey[400],
                           ),
@@ -248,7 +250,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ),
         child: IconButton(
           onPressed: () => _sendTestNotification(currentUser.id),
-          icon: const Icon(Icons.bug_report, color: Colors.grey, size: 24),
+          icon: const Icon(CupertinoIcons.exclamationmark_triangle, color: Colors.grey, size: 24),
           tooltip: 'Send test notification',
         ),
       ),
@@ -315,32 +317,26 @@ class _NotificationsPageState extends State<NotificationsPage> {
               );
             } else {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Unable to open chat - user not found'),
-                    backgroundColor: Colors.red,
-                  ),
+                CustomSnackBarHelper.showError(
+                  context,
+                  'Unable to open chat - user not found',
                 );
               }
             }
           } catch (e) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error opening chat: $e'),
-                  backgroundColor: Colors.red,
-                ),
+              CustomSnackBarHelper.showError(
+                context,
+                'Error opening chat: $e',
               );
             }
           }
         }
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to open chat - sender information missing'),
-          backgroundColor: Colors.red,
-        ),
+      CustomSnackBarHelper.showError(
+        context,
+        'Unable to open chat - sender information missing',
       );
     }
   }
@@ -367,11 +363,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
         }
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to open order - order information missing'),
-          backgroundColor: Colors.red,
-        ),
+      CustomSnackBarHelper.showError(
+        context,
+        'Unable to open order - order information missing',
       );
     }
   }
@@ -390,59 +384,49 @@ class _NotificationsPageState extends State<NotificationsPage> {
           );
         } else {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Unable to open profile - user not found'),
-                backgroundColor: Colors.red,
-              ),
+            CustomSnackBarHelper.showError(
+              context,
+              'Unable to open profile - user not found',
             );
           }
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error opening profile: $e'),
-              backgroundColor: Colors.red,
-            ),
+          CustomSnackBarHelper.showError(
+            context,
+            'Error opening profile: $e',
           );
         }
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to open profile - user information missing'),
-          backgroundColor: Colors.red,
-        ),
+      CustomSnackBarHelper.showError(
+        context,
+        'Unable to open profile - user information missing',
       );
     }
   }
 
   void _navigateToAppointment(AppNotification notification) async {
     // For now, just show a message. In the future, you can navigate to appointment details
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Appointment notification - navigation to be implemented'),
-        duration: Duration(seconds: 2),
-      ),
+    CustomSnackBarHelper.showInfo(
+      context,
+      'Appointment notification - navigation to be implemented',
+      duration: const Duration(seconds: 2),
     );
   }
 
   void _deleteNotification(String notificationId) async {
     try {
       await _notificationService.deleteNotification(notificationId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Notification deleted'),
-          duration: Duration(seconds: 2),
-        ),
+      CustomSnackBarHelper.showSuccess(
+        context,
+        'Notification deleted',
+        duration: const Duration(seconds: 2),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error deleting notification: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomSnackBarHelper.showError(
+        context,
+        'Error deleting notification: $e',
       );
     }
   }
@@ -450,18 +434,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
   void _markAllAsRead(String userId) async {
     try {
       await _notificationService.markAllNotificationsAsRead(userId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All notifications marked as read'),
-          duration: Duration(seconds: 2),
-        ),
+      CustomSnackBarHelper.showSuccess(
+        context,
+        'All notifications marked as read',
+        duration: const Duration(seconds: 2),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error marking notifications as read: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomSnackBarHelper.showError(
+        context,
+        'Error marking notifications as read: $e',
       );
     }
   }
@@ -469,18 +450,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
   void _sendTestNotification(String userId) async {
     try {
       await _notificationService.sendTestNotification(userId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Test notification sent'),
-          duration: Duration(seconds: 2),
-        ),
+      CustomSnackBarHelper.showSuccess(
+        context,
+        'Test notification sent',
+        duration: const Duration(seconds: 2),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error sending test notification: $e'),
-          backgroundColor: Colors.red,
-        ),
+      CustomSnackBarHelper.showError(
+        context,
+        'Error sending test notification: $e',
       );
     }
   }

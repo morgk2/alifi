@@ -1,10 +1,13 @@
 import 'package:alifi/main.dart';
 import 'package:alifi/services/auth_service.dart';
+import 'package:alifi/services/database_service.dart';
 import 'package:alifi/widgets/spinning_loader.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:alifi/pages/page_container.dart';
 
 class StoreSignUpPage extends StatefulWidget {
   const StoreSignUpPage({super.key});
@@ -776,16 +779,37 @@ class _StoreCheckoutPageState extends State<StoreCheckoutPage> {
   ];
 
   void _checkout() {
+    print('🔍 [Store Checkout] Button pressed! _selectedPaymentIndex: $_selectedPaymentIndex');
+    
     if (_selectedPaymentIndex == -1) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a payment method.')),
+        const SnackBar(
+          content: Text('Please select a payment method first!'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
       );
       return;
     }
 
     final method = _paymentMethods[_selectedPaymentIndex];
+    print('🔍 [Store Checkout] Selected method: ${method['name']}');
+    
     if (method['name'] == 'CCP') {
-      final userId = AuthService().currentUser!.id;
+      final authService = context.read<AuthService>();
+      final currentUser = authService.currentUser;
+      
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please log in first!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
+      final userId = currentUser.id;
       FirebaseFirestore.instance.collection('store_requests').add({
         'userId': userId,
         'firstName': widget.firstName,
@@ -802,7 +826,15 @@ class _StoreCheckoutPageState extends State<StoreCheckoutPage> {
       Navigator.of(context).push(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              const StoreCCPConfirmationPage(),
+              StoreCCPConfirmationPage(
+            firstName: widget.firstName,
+            lastName: widget.lastName,
+            storeName: widget.storeName,
+            storeLocation: widget.storeLocation,
+            city: widget.city,
+            phone: widget.phone,
+            selectedOffer: widget.selectedOffer,
+          ),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(1.0, 0.0);
             const end = Offset.zero;
@@ -958,8 +990,32 @@ class _StoreCheckoutPageState extends State<StoreCheckoutPage> {
   }
 }
 
-class StoreCCPConfirmationPage extends StatelessWidget {
-  const StoreCCPConfirmationPage({super.key});
+class StoreCCPConfirmationPage extends StatefulWidget {
+  final String firstName;
+  final String lastName;
+  final String storeName;
+  final String storeLocation;
+  final String city;
+  final String phone;
+  final Map<String, dynamic> selectedOffer;
+  
+  const StoreCCPConfirmationPage({
+    super.key,
+    required this.firstName,
+    required this.lastName,
+    required this.storeName,
+    required this.storeLocation,
+    required this.city,
+    required this.phone,
+    required this.selectedOffer,
+  });
+
+  @override
+  State<StoreCCPConfirmationPage> createState() => _StoreCCPConfirmationPageState();
+}
+
+class _StoreCCPConfirmationPageState extends State<StoreCCPConfirmationPage> {
+  bool _isProcessing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -974,39 +1030,125 @@ class StoreCCPConfirmationPage extends StatelessWidget {
               Image.asset('assets/images/alifi_logo.png', height: 80),
               const SizedBox(height: 24),
               const Text(
-                'Thank You!',
+                'Payment Successful!',
                 style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Colors.green),
               ),
               const SizedBox(height: 16),
+              Text(
+                'Welcome, ${widget.firstName}!',
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
               const Text(
-                'Your request to become a store has been submitted. You will be contacted by our team shortly via phone to finalize the subscription payment.',
+                'Your account has been successfully upgraded to a store account. You can now manage products, view orders, and access all store features.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16, color: Colors.black87),
               ),
               const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context)
-                      .popUntil((route) => route.isFirst); // Go back to home
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+              if (_isProcessing)
+                const CircularProgressIndicator(color: Colors.green)
+              else
+                ElevatedButton(
+                  onPressed: _completeConversion,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Continue to Dashboard',
+                      style: TextStyle(fontSize: 18, color: Colors.white)),
                 ),
-                child: const Text('Back to Home',
-                    style: TextStyle(fontSize: 18, color: Colors.white)),
-              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _completeConversion() async {
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      final authService = context.read<AuthService>();
+      final user = authService.currentUser;
+      
+      if (user == null) {
+        throw Exception('User not found');
+      }
+
+      // Extract price from the offer (remove "DZD" and convert to double)
+      final priceString = widget.selectedOffer['price'].toString().replaceAll(' DZD', '').replaceAll('DZD', '').trim();
+      final amount = double.tryParse(priceString) ?? 900.0;
+
+      // Convert user to store account
+      await DatabaseService().convertUserToVetOrStore(
+        userId: user.id,
+        accountType: 'store',
+        firstName: widget.firstName,
+        lastName: widget.lastName,
+        businessName: widget.storeName,
+        businessLocation: widget.storeLocation,
+        city: widget.city,
+        phone: widget.phone,
+        subscriptionPlan: widget.selectedOffer['title'],
+        amount: amount,
+        currency: 'DZD',
+        paymentMethod: 'CCP',
+      );
+
+      // Update the current user in AuthService
+      final updatedUser = await DatabaseService().getUser(user.id);
+      if (updatedUser != null) {
+        authService.updateCurrentUser(updatedUser);
+      }
+
+      if (mounted) {
+        // Navigate to home page and show success message
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Welcome, ${widget.firstName}! Your store account is now active.'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        
+        // Trigger location setup check after a short delay
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            // Access the PageContainer to trigger location setup
+            final pageContainerState = pageContainerKey.currentState;
+            if (pageContainerState != null) {
+              pageContainerState.checkLocationSetup();
+            }
+          }
+        });
+      }
+    } catch (e) {
+      print('Error completing store conversion: $e');
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error completing conversion: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 

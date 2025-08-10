@@ -18,6 +18,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../pages/adoption_center_page.dart';
 import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
+import '../widgets/custom_snackbar.dart';
 // Only import sensors_plus if not web
 // ignore: uri_does_not_exist
 import 'package:sensors_plus/sensors_plus.dart' if (dart.library.html) '../noop.dart';
@@ -473,11 +474,9 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                     );
                   }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error checking pet ID status: $e'),
-                      backgroundColor: Colors.red,
-                    ),
+                  CustomSnackBarHelper.showError(
+                    context,
+                    'Error checking pet ID status: $e',
                   );
                 }
               },

@@ -8,6 +8,12 @@ import 'map_page.dart';
 import 'my_pets_page.dart';
 import 'marketplace_page.dart';
 import 'user_search_page.dart';
+import 'package:provider/provider.dart';
+import '../services/map_focus_service.dart';
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
+import '../models/user.dart';
+import 'location_setup_page.dart';
 
 class PageContainer extends StatefulWidget {
   const PageContainer({super.key});
@@ -16,7 +22,10 @@ class PageContainer extends StatefulWidget {
   State<PageContainer> createState() => _PageContainerState();
 }
 
-class _PageContainerState extends State<PageContainer> with SingleTickerProviderStateMixin {
+// Global key to access PageContainer from anywhere
+final GlobalKey<_PageContainerState> pageContainerKey = GlobalKey<_PageContainerState>();
+
+class _PageContainerState extends State<PageContainer> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   int _currentIndex = 0;
   bool _isVisible = true;
   bool _isAIAssistantExpanded = false;
@@ -26,10 +35,14 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
   late List<Widget> _pages;
   // Track side menu progress (0.0 closed → 1.0 open) to move nav bar with HomePage
   double _sideMenuProgress = 0.0;
+  // Flag to prevent showing location setup multiple times
+  bool _hasShownLocationSetup = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    
     _pages = [
       _PersistentHomePage(
         onNavigateToMap: () {
@@ -62,8 +75,8 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
     ];
 
     _hideController = AnimationController(
-      vsync: this,
       duration: const Duration(milliseconds: 300),
+      vsync: this,
     );
 
     _slideAnimation = Tween<Offset>(
@@ -81,12 +94,76 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
       parent: _hideController,
       curve: Curves.easeOut,
     ));
+
+    // Check if user needs location setup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLocationSetup();
+    });
   }
 
   @override
   void dispose() {
     _hideController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Check location setup when app resumes
+    if (state == AppLifecycleState.resumed) {
+      // Reset the flag so we can check again
+      _hasShownLocationSetup = false;
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkLocationSetup();
+      });
+    }
+  }
+
+  void navigateToMapWithFocus() {
+    setState(() {
+      _currentIndex = 1; // Map tab index
+    });
+  }
+
+  // Check if the current user needs to set up their business location
+  Future<void> _checkLocationSetup() async {
+    try {
+      // Prevent showing location setup multiple times in the same session
+      if (_hasShownLocationSetup) return;
+      
+      final authService = context.read<AuthService>();
+      
+      if (authService.needsLocationSetup()) {
+        _hasShownLocationSetup = true;
+        
+        // Show location setup page as a modal
+        if (mounted) {
+          await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const LocationSetupPage(),
+              fullscreenDialog: true,
+            ),
+          );
+          
+          // Refresh user data after returning from location setup
+          if (mounted) {
+            await authService.refreshUserData();
+          }
+        }
+      }
+    } catch (e) {
+      print('Error checking location setup: $e');
+    }
+  }
+
+  // Public method to check location setup (can be called from outside)
+  Future<void> checkLocationSetup() async {
+    _hasShownLocationSetup = false; // Reset flag to allow checking again
+    await _checkLocationSetup();
   }
 
   void _toggleVisibility() {
@@ -107,30 +184,41 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: _currentIndex,
-            children: _pages,
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Transform.translate(
-              offset: Offset(MediaQuery.of(context).size.width * 0.65 * (_currentIndex == 0 ? _sideMenuProgress : 0.0), 0),
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: _buildBottomNavBar(),
+    return Consumer<AuthService>(
+      builder: (context, authService, child) {
+        // Check location setup when user data changes
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (authService.currentUser != null) {
+            _checkLocationSetup();
+          }
+        });
+        
+        return Scaffold(
+          body: Stack(
+            children: [
+              IndexedStack(
+                index: _currentIndex,
+                children: _pages,
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Transform.translate(
+                  offset: Offset(MediaQuery.of(context).size.width * 0.65 * (_currentIndex == 0 ? _sideMenuProgress : 0.0), 0),
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: _buildBottomNavBar(),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -397,7 +485,11 @@ class _PersistentMapPageState extends State<_PersistentMapPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return const MapPage();
+    return Consumer<MapFocusService>(
+      builder: (context, mapFocusService, child) {
+        return MapPage(focusUser: mapFocusService.focusUser);
+      },
+    );
   }
 }
 
