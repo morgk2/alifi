@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/ios_toggle.dart';
+import '../l10n/app_localizations.dart';
 
 class PrivacySecurityPage extends StatefulWidget {
   const PrivacySecurityPage({super.key});
@@ -18,12 +19,14 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
-          'Privacy & Security',
-          style: TextStyle(
+        title: Text(
+          l10n.privacyAndSecurity,
+          style: const TextStyle(
             fontFamily: 'Montserrat',
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -41,13 +44,13 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
             
             // Privacy Settings
             _buildSettingsSection(
-              title: 'Privacy',
+              title: l10n.privacy,
               children: [
                 _SettingsTile(
                   icon: Icons.location_on_outlined,
                   iconColor: Colors.blue,
-                  title: 'Location Sharing',
-                  subtitle: 'Allow app to access your location for nearby services',
+                  title: l10n.locationSharing,
+                  subtitle: l10n.allowAppToAccessYourLocation,
                   trailing: IOSToggle(
                     value: _locationSharing,
                     onChanged: (value) {
@@ -60,8 +63,8 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                 _SettingsTile(
                   icon: Icons.analytics_outlined,
                   iconColor: Colors.green,
-                  title: 'Data Analytics',
-                  subtitle: 'Help us improve by sharing anonymous usage data',
+                  title: l10n.dataAnalytics,
+                  subtitle: l10n.helpUsImproveBySharingAnonymousUsageData,
                   trailing: IOSToggle(
                     value: _dataAnalytics,
                     onChanged: (value) {
@@ -74,8 +77,8 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                 _SettingsTile(
                   icon: Icons.visibility_outlined,
                   iconColor: Colors.orange,
-                  title: 'Profile Visibility',
-                  subtitle: 'Control who can see your profile information',
+                  title: l10n.profileVisibility,
+                  subtitle: l10n.controlWhoCanSeeYourProfileInformation,
                   onTap: () {
                     _showProfileVisibilityDialog();
                   },
@@ -83,8 +86,8 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                 _SettingsTile(
                   icon: Icons.delete_outline,
                   iconColor: Colors.red,
-                  title: 'Data & Privacy',
-                  subtitle: 'Manage your data and privacy settings',
+                  title: l10n.dataAndPrivacy,
+                  subtitle: l10n.manageYourDataAndPrivacySettings,
                   onTap: () {
                     _showDataPrivacyDialog();
                   },
@@ -96,13 +99,13 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
             
             // Notifications
             _buildSettingsSection(
-              title: 'Notifications',
+              title: l10n.notifications,
               children: [
                 _SettingsTile(
                   icon: Icons.notifications_outlined,
                   iconColor: Colors.blue,
-                  title: 'Push Notifications',
-                  subtitle: 'Receive notifications about appointments and updates',
+                  title: l10n.pushNotifications,
+                  subtitle: l10n.receiveNotificationsAboutAppointmentsAndUpdates,
                   trailing: IOSToggle(
                     value: _pushNotifications,
                     onChanged: (value) {
@@ -115,8 +118,8 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                 _SettingsTile(
                   icon: Icons.email_outlined,
                   iconColor: Colors.green,
-                  title: 'Email Notifications',
-                  subtitle: 'Receive important updates via email',
+                  title: l10n.emailNotifications,
+                  subtitle: l10n.receiveImportantUpdatesViaEmail,
                   trailing: IOSToggle(
                     value: _emailNotifications,
                     onChanged: (value) {
@@ -129,8 +132,8 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                 _SettingsTile(
                   icon: Icons.settings_outlined,
                   iconColor: Colors.purple,
-                  title: 'Notification Preferences',
-                  subtitle: 'Customize what notifications you receive',
+                  title: l10n.notificationPreferences,
+                  subtitle: l10n.customizeWhatNotificationsYouReceive,
                   onTap: () {
                     _showNotificationPreferencesDialog();
                   },
@@ -142,13 +145,13 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
             
             // Security
             _buildSettingsSection(
-              title: 'Security',
+              title: l10n.security,
               children: [
                 _SettingsTile(
                   icon: Icons.fingerprint_outlined,
                   iconColor: Colors.blue,
-                  title: 'Biometric Authentication',
-                  subtitle: 'Use fingerprint or face ID to unlock the app',
+                  title: l10n.biometricAuthentication,
+                  subtitle: l10n.useFingerprintOrFaceIdToUnlockTheApp,
                   trailing: IOSToggle(
                     value: _biometricAuth,
                     onChanged: (value) {
@@ -161,8 +164,8 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                 _SettingsTile(
                   icon: Icons.security_outlined,
                   iconColor: Colors.orange,
-                  title: 'Two-Factor Authentication',
-                  subtitle: 'Add an extra layer of security to your account',
+                  title: l10n.twoFactorAuthentication,
+                  subtitle: l10n.addAnExtraLayerOfSecurityToYourAccount,
                   trailing: IOSToggle(
                     value: _twoFactorAuth,
                     onChanged: (value) {
@@ -175,8 +178,8 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                 _SettingsTile(
                   icon: Icons.lock_outline,
                   iconColor: Colors.red,
-                  title: 'Change Password',
-                  subtitle: 'Update your account password',
+                  title: l10n.changePassword,
+                  subtitle: l10n.updateYourAccountPassword,
                   onTap: () {
                     _showChangePasswordDialog();
                   },
@@ -184,8 +187,8 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                 _SettingsTile(
                   icon: Icons.devices_outlined,
                   iconColor: Colors.grey,
-                  title: 'Active Sessions',
-                  subtitle: 'Manage devices logged into your account',
+                  title: l10n.activeSessions,
+                  subtitle: l10n.manageDevicesLoggedIntoYourAccount,
                   onTap: () {
                     _showActiveSessionsDialog();
                   },
@@ -197,13 +200,13 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
             
             // Data & Storage
             _buildSettingsSection(
-              title: 'Data & Storage',
+              title: l10n.dataAndStorage,
               children: [
                 _SettingsTile(
                   icon: Icons.storage_outlined,
                   iconColor: Colors.blue,
-                  title: 'Storage Usage',
-                  subtitle: 'Manage app data and cache',
+                  title: l10n.storageUsage,
+                  subtitle: l10n.manageAppDataAndCache,
                   onTap: () {
                     _showStorageUsageDialog();
                   },
@@ -211,8 +214,8 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                 _SettingsTile(
                   icon: Icons.download_outlined,
                   iconColor: Colors.green,
-                  title: 'Export Data',
-                  subtitle: 'Download a copy of your data',
+                  title: l10n.exportData,
+                  subtitle: l10n.downloadACopyOfYourData,
                   onTap: () {
                     _showExportDataDialog();
                   },
@@ -220,8 +223,8 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
                 _SettingsTile(
                   icon: Icons.delete_forever_outlined,
                   iconColor: Colors.red,
-                  title: 'Delete Account',
-                  subtitle: 'Permanently delete your account and data',
+                  title: l10n.deleteAccount,
+                  subtitle: l10n.permanentlyDeleteYourAccountAndData,
                   onTap: () {
                     _showDeleteAccountDialog();
                   },
@@ -277,19 +280,20 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
   }
 
   void _showProfileVisibilityDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Profile Visibility'),
-        content: const Text('Choose who can see your profile information.'),
+        title: Text(l10n.profileVisibility),
+        content: Text(l10n.chooseWhoCanSeeYourProfileInformation),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -297,19 +301,20 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
   }
 
   void _showDataPrivacyDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Data & Privacy'),
-        content: const Text('Manage your data and privacy settings.'),
+        title: Text(l10n.dataAndPrivacy),
+        content: Text(l10n.manageYourDataAndPrivacySettings),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -317,19 +322,20 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
   }
 
   void _showNotificationPreferencesDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Notification Preferences'),
-        content: const Text('Customize what notifications you receive.'),
+        title: Text(l10n.notificationPreferences),
+        content: Text(l10n.customizeWhatNotificationsYouReceive),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -337,19 +343,20 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
   }
 
   void _showChangePasswordDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Change Password'),
-        content: const Text('Enter your new password.'),
+        title: Text(l10n.changePassword),
+        content: Text(l10n.enterYourNewPassword),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -357,19 +364,20 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
   }
 
   void _showActiveSessionsDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Active Sessions'),
-        content: const Text('Manage devices logged into your account.'),
+        title: Text(l10n.activeSessions),
+        content: Text(l10n.manageDevicesLoggedIntoYourAccount),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -377,19 +385,20 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
   }
 
   void _showStorageUsageDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Storage Usage'),
-        content: const Text('Manage app data and cache.'),
+        title: Text(l10n.storageUsage),
+        content: Text(l10n.manageAppDataAndCache),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -397,19 +406,20 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
   }
 
   void _showExportDataDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Export Data'),
-        content: const Text('Download a copy of your data.'),
+        title: Text(l10n.exportData),
+        content: Text(l10n.downloadACopyOfYourData),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Export'),
+            child: Text(l10n.export),
           ),
         ],
       ),
@@ -417,20 +427,21 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
   }
 
   void _showDeleteAccountDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text('This action cannot be undone. All your data will be permanently deleted.'),
+        title: Text(l10n.deleteAccount),
+        content: Text(l10n.thisActionCannotBeUndoneAllYourDataWillBePermanentlyDeleted),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -486,8 +497,8 @@ class _SettingsTile extends StatelessWidget {
                     title,
                     style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w400,
+                      fontFamily: 'InterDisplay',
                     ),
                   ),
                   const SizedBox(height: 2),

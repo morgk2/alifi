@@ -11,6 +11,7 @@ import '../widgets/badge_widget.dart';
 import 'store/add_product_page.dart';
 import 'store_messages_tab.dart';
 import 'store_orders_tab.dart';
+import '../l10n/app_localizations.dart';
 
 class DetailedSellerDashboardPage extends StatefulWidget {
   const DetailedSellerDashboardPage({super.key});
@@ -38,12 +39,13 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
-          'Seller Dashboard',
-          style: TextStyle(
+        title: Text(
+          l10n.sellerDashboard,
+          style: const TextStyle(
             fontFamily: 'Montserrat',
             fontWeight: FontWeight.w800,
           ),
@@ -106,7 +108,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                     width: 40,
                     height: 40,
                   ),
-                  text: 'Overview',
+                  text: l10n.overview,
                 ),
                 Tab(
                   icon: Image.asset(
@@ -114,7 +116,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                     width: 40,
                     height: 40,
                   ),
-                  text: 'Products',
+                  text: l10n.products,
                 ),
                 Tab(
                   icon: Consumer<NotificationService>(
@@ -135,7 +137,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                       );
                     },
                   ),
-                  text: 'Orders',
+                  text: l10n.orders,
                 ),
                 Tab(
                   icon: Consumer<NotificationService>(
@@ -156,7 +158,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                       );
                     },
                   ),
-                  text: 'Messages',
+                  text: l10n.messages,
                 ),
               ],
             ),
@@ -179,11 +181,12 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
   }
 
   Widget _buildOverviewTab() {
+    final l10n = AppLocalizations.of(context)!;
     final authService = Provider.of<AuthService>(context);
     final user = authService.currentUser;
 
     if (user == null) {
-      return const Center(child: Text('Please log in.'));
+      return Center(child: Text(l10n.pleaseLogIn));
     }
 
     return SingleChildScrollView(
@@ -191,9 +194,9 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Revenue Analytics',
-            style: TextStyle(
+          Text(
+            l10n.revenueAnalytics,
+            style: const TextStyle(
               fontFamily: 'Montserrat',
               fontSize: 24,
               fontWeight: FontWeight.w800,
@@ -250,7 +253,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Today\'s Sales',
+                              l10n.todaysSales,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -301,7 +304,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'This Week',
+                                    l10n.thisWeek,
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -350,7 +353,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'This Month',
+                                    l10n.thisMonth,
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -385,9 +388,9 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
             },
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Key Metrics',
-            style: TextStyle(
+          Text(
+            l10n.keyMetrics,
+            style: const TextStyle(
               fontFamily: 'Montserrat',
               fontSize: 24,
               fontWeight: FontWeight.w800,
@@ -422,7 +425,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                   Consumer<CurrencyService>(
                     builder: (context, currencyService, child) {
                       return _buildStatCard(
-                        'Total Sales',
+                        l10n.totalSales,
                         currencyService.formatPrice((stats['totalSales'] as num).toDouble()),
                         Icons.attach_money_rounded,
                         Colors.green,
@@ -430,19 +433,19 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
                     },
                   ),
                   _buildStatCard(
-                    'Unique Customers',
+                    l10n.uniqueCustomers,
                     stats['engagementCount'].toString(),
                     Icons.people_alt_rounded,
                     Colors.blue,
                   ),
                   _buildStatCard(
-                    'Total Orders',
+                    l10n.totalOrders,
                     stats['ordersCount'].toString(),
                     Icons.shopping_bag_rounded,
                     Colors.orange,
                   ),
                   _buildStatCard(
-                    'Active Orders',
+                    l10n.activeOrders,
                     stats['activeOrders'].toString(),
                     Icons.local_shipping_rounded,
                     Colors.purple,

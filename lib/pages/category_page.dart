@@ -14,6 +14,35 @@ class CategoryPage extends StatelessWidget {
     required this.imageAsset,
   }) : super(key: key);
 
+  // Get the English category name for filtering (products are stored with English category names)
+  String _getCategoryFilterName(String categoryName) {
+    // For filtering, we always use English category names since products are stored with English categories
+    switch (categoryName) {
+      case 'Food':
+      case 'Nourriture':
+      case 'طعام':
+        return 'Food';
+      case 'Toys':
+      case 'Jouets':
+      case 'ألعاب':
+        return 'Toys';
+      case 'Health':
+      case 'Santé':
+      case 'صحة':
+        return 'Health';
+      case 'Beds':
+      case 'Lits':
+      case 'أسرّة':
+        return 'Beds';
+      case 'Hygiene':
+      case 'Hygiène':
+      case 'نظافة':
+        return 'Hygiene';
+      default:
+        return categoryName;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final DatabaseService _databaseService = DatabaseService();
@@ -94,7 +123,7 @@ class CategoryPage extends StatelessWidget {
           SliverPadding(
             padding: const EdgeInsets.all(16),
             sliver: StreamBuilder<List<MarketplaceProduct>>(
-              stream: _databaseService.getMarketplaceProducts(category: title),
+              stream: _databaseService.getMarketplaceProducts(category: _getCategoryFilterName(title)),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return SliverToBoxAdapter(child: Center(child: Text('Error:  [${snapshot.error}')));

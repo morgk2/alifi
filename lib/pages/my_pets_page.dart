@@ -169,7 +169,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                               ),
                               const SizedBox(height: 24),
           Text(
-            'Add your first pet',
+            AppLocalizations.of(context)!.addYourFirstPet,
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
@@ -280,6 +280,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
   }
 
   Widget _buildPetDetailsPanel(Pet pet) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
       decoration: BoxDecoration(
@@ -355,7 +356,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                                 ? 'assets/images/gender_female.png'
                                 : 'assets/images/gender_male.png', // fallback
                         lines: [
-                          pet.gender.isNotEmpty ? pet.gender : 'Unknown',
+                          pet.gender.isNotEmpty ? pet.gender : AppLocalizations.of(context)!.unknown,
                         ],
                         backgroundColor: (pet.gender.toLowerCase() == 'female')
                             ? const Color.fromARGB(240, 255, 186, 209) // almost fully saturated pink
@@ -380,7 +381,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                               ];
                             }
                           }
-                          return ['Unknown'];
+                          return [AppLocalizations.of(context)!.unknown];
                         })(),
                         backgroundColor: const Color(0xFFFFE0B2), // deeper pastel for age
                       ),
@@ -394,7 +395,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                             final weightStr = pet.weight!.toStringAsFixed(1);
                             return [weightStr, 'kg'];
                           }
-                          return ['Unknown'];
+                          return [AppLocalizations.of(context)!.unknown];
                         })(),
                         backgroundColor: const Color(0xFFC8E6C9), // deeper pastel for weight
                       ),
@@ -406,7 +407,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
             const SizedBox(height: 24),
             // Health Information Section
             _buildExpandableSection(
-              'Health Information',
+              AppLocalizations.of(context)!.healthInformation,
               Icons.favorite,
               () {
                 NavigationService.push(
@@ -418,7 +419,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
             const Divider(height: 1),
             // Vet Information Section
             _buildExpandableSection(
-              'Vet Information',
+              l10n.vetInformation,
               Icons.medical_services,
               () {
                 // TODO: Implement vet info expansion
@@ -427,7 +428,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
             const Divider(height: 1),
             // Pet ID Section
             _buildExpandableSection(
-              'Pet ID',
+              l10n.petId,
               Icons.badge,
               () async {
                 try {
@@ -476,7 +477,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                 } catch (e) {
                   CustomSnackBarHelper.showError(
                     context,
-                    'Error checking pet ID status: $e',
+                    l10n.errorCheckingPetIdStatus(e.toString()),
                   );
                 }
               },
@@ -677,6 +678,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
   }
 
   void _showEditPetsDialog() async {
+    final l10n = AppLocalizations.of(context)!;
     await showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.2),
@@ -700,7 +702,7 @@ class _MyPetsPageState extends State<MyPetsPage> with SingleTickerProviderStateM
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(AppLocalizations.of(context)?.editPet ?? 'Edit Pets', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                              Text(l10n.editPets, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                               TextButton(
                                 style: TextButton.styleFrom(
                                   backgroundColor: Colors.orange,
@@ -1276,6 +1278,7 @@ class _PetIdRequestPageState extends State<PetIdRequestPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -1297,9 +1300,9 @@ class _PetIdRequestPageState extends State<PetIdRequestPage> {
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'Select the pet you want to request the pet ID for',
-                  style: TextStyle(
+                Text(
+                  l10n.selectPetForPetId,
+                  style: const TextStyle(
                     fontSize: 18,
                     color: Color(0xFF3A1A0B),
                     fontWeight: FontWeight.w500,
@@ -1310,7 +1313,7 @@ class _PetIdRequestPageState extends State<PetIdRequestPage> {
                 CustomDropdown(
                   items: widget.petNames,
                   value: dropdownValue,
-                  hint: 'Select pet',
+                  hint: l10n.selectPet,
                   onChanged: (value) {
                     setState(() {
                       dropdownValue = value;
@@ -1383,8 +1386,8 @@ class _PetIdRequestPageState extends State<PetIdRequestPage> {
                   onPressed: () async {
                     if (dropdownValue == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please select a pet first'),
+                        SnackBar(
+                          content: Text(l10n.pleaseSelectPetFirst),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -1417,8 +1420,8 @@ class _PetIdRequestPageState extends State<PetIdRequestPage> {
 
                       // Show success message
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Pet ID request submitted successfully!'),
+                        SnackBar(
+                          content: Text(l10n.petIdRequestSubmitted),
                           backgroundColor: Colors.green,
                         ),
                       );
@@ -1950,6 +1953,7 @@ class PetIdProcessingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -1976,9 +1980,9 @@ class PetIdProcessingPage extends StatelessWidget {
               fit: BoxFit.contain,
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Your pet ID is being processed and made, please remain patient',
-              style: TextStyle(
+            Text(
+              l10n.yourPetIdIsBeingProcessed,
+              style: const TextStyle(
                 fontSize: 24,
                 color: Color(0xFF3A1A0B),
                 fontWeight: FontWeight.bold,

@@ -79,8 +79,11 @@ class _UnifiedProductCardState extends State<UnifiedProductCard> {
                         width: widget.width,
                         height: widget.height * 0.35, // Reduced image height to give more space to info
                         fit: BoxFit.cover,
-                        placeholder: const Center(
-                          child: SpinningLoader(color: Colors.orange),
+                        placeholder: Image.asset(
+                          'assets/images/photo_loader.png',
+                          fit: BoxFit.cover,
+                          width: widget.width,
+                          height: widget.height * 0.35,
                         ),
                         errorWidget: Container(
                           color: Colors.grey[200],
@@ -142,7 +145,7 @@ class _UnifiedProductCardState extends State<UnifiedProductCard> {
                                   ),
                                         const SizedBox(width: 2),
                                         Text(
-                                          currencyService.formatPrice(_getPrice()),
+                                          currencyService.formatProductPrice(_getPrice(), _getCurrency()),
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
@@ -291,5 +294,14 @@ class _UnifiedProductCardState extends State<UnifiedProductCard> {
       return (widget.product as StoreProduct).totalOrders;
     }
     return 0;
+  }
+
+  String _getCurrency() {
+    if (widget.product is AliexpressProduct) {
+      return (widget.product as AliexpressProduct).currency;
+    } else if (widget.product is StoreProduct) {
+      return (widget.product as StoreProduct).currency;
+    }
+    return 'USD'; // Default fallback
   }
 }

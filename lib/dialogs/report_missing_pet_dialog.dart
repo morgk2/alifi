@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:geocoding/geocoding.dart';
 import 'location_picker_dialog.dart';
+import '../l10n/app_localizations.dart';
 
 class ReportMissingPetDialog extends StatefulWidget {
   final Pet? pet;
@@ -333,9 +334,9 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
+                          child: Text(
+                            AppLocalizations.of(context)!.cancel,
+                            style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 16,
                             ),

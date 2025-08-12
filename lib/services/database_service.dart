@@ -1251,6 +1251,8 @@ class DatabaseService {
     Query query = _db.collection('aliexpresslistings');
 
     if (category != null && category != 'All') {
+      print('🔍 [DatabaseService] Filtering AliExpress by category: "$category"');
+      // Try exact match first, then try case-insensitive alternatives
       query = query.where('category', isEqualTo: category);
     }
 
@@ -1268,6 +1270,22 @@ class DatabaseService {
         .snapshots()
         .map((snapshot) {
           print('Found ${snapshot.docs.length} listings');
+          
+          // Debug: Print unique categories in the results
+          final categories = snapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['category'] ?? 'no-category';
+          }).toSet();
+          print('🔍 [DatabaseService] Categories found in AliExpress: $categories');
+          
+          // Debug: Print first few products with their categories
+          if (snapshot.docs.isNotEmpty) {
+            print('🔍 [DatabaseService] Sample AliExpress products:');
+            for (int i = 0; i < snapshot.docs.length && i < 3; i++) {
+              final data = snapshot.docs[i].data() as Map<String, dynamic>;
+              print('  - ${data['title']}: category="${data['category']}"');
+            }
+          }
           final products = snapshot.docs.map((doc) {
             final data = doc.data() as Map<String, dynamic>;
             print('Processing listing: ${data['title']}');
@@ -1480,6 +1498,7 @@ class DatabaseService {
         .orderBy('createdAt', descending: true);
 
     if (category != null) {
+      print('🔍 [DatabaseService] Filtering Store products by category: "$category"');
       query = query.where('category', isEqualTo: category);
     }
 
@@ -1495,6 +1514,13 @@ class DatabaseService {
         .limit(optimizedLimit)
         .snapshots()
         .map((snapshot) {
+          // Debug: Print unique categories in the results
+          final categories = snapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['category'] ?? 'no-category';
+          }).toSet();
+          print('🔍 [DatabaseService] Categories found in Store products: $categories');
+          
           final products = snapshot.docs
               .map((doc) => StoreProduct.fromFirestore(doc))
               .toList();

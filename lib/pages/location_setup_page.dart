@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../widgets/keyboard_dismissible_text_field.dart';
 
 class LocationSetupPage extends StatefulWidget {
   const LocationSetupPage({super.key});
@@ -276,7 +277,7 @@ class _LocationSetupPageState extends State<LocationSetupPage> {
                     width: 1,
                   ),
                 ),
-                child: TextField(
+                child: KeyboardDismissibleTextField(
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search for your ${isVet ? 'clinic' : 'store'} address...',
@@ -324,6 +325,9 @@ class _LocationSetupPageState extends State<LocationSetupPage> {
                           options: MapOptions(
                             initialCenter: _currentCenter,
                             initialZoom: 15.0,
+                            interactionOptions: const InteractionOptions(
+                              flags: InteractiveFlag.drag | InteractiveFlag.pinchZoom,
+                            ),
                             onTap: _onMapTap,
                           ),
                           children: [

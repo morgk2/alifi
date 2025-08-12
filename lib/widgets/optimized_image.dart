@@ -126,13 +126,18 @@ class _OptimizedImageState extends State<OptimizedImage> {
       width: widget.width,
       height: widget.height,
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: Colors.grey[100],
         borderRadius: widget.borderRadius,
         shape: widget.isCircular ? BoxShape.circle : BoxShape.rectangle,
       ),
       child: widget.isCircular 
           ? const Icon(Icons.pets, color: Colors.grey)
-          : const Icon(Icons.image, color: Colors.grey),
+          : Image.asset(
+              'assets/images/photo_loader.png',
+              fit: BoxFit.cover,
+              width: widget.width,
+              height: widget.height,
+            ),
     );
   }
 

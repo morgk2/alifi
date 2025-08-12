@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
-          'About',
-          style: TextStyle(
+        title: Text(
+          l10n.about,
+          style: const TextStyle(
             fontFamily: 'Montserrat',
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -83,7 +86,7 @@ class AboutPage extends StatelessWidget {
                     
                     // App Tagline
                     Text(
-                      'Your Pet\'s Favourite App',
+                      l10n.yourPetsFavouriteApp,
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey[600],
@@ -100,7 +103,7 @@ class AboutPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        'Version 1.0.0',
+                        l10n.version,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[700],
@@ -117,25 +120,25 @@ class AboutPage extends StatelessWidget {
             
             // App Description
             _buildInfoSection(
-              title: 'About Alifi',
+              title: l10n.aboutAlifi,
               children: [
                 _InfoTile(
                   icon: Icons.info_outline,
                   iconColor: Colors.blue,
-                  title: 'Description',
-                  subtitle: 'Alifi is a comprehensive pet care platform that connects pet owners with veterinarians, pet stores, and other pet care services. Our mission is to make pet care accessible, convenient, and reliable for everyone.',
+                  title: l10n.description,
+                  subtitle: l10n.alifiIsAComprehensivePetCarePlatform,
                 ),
                 _InfoTile(
                   icon: Icons.verified_outlined,
                   iconColor: Colors.green,
-                  title: 'Verified Services',
-                  subtitle: 'All veterinarians and pet stores on our platform are verified to ensure the highest quality of care for your beloved pets.',
+                  title: l10n.verifiedServices,
+                  subtitle: l10n.allVeterinariansAndPetStoresOnOurPlatformAreVerified,
                 ),
                 _InfoTile(
                   icon: Icons.security,
                   iconColor: Colors.orange,
-                  title: 'Secure & Private',
-                  subtitle: 'Your data and your pets\' information are protected with industry-standard security measures.',
+                  title: l10n.secureAndPrivate,
+                  subtitle: l10n.yourDataAndYourPetsInformationAreProtected,
                 ),
               ],
             ),
@@ -144,19 +147,19 @@ class AboutPage extends StatelessWidget {
             
             // Contact & Support
             _buildInfoSection(
-              title: 'Contact & Support',
+              title: l10n.contactAndSupport,
               children: [
                 _InfoTile(
                   icon: Icons.email_outlined,
                   iconColor: Colors.blue,
-                  title: 'Email Support',
+                  title: l10n.emailSupport,
                   subtitle: 'support@alifi.com',
                   onTap: () {
                     // TODO: Open email client
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Email support coming soon!'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(l10n.emailSupportComingSoon),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   },
@@ -164,14 +167,14 @@ class AboutPage extends StatelessWidget {
                 _InfoTile(
                   icon: Icons.phone_outlined,
                   iconColor: Colors.green,
-                  title: 'Phone Support',
+                  title: l10n.phoneSupport,
                   subtitle: '+1 (555) 123-4567',
                   onTap: () {
                     // TODO: Open phone dialer
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Phone support coming soon!'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(l10n.phoneSupportComingSoon),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   },
@@ -179,14 +182,14 @@ class AboutPage extends StatelessWidget {
                 _InfoTile(
                   icon: Icons.web_outlined,
                   iconColor: Colors.purple,
-                  title: 'Website',
+                  title: l10n.website,
                   subtitle: 'www.alifi.com',
                   onTap: () {
                     // TODO: Open website
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Website coming soon!'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(l10n.websiteComingSoon),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   },
@@ -198,18 +201,18 @@ class AboutPage extends StatelessWidget {
             
             // Legal
             _buildInfoSection(
-              title: 'Legal',
+              title: l10n.legal,
               children: [
                 _InfoTile(
                   icon: Icons.description_outlined,
                   iconColor: Colors.grey,
-                  title: 'Terms of Service',
-                  subtitle: 'Read our terms and conditions',
+                  title: l10n.termsOfService,
+                  subtitle: l10n.readOurTermsAndConditions,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Terms of Service coming soon!'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(l10n.termsOfServiceComingSoon),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   },
@@ -217,13 +220,13 @@ class AboutPage extends StatelessWidget {
                 _InfoTile(
                   icon: Icons.privacy_tip_outlined,
                   iconColor: Colors.grey,
-                  title: 'Privacy Policy',
-                  subtitle: 'Learn about our privacy practices',
+                  title: l10n.privacyPolicy,
+                  subtitle: l10n.learnAboutOurPrivacyPractices,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Privacy Policy coming soon!'),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(l10n.privacyPolicyComingSoon),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   },
@@ -235,19 +238,19 @@ class AboutPage extends StatelessWidget {
             
             // Developer Info
             _buildInfoSection(
-              title: 'Developer',
+              title: l10n.developer,
               children: [
                 _InfoTile(
                   icon: Icons.code_outlined,
                   iconColor: Colors.indigo,
-                  title: 'Developed by',
-                  subtitle: 'Alifi Development Team',
+                  title: l10n.developedBy,
+                  subtitle: l10n.alifiDevelopmentTeam,
                 ),
                 _InfoTile(
                   icon: Icons.copyright_outlined,
                   iconColor: Colors.grey,
-                  title: 'Copyright',
-                  subtitle: '© 2024 Alifi. All rights reserved.',
+                  title: l10n.copyright,
+                  subtitle: l10n.copyrightText,
                 ),
               ],
             ),
@@ -346,8 +349,8 @@ class _InfoTile extends StatelessWidget {
                     title,
                     style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w400,
+                      fontFamily: 'InterDisplay',
                     ),
                   ),
                   const SizedBox(height: 2),

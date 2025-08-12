@@ -84,8 +84,11 @@ class _LazyMarketplaceProductCardState extends State<LazyMarketplaceProductCard>
                       height: widget.isHorizontal ? 140 : 120,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      placeholder: const Center(
-                        child: SpinningLoader(color: Colors.orange),
+                      placeholder: Image.asset(
+                        'assets/images/photo_loader.png',
+                        fit: BoxFit.cover,
+                        height: widget.isHorizontal ? 140 : 120,
+                        width: double.infinity,
                       ),
                       errorWidget: Container(
                         color: Colors.grey[200],
@@ -146,7 +149,7 @@ class _LazyMarketplaceProductCardState extends State<LazyMarketplaceProductCard>
                                     ),
                                     const SizedBox(width: 2),
                                     Text(
-                                      currencyService.formatPrice(product.price),
+                                      currencyService.formatProductPrice(product.price, product.currency),
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -155,14 +158,14 @@ class _LazyMarketplaceProductCardState extends State<LazyMarketplaceProductCard>
                                     ),
                                   ],
                                 )
-                              : Text(
-                                  currencyService.formatPrice(product.price),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: product.type == 'store' ? Colors.green : Colors.orange,
-                                  ),
+                              :                               Text(
+                                currencyService.formatProductPrice(product.price, product.currency),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: product.type == 'store' ? Colors.green : Colors.orange,
                                 ),
+                              ),
                             if (product.originalPrice > product.price) ...[
                               const SizedBox(width: 8),
                               currencyService.currentCurrency == Currency.DZD
@@ -174,7 +177,7 @@ class _LazyMarketplaceProductCardState extends State<LazyMarketplaceProductCard>
                                       ),
                                       const SizedBox(width: 2),
                                       Text(
-                                        currencyService.formatPrice(product.originalPrice),
+                                        currencyService.formatProductPrice(product.originalPrice, product.currency),
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Colors.grey[600],
@@ -183,14 +186,14 @@ class _LazyMarketplaceProductCardState extends State<LazyMarketplaceProductCard>
                                       ),
                                     ],
                                   )
-                                : Text(
-                                    currencyService.formatPrice(product.originalPrice),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
+                                :                                 Text(
+                                  currencyService.formatProductPrice(product.originalPrice, product.currency),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    decoration: TextDecoration.lineThrough,
                                   ),
+                                ),
                             ],
                           ],
                         );

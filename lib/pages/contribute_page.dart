@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import '../models/fundraising.dart';
+import '../l10n/app_localizations.dart';
 
 class ContributePage extends StatefulWidget {
   final Fundraising fundraising;
@@ -50,6 +51,7 @@ class _ContributePageState extends State<ContributePage> {
   }
 
   Widget _buildCustomAmountButton() {
+    final l10n = AppLocalizations.of(context)!;
     final bool isSelected = _customAmount != null;
     
     return GestureDetector(
@@ -58,11 +60,11 @@ class _ContributePageState extends State<ContributePage> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Enter custom amount'),
+            title: Text(l10n.enterCustomAmount),
             content: TextField(
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                hintText: 'Enter amount in DZD',
+              decoration: InputDecoration(
+                hintText: l10n.enterAmountInDZD,
               ),
               onChanged: (value) {
                 setState(() {
@@ -70,21 +72,21 @@ class _ContributePageState extends State<ContributePage> {
                 });
               },
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  setState(() {
-                    _selectedAmount = _customAmount ?? _selectedAmount;
-                  });
-                },
-                child: const Text('Confirm'),
-              ),
-            ],
+                          actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.cancel),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    setState(() {
+                      _selectedAmount = _customAmount ?? _selectedAmount;
+                    });
+                  },
+                  child: Text(l10n.confirm),
+                ),
+              ],
           ),
         );
       },
@@ -99,7 +101,7 @@ class _ContributePageState extends State<ContributePage> {
           ),
         ),
         child: Text(
-          'Custom',
+          l10n.custom,
           style: TextStyle(
             color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[800],
             fontWeight: FontWeight.w500,
@@ -210,6 +212,7 @@ class _ContributePageState extends State<ContributePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final double progress = widget.fundraising.currentAmount / widget.fundraising.goalAmount;
     final int percentage = (progress * 100).round();
 
@@ -234,9 +237,9 @@ class _ContributePageState extends State<ContributePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '+ Contribute',
-                style: TextStyle(
+              Text(
+                '+ ${l10n.contribute}',
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF4CAF50),
@@ -244,7 +247,7 @@ class _ContributePageState extends State<ContributePage> {
               ),
               const SizedBox(height: 24),
               Text(
-                'We\'ve raised ${widget.fundraising.currentAmount.toStringAsFixed(2)} DZD!',
+                l10n.weveRaised(widget.fundraising.currentAmount.toStringAsFixed(2)),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -286,7 +289,7 @@ class _ContributePageState extends State<ContributePage> {
                       ),
                     ),
                     Text(
-                      '${widget.fundraising.goalAmount.toStringAsFixed(2)} Goal',
+                      '${widget.fundraising.goalAmount.toStringAsFixed(2)} ${l10n.goal}',
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontWeight: FontWeight.w500,
@@ -327,9 +330,9 @@ class _ContributePageState extends State<ContributePage> {
                 ),
               ),
               const SizedBox(height: 40),
-              const Text(
-                'Contribute with :',
-                style: TextStyle(
+              Text(
+                '${l10n.contribute} with :',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -348,9 +351,9 @@ class _ContributePageState extends State<ContributePage> {
                 ],
               ),
               const SizedBox(height: 32),
-              const Text(
-                'Pay via :',
-                style: TextStyle(
+              Text(
+                '${l10n.payVia} :',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),

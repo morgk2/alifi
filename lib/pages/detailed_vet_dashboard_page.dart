@@ -12,6 +12,7 @@ import '../widgets/reviews_section.dart';
 import '../models/user.dart';
 import '../models/appointment.dart';
 import '../models/pet.dart'; // Added import for Pet model
+import '../l10n/app_localizations.dart';
 
 import 'vet_schedule_page.dart';
 import 'detailed_schedule_page.dart';
@@ -93,17 +94,18 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final authService = Provider.of<AuthService>(context);
     final user = authService.currentUser;
 
     if (user?.accountType != 'vet') {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Access Denied'),
+          title: Text(l10n.accessDenied),
           backgroundColor: Colors.red,
         ),
-        body: const Center(
-          child: Text('This page is only available for veterinary accounts.'),
+        body: Center(
+          child: Text(l10n.thisPageIsOnlyAvailableForVeterinaryAccounts),
         ),
       );
     }
@@ -128,10 +130,10 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
         ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Vet Dashboard',
-                      style: TextStyle(
+                      l10n.vetDashboard,
+                      style: const TextStyle(
                         fontFamily: 'Montserrat',
                         fontWeight: FontWeight.w700,
                         color: Colors.black,
@@ -179,22 +181,22 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.grey[600],
                   dividerColor: Colors.transparent,
-                tabs: const [
+                tabs: [
                   Tab(
-                    icon: Icon(Icons.dashboard),
-                    text: 'Overview',
+                    icon: const Icon(Icons.dashboard),
+                    text: l10n.overview,
                   ),
                   Tab(
-                    icon: Icon(Icons.calendar_today),
-                    text: 'Appointments',
+                    icon: const Icon(Icons.calendar_today),
+                    text: l10n.appointments,
                   ),
                   Tab(
-                    icon: Icon(Icons.people),
-                    text: 'Patients',
+                    icon: const Icon(Icons.people),
+                    text: l10n.patients,
                   ),
                   Tab(
-                    icon: Icon(Icons.analytics),
-                    text: 'Analytics',
+                    icon: const Icon(Icons.analytics),
+                    text: l10n.analytics,
                   ),
                 ],
               ),
@@ -218,6 +220,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
   }
 
   Widget _buildOverviewTab(User user) {
+    final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -240,7 +243,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       Icon(Icons.error_outline, color: Colors.red, size: 40),
                       const SizedBox(height: 8),
                       Text(
-                        'Error loading dashboard',
+                        l10n.errorLoadingDashboard,
                         style: TextStyle(color: Colors.red, fontSize: 14),
                       ),
                     ],
@@ -257,7 +260,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       Icon(Icons.info_outline, color: Colors.grey, size: 40),
                       const SizedBox(height: 8),
                       Text(
-                        'No dashboard data available',
+                        l10n.noDashboardDataAvailable,
                         style: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
                     ],
@@ -279,7 +282,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                     children: [
                                              Expanded(
                          child: _buildOverviewCard(
-                           'Today\'s Appoint.',
+                           l10n.todaysAppoint,
                           appointmentsToday,
                            Icons.medical_services,
                            Colors.blue,
@@ -288,7 +291,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       const SizedBox(width: 16),
                       Expanded(
                         child: _buildOverviewCard(
-                          'Total Patients',
+                          l10n.totalPatients,
                           patientsCount,
                           Icons.people,
                           Colors.green,
@@ -303,7 +306,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                         child: Consumer<CurrencyService>(
                           builder: (context, currencyService, child) {
                             return _buildOverviewCard(
-                              'Revenue Today',
+                              l10n.revenueToday,
                               currencyService.formatPrice(revenueToday),
                               Icons.attach_money,
                               Colors.orange,
@@ -314,7 +317,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       const SizedBox(width: 16),
                                              Expanded(
                          child: _buildOverviewCard(
-                           'Next Appoint.',
+                           l10n.nextAppoint,
                           nextAppointment,
                            Icons.calendar_today,
                            Colors.purple,
@@ -336,9 +339,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
           const SizedBox(height: 32),
 
           // Quick Actions
-          const Text(
-            'Quick Actions',
-            style: TextStyle(
+          Text(
+            l10n.quickActions,
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               fontFamily: 'Montserrat',
@@ -354,25 +357,25 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
             childAspectRatio: 1.5,
             children: [
               _buildQuickActionCard(
-                'Schedule Appointment',
+                l10n.scheduleAppointment,
                 Icons.add_circle_outline,
                 Colors.blue,
                 () => _showSnackBar('Schedule appointment feature coming soon!'),
               ),
               _buildQuickActionCard(
-                'Add Patient',
+                l10n.addPatient,
                 Icons.person_add,
                 Colors.green,
                 () => _showSnackBar('Add patient feature coming soon!'),
               ),
               _buildQuickActionCard(
-                'View Records',
+                l10n.viewRecords,
                 Icons.folder_open,
                 Colors.orange,
                 () => _showSnackBar('Patient records feature coming soon!'),
               ),
               _buildQuickActionCard(
-                'Emergency Contact',
+                l10n.emergencyContact,
                 Icons.emergency,
                 Colors.red,
                 () => _showSnackBar('Emergency contact feature coming soon!'),
@@ -382,9 +385,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
           const SizedBox(height: 32),
 
           // Recent Activity
-          const Text(
-            'Recent Activity',
-            style: TextStyle(
+          Text(
+            l10n.recentActivity,
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               fontFamily: 'Montserrat',
@@ -398,6 +401,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
   }
 
   Widget _buildAppointmentsTab(User user) {
+    final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -452,6 +456,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
             .compareTo(a.value.map((a) => a.createdAt).reduce((a1, a2) => a1.isAfter(a2) ? a1 : a2)));
         final List<String> orderedPetIds = recentPetEntries.map((e) => e.key).toList();
         
+    final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -460,7 +465,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
           // Search Bar
           TextField(
             decoration: InputDecoration(
-              hintText: 'Search patients...',
+              hintText: l10n.searchPatients,
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -475,7 +480,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
             children: [
               Expanded(
                 child: _buildPatientCategoryCard(
-                  'Active Patients',
+                  l10n.activePatients,
                       activePatients.toString(),
                   Icons.people,
                   Colors.blue,
@@ -484,7 +489,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
               const SizedBox(width: 16),
               Expanded(
                 child: _buildPatientCategoryCard(
-                  'New This Month',
+                  l10n.newThisMonth,
                       newThisMonth.toString(),
                   Icons.person_add,
                   Colors.green,
@@ -493,9 +498,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
             ],
           ),
           const SizedBox(height: 24),
-          const Text(
-                'My Patients',
-            style: TextStyle(
+          Text(
+                l10n.myPatients,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               fontFamily: 'Montserrat',
@@ -504,7 +509,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
           const SizedBox(height: 16),
               // Show real recent patients ordered by most recent
               if (orderedPetIds.isEmpty)
-                const Center(child: Text('No patients found'))
+                Center(child: Text(l10n.noPatientsFound))
               else
                 FutureBuilder<List<Pet>>(
                   future: DatabaseService().getPets(orderedPetIds),
@@ -513,7 +518,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                       return _buildPatientsSkeletonLoader();
                     }
                     if (!petSnap.hasData || petSnap.data!.isEmpty) {
-                      return const Center(child: Text('No patients found'));
+                      return Center(child: Text(l10n.noPatientsFound));
                     }
                     final pets = petSnap.data!;
                     // Order pets by orderedPetIds
@@ -583,6 +588,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
         print('🔍 [AnalyticsTab] Pending appointments: ${analytics['pendingAppointments']}');
         print('🔍 [AnalyticsTab] Confirmed appointments: ${analytics['confirmedAppointments']}');
         
+    final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -625,7 +631,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                   
                   return RevenueChartWidget(
                     chartData: chartData,
-                    title: 'Revenue Analytics',
+                    title: l10n.revenueAnalytics,
                   );
                 },
           ),
@@ -636,7 +642,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
             children: [
               Expanded(
                 child: _buildMetricCard(
-                  'Avg. Appointment Duration',
+                  l10n.avgAppointmentDuration,
                       '${analytics['averageDuration'] ?? 45} min',
                   Icons.timer,
                   Colors.blue,
@@ -645,7 +651,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
               const SizedBox(width: 16),
               Expanded(
                 child: _buildMetricCard(
-                  'Patient Satisfaction',
+                  l10n.patientSatisfaction,
                       '${analytics['patientSatisfaction'] ?? 4.8}/5',
                   Icons.star,
                   Colors.orange,
@@ -672,9 +678,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'This Month',
-                  style: TextStyle(
+                Text(
+                  l10n.thisMonth,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'Montserrat',
@@ -704,9 +710,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-                const Text(
-                  'Appointment Status',
-                style: TextStyle(
+                Text(
+                  l10n.appointmentStatus,
+                style: const TextStyle(
                     fontSize: 18,
               fontWeight: FontWeight.bold,
                     fontFamily: 'Montserrat',
@@ -725,6 +731,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
   }
 
   Widget _buildAppointmentsList() {
+    final l10n = AppLocalizations.of(context)!;
     final authService = Provider.of<AuthService>(context, listen: false);
     final currentUser = authService.currentUser;
     
@@ -822,7 +829,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No appointments found',
+                  l10n.noAppointmentsFound,
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey[600],
@@ -831,7 +838,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Your schedule is clear',
+                  l10n.yourScheduleIsClear,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[500],
@@ -863,7 +870,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Text(
-                  'Upcoming Appointments (${upcomingAppointments.length})',
+                  '${l10n.upcomingAppointments} (${upcomingAppointments.length})',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -880,7 +887,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Text(
-                  'Completed Appointments (${completedAppointments.length})',
+                  '${l10n.completedAppointments} (${completedAppointments.length})',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -898,7 +905,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Text(
-                  'Cancelled Appointments (${cancelledAppointments.length})',
+                  '${l10n.cancelledAppointments} (${cancelledAppointments.length})',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -916,6 +923,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
   }
 
   Widget _buildAppointmentCard(Appointment appointment) {
+    final l10n = AppLocalizations.of(context)!;
             Color statusColor = Colors.blue;
             switch (appointment.status) {
               case AppointmentStatus.confirmed:
@@ -1056,9 +1064,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                               ),
                             ),
                             const SizedBox(width: 6),
-                            const Text(
-                              'LIVE',
-                              style: TextStyle(
+                            Text(
+                              l10n.live,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -1072,9 +1080,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Appointment in Progress',
-                              style: TextStyle(
+                            Text(
+                              l10n.appointmentInProgress,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                                 color: Colors.orange,
@@ -1101,9 +1109,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                           ),
                           elevation: 0,
                         ),
-                        child: const Text(
-                          'End Now',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.endNow,
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1541,6 +1549,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
   }
 
   Widget _buildProgressBar(Appointment appointment) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final appointmentStart = appointment.startedAt ?? appointment.appointmentDate;
     final appointmentEnd = appointmentStart.add(const Duration(minutes: 30));
@@ -1565,7 +1574,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Elapsed Time',
+                  l10n.elapsedTime,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -1573,7 +1582,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                   ),
                 ),
                 Text(
-                  '${elapsedDuration} minutes',
+                  '${elapsedDuration} ${l10n.minutes}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -1586,7 +1595,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  'Remaining',
+                  l10n.remaining,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -1594,7 +1603,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                   ),
                 ),
                 Text(
-                  '${remainingMinutes} minutes',
+                  '${remainingMinutes} ${l10n.minutes}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -2165,12 +2174,13 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
   }
 
   Widget _buildRecentActivityList() {
+    final l10n = AppLocalizations.of(context)!;
     // Mock activity data
     final activities = [
-      {'action': 'Appointment completed', 'details': 'Max - Check-up', 'time': '2 hours ago'},
-      {'action': 'New patient registered', 'details': 'Bella - Poodle', 'time': '1 day ago'},
-      {'action': 'Vaccination given', 'details': 'Luna - Cat', 'time': '2 days ago'},
-      {'action': 'Surgery scheduled', 'details': 'Buddy - Labrador', 'time': '3 days ago'},
+      {'action': l10n.appointmentCompleted, 'details': 'Max - Check-up', 'time': '2 hours ago'},
+      {'action': l10n.newPatientRegistered, 'details': 'Bella - Poodle', 'time': '1 day ago'},
+      {'action': l10n.vaccinationGiven, 'details': 'Luna - Cat', 'time': '2 days ago'},
+      {'action': l10n.surgeryScheduled, 'details': 'Buddy - Labrador', 'time': '3 days ago'},
     ];
 
     return Column(

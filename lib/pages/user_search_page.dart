@@ -10,7 +10,9 @@ import '../pages/user_profile_page.dart';
 import '../widgets/spinning_loader.dart';
 import '../widgets/verification_badge.dart';
 import '../widgets/skeleton_loader.dart';
+import '../l10n/app_localizations.dart';
 import 'dart:ui';
+import '../widgets/keyboard_dismissible_text_field.dart';
 
 class UserSearchPage extends StatefulWidget {
   const UserSearchPage({super.key});
@@ -74,6 +76,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
   }
 
   Future<void> _searchUsers(String query) async {
+    final l10n = AppLocalizations.of(context)!;
     if (query.isEmpty) {
       setState(() {
         _searchResults = [];
@@ -105,7 +108,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error searching users: $e')),
+          SnackBar(content: Text(l10n.errorSearchingUsers(e.toString()))),
         );
       }
     }
@@ -208,7 +211,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                 
                 // Name
                 Text(
-                  user.displayName ?? 'No name',
+                  user.displayName ?? AppLocalizations.of(context)!.noName,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -245,7 +248,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            isVet ? 'Vet' : 'Store',
+                            isVet ? AppLocalizations.of(context)!.vet : AppLocalizations.of(context)!.store,
                             style: TextStyle(
                               color: isVet ? Colors.blue[600] : Colors.green[600],
                               fontSize: 11,
@@ -434,6 +437,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
   }
 
   Widget _buildUserCard(User user) {
+    final l10n = AppLocalizations.of(context)!;
     final currentUser = context.read<AuthService>().currentUser;
     final isCurrentUser = currentUser?.id == user.id;
     final isVet = user.accountType == 'vet';
@@ -519,7 +523,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                     children: [
                                              // Name
                        Text(
-                         user.displayName ?? 'No name',
+                         user.displayName ?? AppLocalizations.of(context)!.noName,
                          style: const TextStyle(
                            fontSize: 18,
                            fontWeight: FontWeight.w700,
@@ -568,7 +572,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Vet',
+                                    AppLocalizations.of(context)!.vet,
                                     style: TextStyle(
                                       color: Colors.blue[600],
                                       fontSize: 12,
@@ -599,7 +603,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Store',
+                                    AppLocalizations.of(context)!.store,
                                     style: TextStyle(
                                       color: Colors.green[600],
                                       fontSize: 12,
@@ -622,18 +626,18 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                   width: 1,
                                 ),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.person_rounded,
                                     size: 14,
                                     color: Color(0xFFF59E0B),
                                   ),
-                                  SizedBox(width: 4),
+                                  const SizedBox(width: 4),
                                   Text(
-                                    'You',
-                                    style: TextStyle(
+                                    l10n.you,
+                                    style: const TextStyle(
                                       color: Color(0xFFF59E0B),
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
@@ -663,14 +667,14 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                   ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.verified, color: Colors.white, size: 12),
-                                    SizedBox(width: 4),
+                                    const Icon(Icons.verified, color: Colors.white, size: 12),
+                                    const SizedBox(width: 4),
                                     Text(
-                                      'ALIFI FAVORITE',
-                                      style: TextStyle(
+                                      l10n.alifiFavorite,
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
@@ -692,14 +696,14 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                   ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.verified, color: Colors.white, size: 12),
-                                    SizedBox(width: 4),
+                                    const Icon(Icons.verified, color: Colors.white, size: 12),
+                                    const SizedBox(width: 4),
                                     Text(
-                                      'ALIFI AFFILIATED',
-                                      style: TextStyle(
+                                      l10n.alifiAffiliated,
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
@@ -793,6 +797,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -805,9 +810,9 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Header with title only
-                  const Text(
-                    'Search',
-                    style: TextStyle(
+                  Text(
+                    l10n.search,
+                    style: const TextStyle(
                       fontFamily: 'Montserrat',
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
@@ -834,11 +839,11 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                         ),
                       ],
                     ),
-                    child: TextField(
+                    child: KeyboardDismissibleTextField(
                       controller: _searchController,
                       onChanged: _searchUsers,
                       decoration: InputDecoration(
-                        hintText: 'Search people, pets, vets...',
+                        hintText: l10n.searchPeoplePetsVets,
                         hintStyle: TextStyle(
                           color: Colors.grey[500],
                           fontSize: 16,
@@ -890,15 +895,15 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
             // Content area
             Expanded(
               child: _isLoading
-                  ? const Center(
+                  ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SpinningLoader(color: Color(0xFFF59E0B)),
-                          SizedBox(height: 16),
+                          const SpinningLoader(color: Color(0xFFF59E0B)),
+                          const SizedBox(height: 16),
                           Text(
-                            'Searching...',
-                            style: TextStyle(
+                            l10n.searching,
+                            style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -942,9 +947,9 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                               ),
                                             ),
                                             const SizedBox(width: 12),
-                                            const Text(
-                                              'Recommended Vets & Stores',
-                                              style: TextStyle(
+                                            Text(
+                                              l10n.recommendedVetsAndStores,
+                                              style: const TextStyle(
                                                 fontFamily: 'Montserrat',
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.w700,
@@ -1008,9 +1013,9 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  const Text(
-                                    'Recent Searches',
-                                    style: TextStyle(
+                                  Text(
+                                    l10n.recentSearches,
+                                    style: const TextStyle(
                                       fontFamily: 'Montserrat',
                                       fontSize: 20,
                                       fontWeight: FontWeight.w700,
@@ -1024,20 +1029,20 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                           
                           // Recent profiles or empty state
                           if (_recentProfiles.isEmpty)
-                            const SliverFillRemaining(
+                            SliverFillRemaining(
                               child: Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.search_off_rounded,
                                       size: 64,
                                       color: Colors.grey,
                                     ),
-                                    SizedBox(height: 16),
+                                    const SizedBox(height: 16),
                                     Text(
-                                      'No recent searches',
-                                      style: TextStyle(
+                                      l10n.noRecentSearches,
+                                      style: const TextStyle(
                                         color: Colors.grey,
                                         fontSize: 18,
                                         fontWeight: FontWeight.w500,
@@ -1045,8 +1050,8 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                     ),
                                     SizedBox(height: 8),
                                     Text(
-                                      'Your recent profile visits will appear here',
-                                      style: TextStyle(
+                                      l10n.yourRecentProfileVisitsWillAppearHere,
+                                      style: const TextStyle(
                                         color: Colors.grey,
                                         fontSize: 14,
                                       ),
@@ -1067,29 +1072,29 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                               ),
                             ),
                         ] else if (_searchResults.isEmpty)
-                          const SliverFillRemaining(
+                          SliverFillRemaining(
                             child: Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.search_off_rounded,
                                     size: 64,
                                     color: Colors.grey,
                                   ),
-                                  SizedBox(height: 16),
+                                  const SizedBox(height: 16),
                                   Text(
-                                    'No results found',
-                                    style: TextStyle(
+                                    l10n.noResultsFound,
+                                    style: const TextStyle(
                                       color: Colors.grey,
                                       fontSize: 18,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  SizedBox(height: 8),
+                                  const SizedBox(height: 8),
                                   Text(
-                                    'Try searching with different keywords',
-                                    style: TextStyle(
+                                    l10n.trySearchingWithDifferentKeywords,
+                                    style: const TextStyle(
                                       color: Colors.grey,
                                       fontSize: 14,
                                     ),

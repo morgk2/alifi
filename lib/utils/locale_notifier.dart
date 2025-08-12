@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+import '../services/user_preferences_service.dart';
 
 class LocaleNotifier extends ChangeNotifier {
   Locale _locale;
-  LocaleNotifier(this._locale);
+  final UserPreferencesService? _preferencesService;
+  
+  LocaleNotifier(this._locale, [this._preferencesService]);
 
   Locale get locale => _locale;
 
-  void changeLocale(Locale locale) {
+  void changeLocale(Locale locale) async {
     if (_locale != locale) {
       print('Locale changed from ${_locale.languageCode} to ${locale.languageCode}');
       _locale = locale;
       notifyListeners();
+      
+      // Save to persistent storage
+      await _preferencesService?.setLanguage(locale);
     }
   }
 
@@ -23,7 +29,14 @@ class LocaleNotifier extends ChangeNotifier {
 class LocaleNotifierProvider extends StatefulWidget {
   final Widget child;
   final Locale initialLocale;
-  const LocaleNotifierProvider({Key? key, required this.child, required this.initialLocale}) : super(key: key);
+  final UserPreferencesService? preferencesService;
+  
+  const LocaleNotifierProvider({
+    Key? key, 
+    required this.child, 
+    required this.initialLocale,
+    this.preferencesService,
+  }) : super(key: key);
 
   @override
   _LocaleNotifierProviderState createState() => _LocaleNotifierProviderState();
@@ -35,7 +48,7 @@ class _LocaleNotifierProviderState extends State<LocaleNotifierProvider> {
   @override
   void initState() {
     super.initState();
-    localeNotifier = LocaleNotifier(widget.initialLocale);
+    localeNotifier = LocaleNotifier(widget.initialLocale, widget.preferencesService);
     // Listen to changes in the LocaleNotifier
     localeNotifier.addListener(_onLocaleChanged);
   }

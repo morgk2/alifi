@@ -14,12 +14,14 @@ import 'admin/bulk_import_page.dart';
 import 'admin/user_management_page.dart';
 import 'subscription_management_page.dart';
 import 'notification_settings_page.dart';
+import 'display_settings_page.dart';
 import '../utils/locale_notifier.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/ios_toggle.dart';
-import '../widgets/notification_settings_widget.dart';
+// import removed: not used
 import '../services/currency_service.dart';
 import '../services/database_service.dart';
+import '../services/user_preferences_service.dart';
 import '../widgets/custom_snackbar.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -81,9 +83,9 @@ class _SettingsPageState extends State<SettingsPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
-          'Settings',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.settings,
+          style: const TextStyle(
             fontFamily: 'Montserrat',
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -118,36 +120,36 @@ class _SettingsPageState extends State<SettingsPage> {
             
             // App Settings Section
             _buildSettingsSection(
-              title: 'App Settings',
+              title: AppLocalizations.of(context)!.appSettings,
               children: [
                 _SettingsTile(
                   icon: CupertinoIcons.globe,
                   iconColor: Colors.blue,
-                  title: 'Language',
+                  title: AppLocalizations.of(context)!.language,
                   subtitle: _getLanguageName(context),
                   onTap: () async {
                     final selected = await showDialog<Locale>(
                       context: context,
                       builder: (context) => SimpleDialog(
-                        title: const Text('Select Language'),
+                        title: Text(AppLocalizations.of(context)!.selectLanguage),
                         children: [
                           SimpleDialogOption(
                             onPressed: () {
                               Navigator.pop(context, const Locale('en'));
                             },
-                            child: const Text('English'),
+                            child: Text(AppLocalizations.of(context)!.english),
                           ),
                           SimpleDialogOption(
                             onPressed: () {
                               Navigator.pop(context, const Locale('ar'));
                             },
-                            child: const Text('العربية'),
+                            child: Text(AppLocalizations.of(context)!.arabic),
                           ),
                           SimpleDialogOption(
                             onPressed: () {
                               Navigator.pop(context, const Locale('fr'));
                             },
-                            child: const Text('Français'),
+                            child: Text(AppLocalizations.of(context)!.french),
                           ),
                         ],
                       ),
@@ -161,20 +163,24 @@ class _SettingsPageState extends State<SettingsPage> {
                       } else {
                         print('ERROR: LocaleNotifier state is null!');
                       }
+                      
+                      // Also update the UserPreferencesService
+                      final userPreferences = Provider.of<UserPreferencesService>(context, listen: false);
+                      await userPreferences.setLanguage(selected);
                     }
                   },
                 ),
                 _SettingsTile(
                   icon: CupertinoIcons.moon,
                   iconColor: Colors.purple,
-                  title: 'Dark Mode',
+                  title: AppLocalizations.of(context)!.darkMode,
                   trailing: IOSToggle(
                     value: false, // TODO: Implement dark mode
                     onChanged: (value) {
                       // TODO: Implement dark mode toggle
                       CustomSnackBarHelper.showInfo(
                         context,
-                        'Coming soon!',
+                        AppLocalizations.of(context)!.comingSoon,
                         duration: const Duration(seconds: 1),
                       );
                     },
@@ -184,8 +190,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 _SettingsTile(
                   icon: CupertinoIcons.bell,
                   iconColor: Colors.orange,
-                  title: 'Notifications',
-                  subtitle: 'Manage your notifications',
+                  title: AppLocalizations.of(context)!.notifications,
+                  subtitle: AppLocalizations.of(context)!.manageYourNotifications,
                   onTap: () {
                     NavigationService.push(
                       context,
@@ -198,11 +204,25 @@ class _SettingsPageState extends State<SettingsPage> {
                     return _SettingsTile(
                       icon: CupertinoIcons.money_dollar,
                       iconColor: Colors.green,
-                      title: 'Currency',
+                      title: AppLocalizations.of(context)!.currency,
                       subtitle: currencyService.currencyName,
                       onTap: () {
                         _showCurrencyDialog(context);
                       },
+                    );
+                  },
+                ),
+                _SettingsTile(
+                  icon: CupertinoIcons.device_phone_portrait,
+                  iconColor: Colors.purple,
+                  title: AppLocalizations.of(context)!.display,
+                  subtitle: AppLocalizations.of(context)!.customizeAppAppearanceAndInterface,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DisplaySettingsPage(),
+                      ),
                     );
                   },
                 ),
@@ -213,13 +233,13 @@ class _SettingsPageState extends State<SettingsPage> {
             
             // Account Section
             _buildSettingsSection(
-              title: 'Account',
+              title: AppLocalizations.of(context)!.account,
               children: [
                 _SettingsTile(
                   icon: CupertinoIcons.person_circle,
                   iconColor: Colors.green,
-                  title: 'Edit Profile',
-                  subtitle: 'Update your information',
+                  title: AppLocalizations.of(context)!.editProfile,
+                  subtitle: AppLocalizations.of(context)!.updateYourInformation,
                   onTap: () {
                     NavigationService.push(
                       context,
@@ -230,8 +250,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 _SettingsTile(
                   icon: CupertinoIcons.lock_shield,
                   iconColor: Colors.red,
-                  title: 'Privacy & Security',
-                  subtitle: 'Manage your privacy settings',
+                  title: AppLocalizations.of(context)!.privacyAndSecurity,
+                  subtitle: AppLocalizations.of(context)!.manageYourPrivacySettings,
                   onTap: () {
                     NavigationService.push(
                       context,
@@ -246,13 +266,13 @@ class _SettingsPageState extends State<SettingsPage> {
             
             // Support Section
             _buildSettingsSection(
-              title: 'Support',
+              title: AppLocalizations.of(context)!.support,
               children: [
                 _SettingsTile(
                   icon: CupertinoIcons.question_circle,
                   iconColor: Colors.blue,
-                  title: 'Help Center',
-                  subtitle: 'Get help and support',
+                  title: AppLocalizations.of(context)!.helpCenter,
+                  subtitle: AppLocalizations.of(context)!.getHelpAndSupport,
                   onTap: () {
                     NavigationService.push(
                       context,
@@ -263,8 +283,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 _SettingsTile(
                   icon: CupertinoIcons.exclamationmark_triangle,
                   iconColor: Colors.orange,
-                  title: 'Report a Bug',
-                  subtitle: 'Help us improve the app',
+                  title: AppLocalizations.of(context)!.reportABug,
+                  subtitle: AppLocalizations.of(context)!.helpUsImproveTheApp,
                   onTap: () {
                     showDialog(
                       context: context,
@@ -275,12 +295,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 _SettingsTile(
                   icon: CupertinoIcons.star,
                   iconColor: Colors.amber,
-                  title: 'Rate the App',
-                  subtitle: 'Share your feedback',
+                  title: AppLocalizations.of(context)!.rateTheApp,
+                  subtitle: AppLocalizations.of(context)!.shareYourFeedback,
                   onTap: () {
                     CustomSnackBarHelper.showInfo(
                       context,
-                      'Coming soon!',
+                      AppLocalizations.of(context)!.comingSoon,
                       duration: const Duration(seconds: 1),
                     );
                   },
@@ -288,8 +308,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 _SettingsTile(
                   icon: CupertinoIcons.info_circle,
                   iconColor: Colors.grey,
-                  title: 'About',
-                  subtitle: 'App version and info',
+                  title: AppLocalizations.of(context)!.about,
+                  subtitle: AppLocalizations.of(context)!.appVersionAndInfo,
                   onTap: () {
                     NavigationService.push(
                       context,
@@ -305,13 +325,13 @@ class _SettingsPageState extends State<SettingsPage> {
             // Admin Tools Section (only for admins)
             if (authService.currentUser?.isAdmin ?? false)
               _buildSettingsSection(
-                title: 'Admin Tools',
+                title: AppLocalizations.of(context)!.adminTools,
                 children: [
                   _SettingsTile(
                     icon: CupertinoIcons.cart_badge_plus,
                     iconColor: Colors.green,
-                    title: 'Add AliExpress Product',
-                    subtitle: 'Add new products to the store',
+                    title: AppLocalizations.of(context)!.addAliexpressProduct,
+                    subtitle: AppLocalizations.of(context)!.addNewProductsToTheStore,
                     onTap: () {
                       NavigationService.push(
                         context,
@@ -322,8 +342,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   _SettingsTile(
                     icon: CupertinoIcons.arrow_up_doc,
                     iconColor: Colors.blue,
-                    title: 'Bulk Import Products',
-                    subtitle: 'Import multiple products at once',
+                    title: AppLocalizations.of(context)!.bulkImportProducts,
+                    subtitle: AppLocalizations.of(context)!.importMultipleProductsAtOnce,
                     onTap: () {
                       NavigationService.push(
                         context,
@@ -334,8 +354,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   _SettingsTile(
                     icon: CupertinoIcons.person_2,
                     iconColor: Colors.purple,
-                    title: 'User Management',
-                    subtitle: 'Manage user accounts',
+                    title: AppLocalizations.of(context)!.userManagement,
+                    subtitle: AppLocalizations.of(context)!.manageUserAccounts,
                     onTap: () {
                       NavigationService.push(
                         context,
@@ -356,7 +376,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   _SettingsTile(
                     icon: CupertinoIcons.square_arrow_right,
                     iconColor: Colors.red,
-                    title: 'Sign Out',
+                    title: AppLocalizations.of(context)!.signOut,
                     titleColor: Colors.red,
                     onTap: () async {
                       await authService.signOut();
@@ -373,27 +393,27 @@ class _SettingsPageState extends State<SettingsPage> {
             // Debug Info Section (only in debug mode)
             if (authService.currentUser?.isAdmin ?? false)
               _buildSettingsSection(
-                title: 'Debug Info',
+                title: AppLocalizations.of(context)!.debugInfo,
                 children: [
                   _SettingsTile(
                     icon: CupertinoIcons.info_circle,
                     iconColor: Colors.grey,
-                    title: 'Current Locale',
+                    title: AppLocalizations.of(context)!.currentLocale,
                     subtitle: '${currentLocale.languageCode} (${currentLocale.countryCode ?? 'no country'})',
                     onTap: () {},
                   ),
                   _SettingsTile(
                     icon: CupertinoIcons.text_bubble,
                     iconColor: Colors.grey,
-                    title: 'Localized Text Test',
+                    title: AppLocalizations.of(context)!.localizedTextTest,
                     subtitle: AppLocalizations.of(context)?.myPets ?? 'My Pets (fallback)',
                     onTap: () {},
                   ),
                   _SettingsTile(
                     icon: CupertinoIcons.calendar,
                     iconColor: Colors.blue,
-                    title: 'Add Test Appointment',
-                    subtitle: 'Create appointment in 1h 30min for testing',
+                    title: AppLocalizations.of(context)!.addTestAppointment,
+                    subtitle: AppLocalizations.of(context)!.createAppointmentForTesting,
                     onTap: () => _createTestAppointment(),
                   ),
                 ],
@@ -828,10 +848,7 @@ String _getLanguageName(BuildContext context) {
   }
 }
 
-String _getCurrencyName(BuildContext context) {
-  final currencyService = Provider.of<CurrencyService>(context, listen: false);
-  return currencyService.currencyName;
-}
+// _getCurrencyName not used
 
 void _showCurrencyDialog(BuildContext context) {
   showDialog(

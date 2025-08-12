@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../services/notification_service.dart';
 import 'package:provider/provider.dart';
+import '../widgets/keyboard_dismissible_text_field.dart';
 
 class StoreReceiverChatPage extends StatefulWidget {
   final User customer;
@@ -251,7 +252,7 @@ class _StoreReceiverChatPageState extends State<StoreReceiverChatPage>
                           ),
                         ],
                       ),
-                      child: TextField(
+                      child: KeyboardDismissibleTextField(
                         controller: _messageController,
                         decoration: InputDecoration(
                           hintText: 'Type your reply...',

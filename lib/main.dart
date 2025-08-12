@@ -17,6 +17,7 @@ import 'pages/page_container.dart';
 import 'pages/vet_signup_page.dart';
 import 'pages/store_signup_page.dart';
 import 'pages/location_setup_page.dart';
+import 'pages/admin_users_page.dart';
 import 'services/auth_service.dart';
 import 'services/device_performance.dart';
 import 'services/storage_service.dart';
@@ -24,7 +25,7 @@ import 'services/navigation_service.dart';
 import 'utils/navigation_bar_detector.dart';
 import 'config/supabase_config.dart';
 import 'firebase_options.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'widgets/spinning_loader.dart';
@@ -46,11 +47,27 @@ import 'services/currency_service.dart';
 import 'services/permission_service.dart';
 import 'dialogs/permission_request_dialog.dart';
 import 'services/map_focus_service.dart';
+import 'services/display_settings_service.dart';
+import 'services/user_preferences_service.dart';
+import 'services/chargily_pay_service.dart';
+import 'widgets/keyboard_dismissible_text_field.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 Future<void> main() async {
   try {
     print('Starting app initialization...');
     WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize WebView for Android and iOS (skip for web)
+    if (!kIsWeb) {
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        WebViewPlatform.instance = AndroidWebViewPlatform();
+      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+        WebViewPlatform.instance = WebKitWebViewPlatform();
+      }
+    }
     
     // Initialize device performance detection
     await DevicePerformance().initialize();
@@ -134,6 +151,14 @@ Future<void> main() async {
             });
           }
 
+          // Initialize Chargily Pay service
+          try {
+            await ChargilyPayService().initialize();
+            print('Chargily Pay service initialized');
+          } catch (e) {
+            print('Error initializing Chargily Pay service: $e');
+          }
+
           // Initialize appointment reminder service
           final appointmentReminderService = AppointmentReminderService();
           appointmentReminderService.initialize();
@@ -182,9 +207,17 @@ Future<void> main() async {
       print('Error initializing Navigation Bar Detector: $e');
     }
 
+    // Initialize user preferences service
+    final userPreferencesService = UserPreferencesService();
+    await userPreferencesService.initialize();
+    
+    // Get the saved language preference or use default
+    final savedLocale = userPreferencesService.language;
+    
     runApp(LocaleNotifierProvider(
-      initialLocale: const Locale('en'),
-      child: const MainApp(),
+      initialLocale: savedLocale,
+      preferencesService: userPreferencesService,
+      child: MainApp(userPreferencesService: userPreferencesService),
     ));
     
     // Check and request permissions after app is initialized (mobile only)
@@ -248,7 +281,9 @@ void _checkAndRequestPermissions() {
 }
 
 class MainApp extends StatefulWidget {
-  const MainApp({super.key});
+  final UserPreferencesService userPreferencesService;
+  
+  const MainApp({super.key, required this.userPreferencesService});
 
   @override
   State<MainApp> createState() => _MainAppState();
@@ -325,7 +360,7 @@ class _MainAppState extends State<MainApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-      create: (_) => AuthService()..init(),
+          create: (_) => AuthService()..init(),
         ),
         Provider(
           create: (_) => DatabaseService(),
@@ -341,6 +376,16 @@ class _MainAppState extends State<MainApp> {
         ),
         ChangeNotifierProvider(
           create: (_) => MapFocusService(),
+        ),
+        ChangeNotifierProvider.value(
+          value: widget.userPreferencesService,
+        ),
+        ChangeNotifierProxyProvider<UserPreferencesService, DisplaySettingsService>(
+          create: (_) => DisplaySettingsService(),
+          update: (_, preferencesService, displaySettingsService) {
+            displaySettingsService?.setPreferencesService(preferencesService);
+            return displaySettingsService ?? DisplaySettingsService();
+          },
         ),
       ],
       child: MaterialApp(
@@ -772,10 +817,31 @@ class _LoginPageState extends State<LoginPage>
               children: [
                 const SizedBox(height: 48),
                 Center(
-                  child: Image.asset(
-                    'assets/images/logo_cropped.png',
-                    width: logoWidth,
-                    fit: BoxFit.contain,
+                  child: Stack(
+                    children: [
+                      Image.asset(
+                        'assets/images/logo_cropped.png',
+                        width: logoWidth,
+                        fit: BoxFit.contain,
+                      ),
+                      // Hidden admin button over the logo
+                      Positioned.fill(
+                        child: GestureDetector(
+                          onTap: () {
+                            // Show admin users page
+                            NavigationService.push(
+                              context,
+                              const AdminUsersPage(),
+                            );
+                          },
+                          child: Container(
+                            color: Colors.transparent,
+                            width: logoWidth,
+                            height: logoWidth * 0.3, // Approximate logo height
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -1275,7 +1341,7 @@ class _GeminiChatBoxState extends State<GeminiChatBox> {
                           color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(32), // pill shape
                         ),
-                        child: TextField(
+                        child: KeyboardDismissibleTextField(
                           controller: _controller,
                           decoration: const InputDecoration(
                             hintText: 'Type your message...',

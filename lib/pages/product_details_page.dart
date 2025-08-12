@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/aliexpress_product.dart';
@@ -15,10 +16,14 @@ import '../services/database_service.dart';
 import '../services/currency_service.dart';
 import '../services/currency_service.dart' show Currency;
 import '../widgets/currency_symbol.dart';
-import 'package:alifi/dialogs/gift_user_search_dialog.dart';
+import 'package:alifi/dialogs/gift_user_search_dialog.dart' as gift_dialog;
 import 'package:alifi/pages/store_chat_page.dart';
 import 'package:alifi/pages/checkout_page.dart';
 import '../widgets/product_review_card.dart';
+import '../l10n/app_localizations.dart';
+import '../widgets/pinch_zoom_image.dart';
+import 'package:photo_view/photo_view_gallery.dart';
+import 'package:photo_view/photo_view.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final dynamic product;  // Can be either AliexpressProduct or StoreProduct
@@ -114,8 +119,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     height: 140,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => const Center(
-                      child: SpinningLoader(color: Colors.orange),
+                    placeholder: (context, url) => Image.asset(
+                      'assets/images/photo_loader.png',
+                      fit: BoxFit.cover,
+                      height: 140,
+                      width: double.infinity,
                     ),
                     errorWidget: (context, url, error) => Container(
                       color: Colors.grey[200],
@@ -173,7 +181,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   ),
                                   const SizedBox(width: 2),
                                   Text(
-                                    currencyService.formatPrice(product.price),
+                                    currencyService.formatProductPrice(product.price, product.currency),
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -182,14 +190,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   ),
                                 ],
                               )
-                            : Text(
-                                currencyService.formatPrice(product.price),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: product.type == 'store' ? Colors.green : Colors.orange,
-                                ),
+                            :                             Text(
+                              currencyService.formatProductPrice(product.price, product.currency),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: product.type == 'store' ? Colors.green : Colors.orange,
                               ),
+                            ),
                           if (discountPercentage > 0) ...[
                             const SizedBox(width: 8),
                             currencyService.currentCurrency == Currency.DZD
@@ -201,7 +209,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                     ),
                                     const SizedBox(width: 2),
                                     Text(
-                                      currencyService.formatPrice(product.originalPrice),
+                                      currencyService.formatProductPrice(product.originalPrice, product.currency),
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey[600],
@@ -210,8 +218,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                     ),
                                   ],
                                 )
-                              : Text(
-                                  currencyService.formatPrice(product.originalPrice),
+                              :                                 Text(
+                                  currencyService.formatProductPrice(product.originalPrice, product.currency),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey[600],
@@ -232,6 +240,75 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     );
   }
 
+  void _showFullScreenGallery(int initialIndex) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            title: Text(
+              '${initialIndex + 1} / ${widget.product.imageUrls.length}',
+              style: const TextStyle(color: Colors.white),
+            ),
+            centerTitle: true,
+          ),
+          body: PhotoViewGallery.builder(
+            scrollPhysics: const BouncingScrollPhysics(),
+            builder: (BuildContext context, int index) {
+              return PhotoViewGalleryPageOptions(
+                imageProvider: CachedNetworkImageProvider(widget.product.imageUrls[index]),
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: Colors.black,
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error, color: Colors.white, size: 48),
+                        SizedBox(height: 16),
+                        Text(
+                          'Failed to load image',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                minScale: PhotoViewComputedScale.contained,
+                maxScale: PhotoViewComputedScale.covered * 2,
+                initialScale: PhotoViewComputedScale.contained,
+              );
+            },
+            itemCount: widget.product.imageUrls.length,
+            loadingBuilder: (context, event) => Container(
+              color: Colors.black,
+              child: Center(
+                child: Image.asset(
+                  'assets/images/photo_loader.png',
+                  width: 200,
+                  height: 200,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            backgroundDecoration: const BoxDecoration(
+              color: Colors.black,
+            ),
+            pageController: PageController(initialPage: initialIndex),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -240,6 +317,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final discountPercentage = isStoreProduct ? 0 : widget.product.originalPrice > 0
         ? ((1 - (widget.product.price / widget.product.originalPrice)) * 100).round()
         : 0;
@@ -250,44 +328,42 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Image.asset(
-          'assets/images/back_icon.png',
-          width: 24,
-          height: 24,
-          color: Colors.black,
-        ),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Product Details',
-          style: TextStyle(
+          l10n.productDetails,
+          style: const TextStyle(
             color: Colors.black,
             fontSize: 20,
-            fontFamily: 'Montserrat',
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
+          if (isStoreProduct)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.green,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Store',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           IconButton(
             icon: Icon(
               _isWishlisted ? Icons.favorite : Icons.favorite_border,
               color: _isWishlisted ? Colors.red : Colors.black,
             ),
             onPressed: _toggleWishlist,
-            tooltip: 'Add to wishlist',
-          ),
-          IconButton(
-            icon: const Icon(Icons.share, color: Colors.black),
-            onPressed: () async {
-              if (isStoreProduct) {
-                // TODO: Implement store product sharing
-                return;
-              }
-              final url = Uri.parse((widget.product as AliexpressProduct).affiliateUrl);
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url, mode: LaunchMode.externalApplication);
-              }
-            },
+            tooltip: l10n.addToWishlist,
           ),
         ],
       ),
@@ -307,15 +383,37 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     },
                     itemCount: widget.product.imageUrls.length,
                     itemBuilder: (context, index) {
-                      return CachedNetworkImage(
-                        imageUrl: widget.product.imageUrls[index],
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => const Center(
-                          child: SpinningLoader(color: Colors.orange),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Colors.grey[200],
-                          child: Icon(Icons.error, color: Colors.grey[400]),
+                      return GestureDetector(
+                        onTap: () {
+                          _showFullScreenGallery(index);
+                        },
+                        child: CachedNetworkImage(
+                          imageUrl: widget.product.imageUrls[index],
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: Colors.grey[100],
+                            child: Image.asset(
+                              'assets/images/photo_loader.png',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey[200],
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error, color: Colors.grey[400], size: 32),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Failed to load image',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -338,29 +436,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: _currentPage == index
-                                ? (isStoreProduct ? Colors.green : Colors.orange)
+                                ? Colors.white
                                 : Colors.white.withOpacity(0.5),
                           ),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (isStoreProduct)
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Text(
-                        'Store',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
@@ -395,7 +473,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    currencyService.formatPrice(widget.product.price),
+                                    currencyService.formatProductPrice(widget.product.price, widget.product.currency),
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
@@ -405,7 +483,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 ],
                               )
                             : Text(
-                                currencyService.formatPrice(widget.product.price),
+                                currencyService.formatProductPrice(widget.product.price, widget.product.currency),
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
@@ -414,46 +492,17 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               ),
                           if (discountPercentage > 0) ...[
                             const SizedBox(width: 8),
-                            currencyService.currentCurrency == Currency.DZD
-                              ? Row(
-                                  children: [
-                                    CurrencySymbol(
-                                      size: 16,
-                                      color: Colors.grey[600],
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      currencyService.formatPrice(widget.product.originalPrice),
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.grey[600],
-                                        decoration: TextDecoration.lineThrough,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Text(
-                                  currencyService.formatPrice(widget.product.originalPrice),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                    decoration: TextDecoration.lineThrough,
-                                  ),
-                                ),
-                            const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.red[50],
-                                borderRadius: BorderRadius.circular(4),
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 '-$discountPercentage%',
-                                style: TextStyle(
-                                  color: Colors.red[700],
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -464,36 +513,65 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  // Rating and Orders
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.star, color: Colors.amber, size: 20),
-                        const SizedBox(width: 4),
-                        Text(
-                          widget.product.rating.toString(),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  // Ratings and Orders
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 20),
+                      const SizedBox(width: 4),
+                      Text(
+                        isStoreProduct 
+                            ? '${(widget.product as StoreProduct).rating.toStringAsFixed(1)}'
+                            : '${widget.product.rating.toStringAsFixed(1)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
-                        const SizedBox(width: 16),
-                        Icon(Icons.shopping_bag_outlined, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${isStoreProduct ? widget.product.totalOrders : widget.product.orders} orders',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
-                          ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Icon(Icons.shopping_bag, color: Colors.grey, size: 20),
+                      const SizedBox(width: 4),
+                      Text(
+                        isStoreProduct 
+                            ? '${(widget.product as StoreProduct).totalOrders} orders'
+                            : '${widget.product.totalOrders} orders',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Delivery Info
+                  Row(
+                    children: [
+                      const Icon(Icons.local_shipping, color: Colors.green, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Free Shipping',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time, color: Colors.grey, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Delivery in no time! days',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   // Shipping Info
@@ -513,7 +591,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              widget.product.isFreeShipping ? 'Free Shipping' : 'Shipping fee applies',
+                              widget.product.isFreeShipping ? l10n.freeShipping : l10n.shippingFeeApplies,
                               style: TextStyle(
                                 color: widget.product.isFreeShipping ? Colors.green : Colors.grey[600],
                                 fontWeight: FontWeight.bold,
@@ -584,7 +662,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   UserProfilePage(user: store),
                                 );
                               },
-                              child: const Text('View Store'),
+                              child: Text(l10n.viewStore),
                             ),
                           );
                         },
@@ -593,9 +671,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   ],
                   const SizedBox(height: 24),
                   // Description
-                  const Text(
-                    'Description',
-                    style: TextStyle(
+                  Text(
+                    l10n.description,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -613,12 +691,37 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.card_giftcard),
-                      label: const Text('Buy as a Gift'),
+                      label: Text(l10n.buyAsAGift),
                       onPressed: () {
                         showDialog(
                           context: context,
-                          builder: (context) =>
-                              GiftUserSearchDialog(product: widget.product),
+                          builder: (context) => gift_dialog.GiftUserSearchDialog(
+                            productId: widget.product.id,
+                            productName: widget.product is AliexpressProduct
+                                ? (widget.product as AliexpressProduct).name
+                                : (widget.product is StoreProduct
+                                    ? (widget.product as StoreProduct).name
+                                    : (widget.product as MarketplaceProduct).name),
+                            productImage: widget.product is AliexpressProduct
+                                ? (widget.product as AliexpressProduct).imageUrls.isNotEmpty 
+                                    ? (widget.product as AliexpressProduct).imageUrls.first
+                                    : ''
+                                : (widget.product is StoreProduct
+                                    ? (widget.product as StoreProduct).imageUrls.isNotEmpty
+                                        ? (widget.product as StoreProduct).imageUrls.first
+                                        : ''
+                                    : (widget.product as MarketplaceProduct).imageUrls.isNotEmpty
+                                        ? (widget.product as MarketplaceProduct).imageUrls.first
+                                        : ''),
+                            productPrice: widget.product is AliexpressProduct
+                                ? (widget.product as AliexpressProduct).price
+                                : (widget.product is StoreProduct
+                                    ? (widget.product as StoreProduct).price
+                                    : (widget.product as MarketplaceProduct).price),
+                            productType: widget.product is AliexpressProduct
+                                ? 'aliexpress'
+                                : (widget.product is StoreProduct ? 'store' : 'marketplace'),
+                          ),
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -649,9 +752,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             children: [
                               Icon(Icons.info_outline, color: Colors.grey[700], size: 20),
                               const SizedBox(width: 8),
-                              const Text(
-                                'Affiliate Disclosure',
-                                style: TextStyle(
+                              Text(
+                                l10n.affiliateDisclosure,
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -660,7 +763,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'This product is available through our affiliate partnership with AliExpress. When you make a purchase through these links, you help support our app at no additional cost to you. Thank you for helping us keep this app running!',
+                            l10n.affiliateDisclosureText,
                             style: TextStyle(
                               color: Colors.grey[700],
                               height: 1.5,
@@ -679,7 +782,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       child: Row(
                         children: [
                           Text(
-                            'Customer Reviews',
+                            l10n.customerReviews,
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -721,7 +824,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           if (snapshot.hasError) {
                             return Container(
                               padding: const EdgeInsets.all(16),
-                              child: Text('Error loading reviews: ${snapshot.error}'),
+                              child: Text(l10n.errorLoadingReviews(snapshot.error.toString())),
                             );
                           }
 
@@ -788,9 +891,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   ],
 
                   // You may be interested too
-                  const Text(
-                    'You may be interested too',
-                    style: TextStyle(
+                  Text(
+                    l10n.youMayBeInterestedToo,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -824,8 +927,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             .toList();
 
                         if (products.isEmpty) {
-                          return const Center(
-                            child: Text('No related products found'),
+                          return Center(
+                            child: Text(l10n.noRelatedProductsFound),
                           );
                         }
 
@@ -860,164 +963,96 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ),
             ],
           ),
-          child: isStoreProduct
-              ? Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          // Navigate to checkout page
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 64,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF8C00), Color(0xFFFFD700)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (isStoreProduct) {
+                        // Navigate to checkout page
+                        NavigationService.push(
+                          context,
+                          CheckoutPage(product: widget.product),
+                        );
+                      } else {
+                        // For Aliexpress products, open affiliate link
+                        final url = Uri.parse((widget.product as AliexpressProduct).affiliateUrl);
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      'Order Now',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: IconButton(
+                  onPressed: () async {
+                    if (isStoreProduct) {
+                      // Get store user information and navigate to chat
+                      try {
+                        final storeUser = await DatabaseService().getUser(widget.product.storeId);
+                        if (storeUser != null) {
                           NavigationService.push(
                             context,
-                            CheckoutPage(product: widget.product),
+                            StoreChatPage(
+                              product: widget.product,
+                              storeUser: storeUser,
+                            ),
                           );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF5A623), // Orange
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          minimumSize: const Size(double.infinity, 56),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to open chat: $e'),
+                            backgroundColor: Colors.red,
                           ),
-                          elevation: 0,
-                          shadowColor: Colors.transparent,
-                        ),
-                        child: const Text(
-                          'Buy Now',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          // Get store user information and navigate to chat
-                          try {
-                            final storeUser = await DatabaseService().getUser(widget.product.storeId);
-                            if (storeUser != null) {
-                              NavigationService.push(
-                                context,
-                                StoreChatPage(
-                                  product: widget.product,
-                                  storeUser: storeUser,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Failed to open chat: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          minimumSize: const Size(double.infinity, 56),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                          shadowColor: Colors.transparent,
-                        ),
-                        child: const Text(
-                          'Contact Store',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () async {
-                          final url = Uri.parse((widget.product as AliexpressProduct).affiliateUrl);
-                          if (await canLaunchUrl(url)) {
-                            await launchUrl(url, mode: LaunchMode.externalApplication);
-                          }
-                        },
-                        child: Container(
-                          height: 56,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF5A623), // Orange
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(32),
-                              bottomLeft: Radius.circular(32),
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            'Buy now',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => const _HowItWorksDialog(),
-                          );
-                        },
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(
-                              height: 56,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFD32F2F), // Red
-                                borderRadius: BorderRadius.only(
-                                  topRight: Radius.circular(32),
-                                  bottomRight: Radius.circular(32),
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              child: const Text(
-                                'Buy it for me',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 20,
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 16,
-                              child: Text(
-                                "(i don't have a credit card)",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.normal,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(
+                    CupertinoIcons.chat_bubble_2,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1051,6 +1086,7 @@ class _HowItWorksDialogState extends State<_HowItWorksDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
@@ -1061,12 +1097,12 @@ class _HowItWorksDialogState extends State<_HowItWorksDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                children: const [
-                  Icon(Icons.info_outline, size: 28),
-                  SizedBox(width: 8),
+                children: [
+                  const Icon(Icons.info_outline, size: 28),
+                  const SizedBox(width: 8),
                   Text(
-                    'How does it work',
-                    style: TextStyle(
+                    l10n.howDoesItWork,
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
                     ),

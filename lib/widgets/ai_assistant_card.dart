@@ -4,8 +4,10 @@ import 'package:http/http.dart' as http;
 import 'typing_indicator.dart';
 import '../services/chat_service.dart';
 import '../services/auth_service.dart';
+import 'keyboard_dismissible_text_field.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import '../l10n/app_localizations.dart';
 
 class AIPetAssistantCard extends StatefulWidget {
   final VoidCallback onTap;
@@ -165,7 +167,7 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
       if (mounted) {
         final errorMessage = ChatMessage(
           id: _uuid.v4(),
-          text: 'Sorry, I encountered an error. Please try again.',
+          text: AppLocalizations.of(context)!.sorryIEncounteredAnError,
           isUser: false,
           timestamp: DateTime.now(),
         );
@@ -262,6 +264,8 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     if (!widget.isExpanded) {
       // Show the last message in the preview if available
       final lastMessage = _messages.isNotEmpty ? _messages.last : null;
@@ -311,7 +315,7 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
                               ),
                             ),
                                                          child: Text(
-                               lastMessage?.text ?? 'Hi! ask me about any pet advice,\nand I\'ll do my best to help you, and\nyour little one!',
+                               lastMessage?.text ?? l10n.hiAskMeAboutAnyPetAdvice,
                                style: const TextStyle(
                                  fontSize: 14,
                                  color: Colors.black87,
@@ -329,7 +333,7 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Text(
-                    'Tap to chat...',
+                    l10n.tapToChat,
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[400],
@@ -374,9 +378,9 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
                     height: 40,
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'AI Pet Assistant',
-                    style: TextStyle(
+                  Text(
+                    l10n.aiPetAssistant,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                     ),
@@ -438,10 +442,10 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: KeyboardDismissibleTextField(
                       controller: _messageController,
                       decoration: InputDecoration(
-                        hintText: 'Type your message...',
+                        hintText: l10n.typeYourMessage,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,

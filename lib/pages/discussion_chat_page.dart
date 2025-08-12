@@ -11,6 +11,8 @@ import '../dialogs/store_products_dialog.dart';
 import '../widgets/currency_symbol.dart';
 import '../services/currency_service.dart' show Currency;
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
+import '../widgets/keyboard_dismissible_text_field.dart';
 
 class DiscussionChatPage extends StatefulWidget {
   final User storeUser;
@@ -183,6 +185,7 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -221,7 +224,7 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.storeUser.displayName ?? 'Store',
+                    widget.storeUser.displayName ?? l10n.store,
                     style: const TextStyle(
                       color: Colors.black,
                       fontSize: 16,
@@ -230,7 +233,7 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                     ),
                   ),
                   Text(
-                    'Discussion',
+                    l10n.discussion,
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 12,
@@ -260,6 +263,7 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -271,7 +275,7 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
           ),
           const SizedBox(height: 16),
           Text(
-            'Start a discussion',
+            l10n.startDiscussion,
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
@@ -713,6 +717,7 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
   }
 
   Widget _buildMessageInput() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -741,10 +746,10 @@ class _DiscussionChatPageState extends State<DiscussionChatPage>
                     ),
                   ],
                 ),
-                child: TextField(
+                child: KeyboardDismissibleTextField(
                   controller: _messageController,
                   decoration: InputDecoration(
-                    hintText: 'Type your message...',
+                    hintText: l10n.typeMessage,
                     hintStyle: TextStyle(
                       color: Colors.grey[500],
                       fontFamily: 'Inter',

@@ -8,6 +8,7 @@ import '../icons.dart';
 import 'unified_product_card.dart';
 import 'skeleton_loader.dart';
 import '../pages/marketplace_page.dart';
+import '../l10n/app_localizations.dart';
 
 class CombinedRecommendationsWidget extends StatefulWidget {
   final ScrollController scrollController;
@@ -62,6 +63,8 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     // Use const for static values
     const double borderRadius = 20.0;
     
@@ -100,9 +103,9 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
                     height: 24,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    'You may be Interested',
-                    style: TextStyle(
+                  Text(
+                    l10n.youMayBeInterested,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                     ),
@@ -120,7 +123,7 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
                     child: Row(
                       children: [
                         Text(
-                          'See all',
+                          l10n.seeAll,
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,
@@ -150,7 +153,7 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Error loading products',
+                                l10n.errorLoadingProducts,
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
@@ -159,7 +162,7 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
                               const SizedBox(height: 8),
                               ElevatedButton(
                                 onPressed: _loadProducts,
-                                child: const Text('Retry'),
+                                child: Text(l10n.retry),
                               ),
                             ],
                           ),
@@ -176,7 +179,7 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
                       if (allProducts.isEmpty) {
                         return Center(
                           child: Text(
-                            'No products available',
+                            l10n.noProductsAvailable,
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 14,

@@ -6,6 +6,7 @@ import '../services/database_service.dart';
 import '../models/chat_message.dart';
 import 'booking_page.dart';
 import 'package:provider/provider.dart';
+import '../widgets/keyboard_dismissible_text_field.dart';
 
 class VetChatPage extends StatefulWidget {
   final User vetUser;
@@ -288,7 +289,7 @@ class _VetChatPageState extends State<VetChatPage>
                           ),
                         ],
                       ),
-                      child: TextField(
+                      child: KeyboardDismissibleTextField(
                         controller: _messageController,
                         decoration: InputDecoration(
                           hintText: 'Type your message...',

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/user.dart';
-import '../services/database_service.dart';
-import '../widgets/spinning_loader.dart';
+import '../l10n/app_localizations.dart';
+import '../widgets/keyboard_dismissible_text_field.dart';
 
 class UserSearchDialog extends StatefulWidget {
-  final Function(User) onUserSelected;
+  final Function(String userId, String userName) onUserSelected;
 
   const UserSearchDialog({
     super.key,
@@ -17,114 +16,240 @@ class UserSearchDialog extends StatefulWidget {
 
 class _UserSearchDialogState extends State<UserSearchDialog> {
   final TextEditingController _searchController = TextEditingController();
-  Future<List<User>>? _searchResults;
-
-  void _searchUsers(String query) {
-    if (query.isNotEmpty) {
-      setState(() {
-        _searchResults = DatabaseService().searchUsers(displayName: query);
-      });
-    } else {
-      setState(() {
-        _searchResults = null;
-      });
-    }
-  }
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isSearching = false;
+  String _searchQuery = '';
 
   @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Search Users',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by name or email',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.grey[100],
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 0, horizontal: 20),
-              ),
-              onChanged: _searchUsers,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 300,
-              child: _searchResults == null
-                  ? const Center(
-                      child: Text('Type to search for users'),
-                    )
-                  : FutureBuilder<List<User>>(
-                      future: _searchResults,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: SpinningLoader());
-                        }
-                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return const Center(child: Text('No users found'));
-                        }
-
-                        final users = snapshot.data!;
-                        return ListView.builder(
-                          itemCount: users.length,
-                          itemBuilder: (context, index) {
-                            final user = users[index];
-                            return ListTile(
-                              leading: CircleAvatar(
-                                backgroundImage: user.photoURL != null
-                                    ? NetworkImage(user.photoURL!)
-                                    : null,
-                                child: user.photoURL == null
-                                    ? const Icon(Icons.person)
-                                    : null,
-                              ),
-                              title: Text(user.displayName ?? 'No Name'),
-                              subtitle: Text(user.email),
-                              trailing: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  shape: const StadiumBorder(),
-                                  backgroundColor: Colors.green,
-                                  elevation: 0,
-                                ),
-                                onPressed: () {
-                                  widget.onUserSelected(user);
-                                  Navigator.of(context).pop();
-                                },
-                                child: const Text('Select'),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+    });
+    _performSearch();
+  }
+
+  Future<void> _performSearch() async {
+    if (_searchQuery.trim().isEmpty) {
+      setState(() {
+        _searchResults = [];
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      // Simulate search delay
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // TODO: Implement actual user search
+      // For now, show mock results
+      setState(() {
+        _searchResults = [
+          {
+            'id': '1',
+            'name': 'John Doe',
+            'email': 'john@example.com',
+            'photoURL': null,
+          },
+          {
+            'id': '2',
+            'name': 'Jane Smith',
+            'email': 'jane@example.com',
+            'photoURL': null,
+          },
+        ];
+      });
+    } catch (e) {
+      // Handle error
+    } finally {
+      setState(() {
+        _isSearching = false;
+      });
+    }
+  }
+
+  void _selectUser(Map<String, dynamic> user) {
+    widget.onUserSelected(user['id'], user['name']);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        width: double.maxFinite,
+        constraints: const BoxConstraints(maxHeight: 600),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Text(
+                AppLocalizations.of(context)!.searchUsers,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            
+            // Search Section
+            Container(
+              padding: const EdgeInsets.all(20),
+              child: KeyboardDismissibleTextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context)!.searchByNameOrEmail,
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ),
+            
+            // Results Section
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _searchQuery.isEmpty
+                    ? Center(
+                        child: Text(
+                          AppLocalizations.of(context)!.typeToSearchForUsers,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      )
+                    : _isSearching
+                        ? const Center(child: CircularProgressIndicator())
+                        : _searchResults.isEmpty
+                            ? Center(
+                                child: Text(
+                                  AppLocalizations.of(context)!.noUsersFound,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: _searchResults.length,
+                                itemBuilder: (context, index) {
+                                  final user = _searchResults[index];
+                                  return _UserListItem(
+                                    user: user,
+                                    onSelect: () => _selectUser(user),
+                                  );
+                                },
+                              ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UserListItem extends StatelessWidget {
+  final Map<String, dynamic> user;
+  final VoidCallback onSelect;
+
+  const _UserListItem({
+    required this.user,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundImage: user['photoURL'] != null ? NetworkImage(user['photoURL']) : null,
+            child: user['photoURL'] == null
+                ? Text(
+                    (user['name'] ?? AppLocalizations.of(context)!.noName)[0].toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user['name'] ?? AppLocalizations.of(context)!.noName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  user['email'] ?? AppLocalizations.of(context)!.noEmail,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: onSelect,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(AppLocalizations.of(context)!.select),
+          ),
+        ],
+      ),
+    );
   }
 } 

@@ -11,6 +11,7 @@ import '../widgets/spinning_loader.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
 import 'package:path/path.dart' as path;
+import '../l10n/app_localizations.dart';
 
 class AddPetDialog extends StatefulWidget {
   final Pet? pet;
@@ -342,13 +343,13 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         _selectedDate == null || 
         _weightNotifier.value == 0 || 
         _selectedImage == null) {
-      _errorMessageNotifier.value = 'Please fill in all fields';
+      _errorMessageNotifier.value = AppLocalizations.of(context)!.pleaseFillInAllFields;
       print('Validation failed:  [31m [1m [4m${_errorMessageNotifier.value} [0m');
       return;
     }
 
     _isSavingNotifier.value = true;
-    _loadingMessageNotifier.value = 'Starting save process...';
+          _loadingMessageNotifier.value = AppLocalizations.of(context)!.startingSaveProcess;
     print('Starting save process...');
 
     try {
@@ -359,7 +360,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         throw Exception('No user logged in');
       }
 
-      _loadingMessageNotifier.value = 'Uploading photo...';
+      _loadingMessageNotifier.value = AppLocalizations.of(context)!.uploadingPhoto;
       print('Uploading image to Supabase...');
       // Upload image to Supabase first
       String imageUrl = '';
@@ -396,7 +397,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         isActive: true,
       );
 
-      _loadingMessageNotifier.value = isEdit ? 'Saving changes...' : 'Saving to database...';
+      _loadingMessageNotifier.value = isEdit ? AppLocalizations.of(context)!.savingChanges : AppLocalizations.of(context)!.savingToDatabase;
       print(isEdit ? 'Updating pet in Firestore...' : 'Saving pet to Firestore...');
       if (isEdit) {
         await DatabaseService().updatePet(pet, isGuest: authService.isGuestMode);
@@ -414,8 +415,8 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
       print('Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
-          _errorMessage = 'Error adding pet: $e';
-          _errorMessageNotifier.value = 'Error adding pet: $e';
+          _errorMessage = AppLocalizations.of(context)!.errorAddingPet(e.toString());
+          _errorMessageNotifier.value = AppLocalizations.of(context)!.errorAddingPet(e.toString());
         });
       }
     } finally {
@@ -717,9 +718,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          'What\'s your pet\'s name?',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)!.whatsYourPetsName,
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
@@ -733,16 +734,16 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: TextField(
           controller: _nameController,
-                decoration: const InputDecoration(
-                  hintText: 'Pet\'s name',
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context)!.petsName,
                   border: InputBorder.none,
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'What breed is your pet?',
-                    style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.whatBreedIsYourPet,
+                    style: const TextStyle(
                 fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -756,8 +757,8 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: TextField(
                 controller: _breedController,
-                decoration: const InputDecoration(
-                  hintText: 'Pet\'s breed',
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context)!.petsBreed,
                   border: InputBorder.none,
             ),
           ),
@@ -1364,16 +1365,16 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
+                        child: Text(
+                          AppLocalizations.of(context)!.cancel,
+                          style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 16,
                           ),
                         ),
                       ),
                       Text(
-                        widget.pet != null ? 'Edit existing pet' : 'Add Pet',
+                        widget.pet != null ? AppLocalizations.of(context)!.editExistingPet : AppLocalizations.of(context)!.addPet,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -1397,7 +1398,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.pop(context, false),
-                                      child: const Text('Cancel'),
+                                      child: Text(AppLocalizations.of(context)!.cancel),
                                     ),
                                     TextButton(
                                       onPressed: () => Navigator.pop(context, true),
@@ -1553,7 +1554,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                           ),
                         ),
                         child: Text(
-                          widget.pet != null ? 'Save Changes' : 'Add Pet',
+                          widget.pet != null ? AppLocalizations.of(context)!.saveChanges : AppLocalizations.of(context)!.addPet,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

@@ -20,6 +20,8 @@ import 'user_orders_page.dart';
 import 'category_page.dart';
 import 'dart:async';
 import '../services/device_performance.dart';
+import '../l10n/app_localizations.dart';
+import '../widgets/keyboard_dismissible_text_field.dart';
 
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
@@ -46,11 +48,11 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
   String _currentSearchQuery = '';
 
   final List<Map<String, dynamic>> _categories = [
-    {'icon': 'assets/images/food.png', 'name': 'Food'},
-    {'icon': 'assets/images/toys.png', 'name': 'Toys'},
-    {'icon': 'assets/images/health.png', 'name': 'Health'},
-    {'icon': 'assets/images/beds.png', 'name': 'Beds'},
-    {'icon': 'assets/images/hygiene.png', 'name': 'Hygiene'},
+    {'icon': 'assets/images/food.png', 'name': 'Food', 'key': 'food'},
+    {'icon': 'assets/images/toys.png', 'name': 'Toys', 'key': 'toys'},
+    {'icon': 'assets/images/health.png', 'name': 'Health', 'key': 'health'},
+    {'icon': 'assets/images/beds.png', 'name': 'Beds', 'key': 'beds'},
+    {'icon': 'assets/images/hygiene.png', 'name': 'Hygiene', 'key': 'hygiene'},
   ];
 
   @override
@@ -59,6 +61,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
     final devicePerformance = DevicePerformance();
     final isLowEnd = devicePerformance.performanceTier == PerformanceTier.low;
     final animationDuration = isLowEnd ? const Duration(milliseconds: 120) : const Duration(milliseconds: 300);
+    
+    // Debug: Check if there are any products at all
+    _debugCheckProducts();
     _fadeController = AnimationController(
       duration: animationDuration,
       vsync: this,
@@ -203,28 +208,103 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
   }
 
   String _getSortDisplayText() {
+    final l10n = AppLocalizations.of(context)!;
     switch (_sortBy) {
       case 'orders':
-        return 'Most Orders';
+        return l10n.mostOrders;
       case 'price_low':
-        return 'Price: Low to High';
+        return l10n.priceLowToHigh;
       case 'price_high':
-        return 'Price: High to Low';
+        return l10n.priceHighToLow;
       case 'newest':
-        return 'Newest First';
+        return l10n.newestFirst;
       default:
-        return 'Sort by';
+        return l10n.sortBy;
     }
   }
 
   String _getFilterDisplayText() {
+    final l10n = AppLocalizations.of(context)!;
     if (_selectedCategory == 'All') {
-      return 'All Categories';
+      return l10n.allCategories;
     }
-    return _selectedCategory;
+    return _getCategoryDisplayName(_selectedCategory);
+  }
+
+  String _getCategoryDisplayName(String categoryName) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (categoryName) {
+      case 'Food':
+        return l10n.food;
+      case 'Toys':
+        return l10n.toys;
+      case 'Health':
+        return l10n.health;
+      case 'Beds':
+        return l10n.beds;
+      case 'Hygiene':
+        return l10n.hygiene;
+      default:
+        return categoryName;
+    }
+  }
+
+  // Get the English category name for filtering (products are stored with English category names)
+  String _getCategoryFilterName(String categoryName) {
+    print('🔍 [MarketplacePage] Mapping category: "$categoryName"');
+    
+    // For filtering, we always use English category names since products are stored with English categories
+    String result;
+    switch (categoryName) {
+      case 'Food':
+      case 'Nourriture':
+      case 'طعام':
+        result = 'Food';
+        break;
+      case 'Toys':
+      case 'Jouets':
+      case 'ألعاب':
+        result = 'Toys';
+        break;
+      case 'Health':
+      case 'Santé':
+      case 'صحة':
+        result = 'Health';
+        break;
+      case 'Beds':
+      case 'Lits':
+      case 'أسرّة':
+        result = 'Beds';
+        break;
+      case 'Hygiene':
+      case 'Hygiène':
+      case 'نظافة':
+        result = 'Hygiene';
+        break;
+      default:
+        result = categoryName;
+    }
+    
+    print('🔍 [MarketplacePage] Mapped to: "$result"');
+    return result;
+  }
+
+  void _debugCheckProducts() {
+    // Debug: Check if there are any products at all
+    _databaseService.getMarketplaceProducts(limit: 5).listen((products) {
+      print('🔍 [MarketplacePage] Found ${products.length} total products');
+      if (products.isNotEmpty) {
+        print('🔍 [MarketplacePage] Sample products:');
+        for (int i = 0; i < products.length && i < 3; i++) {
+          final product = products[i];
+          print('  - ${product.name}: category="${product.category}"');
+        }
+      }
+    });
   }
 
   void _showSortDialog() {
+    final l10n = AppLocalizations.of(context)!;
     String tempSortBy = _sortBy;
     showDialog(
       context: context,
@@ -240,31 +320,31 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Sort by',
-                  style: TextStyle(
+                Text(
+                  l10n.sortBy,
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 20),
-                _buildSortOption('orders', 'Most Orders', Icons.trending_up, tempSortBy, (value) {
+                _buildSortOption('orders', l10n.mostOrders, Icons.trending_up, tempSortBy, (value) {
                   setDialogState(() {
                     tempSortBy = value;
                   });
                 }),
-                _buildSortOption('price_low', 'Price: Low to High', Icons.arrow_upward, tempSortBy, (value) {
+                _buildSortOption('price_low', l10n.priceLowToHigh, Icons.arrow_upward, tempSortBy, (value) {
                   setDialogState(() {
                     tempSortBy = value;
                   });
                 }),
-                _buildSortOption('price_high', 'Price: High to Low', Icons.arrow_downward, tempSortBy, (value) {
+                _buildSortOption('price_high', l10n.priceHighToLow, Icons.arrow_downward, tempSortBy, (value) {
                   setDialogState(() {
                     tempSortBy = value;
                   });
                 }),
-                _buildSortOption('newest', 'Newest First', Icons.new_releases, tempSortBy, (value) {
+                _buildSortOption('newest', l10n.newestFirst, Icons.new_releases, tempSortBy, (value) {
                   setDialogState(() {
                     tempSortBy = value;
                   });
@@ -280,9 +360,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.cancel,
+                          style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
@@ -306,9 +386,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
-                        child: const Text(
-                          'Done',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.done,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
@@ -326,6 +406,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
   }
 
   void _showFilterDialog() {
+    final l10n = AppLocalizations.of(context)!;
     String tempCategory = _selectedCategory;
     showDialog(
       context: context,
@@ -341,23 +422,23 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Filter by Category',
-                  style: TextStyle(
+                Text(
+                  l10n.filterByCategory,
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 20),
-                _buildFilterOption('All', 'All Categories', Icons.category, tempCategory, (value) {
+                _buildFilterOption('All', l10n.allCategories, Icons.category, tempCategory, (value) {
                   setDialogState(() {
                     tempCategory = value;
                   });
                 }),
                 ..._categories.map((category) => _buildFilterOption(
                   category['name'],
-                  category['name'],
+                  _getCategoryDisplayName(category['name']),
                   Icons.category,
                   tempCategory,
                   (value) {
@@ -377,9 +458,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.cancel,
+                          style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
@@ -403,9 +484,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
-                        child: const Text(
-                          'Done',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.done,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
@@ -513,6 +594,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: _categories.length,
+            physics: const BouncingScrollPhysics(),
             itemBuilder: (context, index) {
               final category = _categories[index];
               final isSelected = _selectedCategory == category['name'];
@@ -521,7 +603,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                   NavigationService.push(
                     context,
                     CategoryPage(
-                      title: category['name'],
+                      title: _getCategoryDisplayName(category['name']),
                       accentColor: Colors.orange,
                       imageAsset: category['icon'],
                     ),
@@ -539,7 +621,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        category['name'],
+                        _getCategoryDisplayName(category['name']),
                         style: TextStyle(
                           color: isSelected ? Colors.orange : Colors.grey[600],
                           fontSize: 12,
@@ -559,16 +641,17 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
   }
 
   Widget _buildSearchResults() {
+    final l10n = AppLocalizations.of(context)!;
     return StreamBuilder<List<MarketplaceProduct>>(
       stream: _databaseService.searchMarketplaceProducts(
         query: _currentSearchQuery,
-        category: _selectedCategory == 'All' ? null : _selectedCategory,
+        category: _selectedCategory == 'All' ? null : _getCategoryFilterName(_selectedCategory),
         sortBy: _sortBy,
         limit: 50,
       ),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+          return Center(child: Text(l10n.error(snapshot.error.toString())));
         }
 
         if (!snapshot.hasData) {
@@ -591,7 +674,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                   Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
-                    'No products found for "${_currentSearchQuery}"',
+                    l10n.noProductsFoundFor(_currentSearchQuery),
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.grey[600],
@@ -642,6 +725,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
   }
 
   Widget _buildRegularSections() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         // New Listings section
@@ -651,9 +735,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             children: [
               const Icon(Icons.star, color: Colors.black),
               const SizedBox(width: 8),
-              const Text(
-                'New Listings',
-                style: TextStyle(
+              Text(
+                l10n.newListings,
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -669,7 +753,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             stream: _databaseService.getNewMarketplaceProducts(limit: 5),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return Center(child: Text(l10n.error(snapshot.error.toString())));
               }
 
               if (!snapshot.hasData) {
@@ -686,7 +770,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: products.length,
-                physics: const ClampingScrollPhysics(),
+                physics: const BouncingScrollPhysics(),
                 itemBuilder: (context, index) {
                   return LazyMarketplaceProductCard(
                     product: products[index],
@@ -706,9 +790,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             children: [
               const Icon(Icons.recommend, color: Colors.black),
               const SizedBox(width: 8),
-              const Text(
-                'Recommended',
-                style: TextStyle(
+              Text(
+                l10n.recommended,
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -724,7 +808,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             stream: _databaseService.getRecommendedMarketplaceProducts(limit: 5),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return Center(child: Text(l10n.error(snapshot.error.toString())));
               }
 
               if (!snapshot.hasData) {
@@ -737,10 +821,10 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
               }
 
               if (snapshot.data!.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
-                    'No recommended products available',
-                    style: TextStyle(
+                    l10n.noRecommendedProductsAvailable,
+                    style: const TextStyle(
                       color: Colors.grey,
                       fontSize: 16,
                     ),
@@ -753,7 +837,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: products.length,
-                physics: const ClampingScrollPhysics(),
+                physics: const BouncingScrollPhysics(),
                 itemBuilder: (context, index) {
                   return LazyMarketplaceProductCard(
                     product: products[index],
@@ -773,9 +857,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             children: [
               const Icon(Icons.trending_up, color: Colors.black),
               const SizedBox(width: 8),
-              const Text(
-                'Popular Products',
-                style: TextStyle(
+              Text(
+                l10n.popularProducts,
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -789,12 +873,12 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: StreamBuilder<List<MarketplaceProduct>>(
             stream: _databaseService.getMarketplaceProducts(
-              category: _selectedCategory == 'All' ? null : _selectedCategory,
+              category: _selectedCategory == 'All' ? null : _getCategoryFilterName(_selectedCategory),
               limit: 6,
             ),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return Center(child: Text(l10n.error(snapshot.error.toString())));
               }
 
               if (!snapshot.hasData) {
@@ -807,10 +891,10 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
               }
 
               if (snapshot.data!.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
-                    'No popular products available',
-                    style: TextStyle(
+                    l10n.noPopularProductsAvailable,
+                    style: const TextStyle(
                       color: Colors.grey,
                       fontSize: 16,
                     ),
@@ -845,6 +929,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
   }
 
   Widget _buildProductCard(MarketplaceProduct product, {bool isLarge = false}) {
+    final l10n = AppLocalizations.of(context)!;
     final discountPercentage = product.originalPrice > 0
         ? ((1 - (product.price / product.originalPrice)) * 100).round()
         : 0;
@@ -892,8 +977,11 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                       height: isLarge ? 140 : 200,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      placeholder: const Center(
-                        child: SpinningLoader(color: Colors.orange),
+                      placeholder: Image.asset(
+                        'assets/images/photo_loader.png',
+                        fit: BoxFit.cover,
+                        height: isLarge ? 140 : 200,
+                        width: double.infinity,
                       ),
                       errorWidget: Container(
                         color: Colors.grey[200],
@@ -954,7 +1042,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                                     ),
                                     const SizedBox(width: 2),
                                     Text(
-                                      currencyService.formatPrice(product.price),
+                                      currencyService.formatProductPrice(product.price, product.currency),
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -963,14 +1051,14 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                                     ),
                                   ],
                                 )
-                              : Text(
-                                  currencyService.formatPrice(product.price),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: product.type == 'store' ? Colors.green : Colors.orange,
-                                  ),
+                              :                               Text(
+                                currencyService.formatProductPrice(product.price, product.currency),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: product.type == 'store' ? Colors.green : Colors.orange,
                                 ),
+                              ),
                             if (discountPercentage > 0) ...[
                               const SizedBox(width: 8),
                               currencyService.currentCurrency == Currency.DZD
@@ -982,7 +1070,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                                       ),
                                       const SizedBox(width: 2),
                                       Text(
-                                        currencyService.formatPrice(product.originalPrice),
+                                        currencyService.formatProductPrice(product.originalPrice, product.currency),
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Colors.grey[600],
@@ -991,14 +1079,14 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                                       ),
                                     ],
                                   )
-                                : Text(
-                                    currencyService.formatPrice(product.originalPrice),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
+                                :                                 Text(
+                                  currencyService.formatProductPrice(product.originalPrice, product.currency),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    decoration: TextDecoration.lineThrough,
                                   ),
+                                ),
                             ],
                           ],
                         );
@@ -1037,7 +1125,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                'Free Shipping',
+                                l10n.freeShipping,
                                 style: TextStyle(
                                   color: Colors.green[700],
                                   fontSize: 10,
@@ -1105,8 +1193,11 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                       height: 120,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      placeholder: const Center(
-                        child: SpinningLoader(color: Colors.orange),
+                      placeholder: Image.asset(
+                        'assets/images/photo_loader.png',
+                        fit: BoxFit.cover,
+                        height: 120,
+                        width: double.infinity,
                       ),
                       errorWidget: Container(
                         color: Colors.grey[200],
@@ -1164,7 +1255,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                                     ),
                                     const SizedBox(width: 2),
                                     Text(
-                                      currencyService.formatPrice(product.price),
+                                      currencyService.formatProductPrice(product.price, product.currency),
                                       style: TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.bold,
@@ -1173,14 +1264,14 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                                     ),
                                   ],
                                 )
-                              : Text(
-                                  currencyService.formatPrice(product.price),
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: product.type == 'store' ? Colors.green : Colors.orange,
-                                  ),
+                              :                               Text(
+                                currencyService.formatProductPrice(product.price, product.currency),
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: product.type == 'store' ? Colors.green : Colors.orange,
                                 ),
+                              ),
                             if (discountPercentage > 0) ...[
                               const SizedBox(width: 4),
                               currencyService.currentCurrency == Currency.DZD
@@ -1192,7 +1283,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                                       ),
                                       const SizedBox(width: 2),
                                       Text(
-                                        currencyService.formatPrice(product.originalPrice),
+                                        currencyService.formatProductPrice(product.originalPrice, product.currency),
                                         style: TextStyle(
                                           fontSize: 14,
                                           color: Colors.grey[600],
@@ -1201,14 +1292,14 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                                       ),
                                     ],
                                   )
-                                : Text(
-                                    currencyService.formatPrice(product.originalPrice),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
+                                :                                 Text(
+                                  currencyService.formatProductPrice(product.originalPrice, product.currency),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                    decoration: TextDecoration.lineThrough,
                                   ),
+                                ),
                             ],
                           ],
                         );
@@ -1248,9 +1339,11 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
         slivers: [
           // App Bar
           SliverAppBar(
@@ -1297,9 +1390,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             ],
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              title: const Text(
-                'Marketplace',
-                style: TextStyle(
+              title: Text(
+                l10n.marketplace,
+                style: const TextStyle(
                   color: Colors.black,
                   fontSize: 28,
                   fontFamily: 'Montserrat',
@@ -1329,10 +1422,10 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
                         ),
                       ],
                     ),
-                    child: TextField(
+                    child: KeyboardDismissibleTextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText: 'Search items, products...',
+                        hintText: l10n.searchItemsProducts,
                         hintStyle: TextStyle(color: Colors.grey[400], fontSize: 16),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),

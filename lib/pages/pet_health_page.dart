@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/database_service.dart';
 import 'package:flutter/cupertino.dart';
 import '../widgets/custom_snackbar.dart';
+import '../l10n/app_localizations.dart';
 
 class PetHealthPage extends StatefulWidget {
   final Pet pet;
@@ -32,11 +33,11 @@ class _PetHealthPageState extends State<PetHealthPage> {
       await DatabaseService().updatePet(updatedPet);
       setState(() => _pet = updatedPet);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vaccine added!')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.vaccineAdded)),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add vaccine: $e')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.failedToAddVaccine(e.toString()))),
       );
     }
   }
@@ -225,9 +226,9 @@ class _PetHealthPageState extends State<PetHealthPage> {
                   const SizedBox(width: 8),
                   const Icon(Icons.favorite, size: 28),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Health Information',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.healthInformation,
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 22,
                     ),
@@ -241,7 +242,7 @@ class _PetHealthPageState extends State<PetHealthPage> {
               // Vaccines section
               Row(
                 children: [
-                  const Text('Vaccines', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                  Text(AppLocalizations.of(context)!.vaccines, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
                   const SizedBox(width: 8),
                   Container(
                     width: 10,
@@ -263,7 +264,7 @@ class _PetHealthPageState extends State<PetHealthPage> {
               ),
               const SizedBox(height: 32),
               // Illness section
-              const Text('Illness', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+              Text(AppLocalizations.of(context)!.illness, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
               const SizedBox(height: 12),
               _IllnessSection(
                 illnesses: _pet.illnesses,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../widgets/spinning_loader.dart';
+import '../../l10n/app_localizations.dart';
 
 class PetIdManagementPage extends StatefulWidget {
   const PetIdManagementPage({Key? key}) : super(key: key);
@@ -47,7 +48,7 @@ class _PetIdManagementPageState extends State<PetIdManagementPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pet ID status updated successfully'),
+            content: Text(AppLocalizations.of(context)!.petIdStatusUpdated),
             backgroundColor: Colors.green,
           ),
         );
@@ -56,7 +57,7 @@ class _PetIdManagementPageState extends State<PetIdManagementPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating pet ID: $e'),
+            content: Text(AppLocalizations.of(context)!.errorUpdatingPetId(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -115,11 +116,11 @@ class _PetIdManagementPageState extends State<PetIdManagementPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Pet ID'),
+        title: Text(AppLocalizations.of(context)!.editPhysicalPetId),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Pet: ${petIdData['petId']}'),
+            Text('${AppLocalizations.of(context)!.pet}: ${petIdData['petId']}'),
             const SizedBox(height: 16),
             TextField(
               controller: idUrlController,
@@ -145,7 +146,7 @@ class _PetIdManagementPageState extends State<PetIdManagementPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -156,7 +157,7 @@ class _PetIdManagementPageState extends State<PetIdManagementPage>
                 idUrlController.text.trim(),
               );
             },
-            child: const Text('Update'),
+            child: Text(AppLocalizations.of(context)!.update),
           ),
         ],
       ),
@@ -173,21 +174,21 @@ class _PetIdManagementPageState extends State<PetIdManagementPage>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Pet: ${physicalIdData['petName']}'),
-            Text('Customer: ${physicalIdData['fullName']}'),
+            Text('${AppLocalizations.of(context)!.pet}: ${physicalIdData['petName']}'),
+            Text('${AppLocalizations.of(context)!.customer}: ${physicalIdData['fullName']}'),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: selectedStatus,
-              decoration: const InputDecoration(
-                labelText: 'Status',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.status,
+                border: const OutlineInputBorder(),
               ),
-              items: const [
-                DropdownMenuItem(value: 'pending', child: Text('Pending')),
-                DropdownMenuItem(value: 'processing', child: Text('Processing')),
-                DropdownMenuItem(value: 'shipped', child: Text('Shipped')),
-                DropdownMenuItem(value: 'delivered', child: Text('Delivered')),
-                DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
+              items: [
+                DropdownMenuItem(value: 'pending', child: Text(AppLocalizations.of(context)!.pending)),
+                DropdownMenuItem(value: 'processing', child: Text(AppLocalizations.of(context)!.processingStatus)),
+                DropdownMenuItem(value: 'shipped', child: Text(AppLocalizations.of(context)!.shipped)),
+                DropdownMenuItem(value: 'delivered', child: Text(AppLocalizations.of(context)!.delivered)),
+                DropdownMenuItem(value: 'cancelled', child: Text(AppLocalizations.of(context)!.cancelled)),
               ],
               onChanged: (value) {
                 selectedStatus = value!;
@@ -198,14 +199,14 @@ class _PetIdManagementPageState extends State<PetIdManagementPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
               _updatePhysicalPetIdStatus(docId, selectedStatus);
             },
-            child: const Text('Update'),
+            child: Text(AppLocalizations.of(context)!.update),
           ),
         ],
       ),
@@ -230,7 +231,7 @@ class _PetIdManagementPageState extends State<PetIdManagementPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('User ID: $userId'),
-            Text('Status: ${isAvailable ? 'Available' : 'Processing'}'),
+            Text('${AppLocalizations.of(context)!.status}: ${isAvailable ? AppLocalizations.of(context)!.ready : AppLocalizations.of(context)!.processing}'),
             if (createdAt != null)
               Text('Requested: ${createdAt.toDate().toString().split('.')[0]}'),
             if (idUrl.isNotEmpty)
@@ -247,7 +248,7 @@ class _PetIdManagementPageState extends State<PetIdManagementPage>
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                isAvailable ? 'Ready' : 'Processing',
+                isAvailable ? AppLocalizations.of(context)!.ready : AppLocalizations.of(context)!.processing,
                 style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
             ),
@@ -345,12 +346,12 @@ class _PetIdManagementPageState extends State<PetIdManagementPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pet ID Management'),
+        title: Text(AppLocalizations.of(context)!.petIdManagement),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Digital Pet IDs'),
-            Tab(text: 'Physical Pet IDs'),
+          tabs: [
+            Tab(text: AppLocalizations.of(context)!.digitalPetIds),
+            Tab(text: AppLocalizations.of(context)!.physicalPetIds),
           ],
         ),
       ),

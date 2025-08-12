@@ -12,6 +12,7 @@ import '../widgets/reviews_section.dart';
 import 'vet_chat_page.dart';
 import 'product_details_page.dart';
 import 'discussion_chat_page.dart';
+import '../l10n/app_localizations.dart';
 import 'dart:ui';
 
 
@@ -61,6 +62,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
   }
 
   Future<void> _loadUserPets() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       if (!mounted) return;
       
@@ -79,7 +81,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
             if (mounted) {
               setState(() => _isLoading = false);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error loading pets: $e')),
+                SnackBar(content: Text(l10n.errorLoadingPets(e.toString()))),
               );
             }
           });
@@ -87,13 +89,14 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading pets: $e')),
+          SnackBar(content: Text(l10n.errorLoadingPets(e.toString()))),
         );
       }
     }
   }
 
   Future<void> _checkFollowStatus() async {
+    final l10n = AppLocalizations.of(context)!;
     final currentUser = context.read<AuthService>().currentUser;
     if (currentUser == null) return;
 
@@ -112,10 +115,11 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
   }
 
   Future<void> _toggleFollow() async {
+    final l10n = AppLocalizations.of(context)!;
     final currentUser = context.read<AuthService>().currentUser;
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please sign in to follow users')),
+        SnackBar(content: Text(l10n.pleaseSignInToFollowUsers)),
       );
       return;
     }
@@ -139,13 +143,14 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
       if (mounted) {
         setState(() => _isLoadingFollow = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating follow status: $e')),
+          SnackBar(content: Text(l10n.errorUpdatingFollowStatus(e.toString()))),
         );
       }
     }
   }
 
   Future<void> _contactVet() async {
+    final l10n = AppLocalizations.of(context)!;
     if (widget.user.accountType != 'vet') return;
 
     try {
@@ -155,12 +160,13 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error opening chat: $e')),
+        SnackBar(content: Text(l10n.errorOpeningChat(e.toString()))),
       );
     }
   }
 
   Widget _buildPatientsList(List<String> patients) {
+    final l10n = AppLocalizations.of(context)!;
     return FutureBuilder<List<Pet>>(
       future: _databaseService.getPets(patients),
       builder: (context, snapshot) {
@@ -168,10 +174,10 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
           return const Center(child: SpinningLoader());
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
-              'No patients found',
-              style: TextStyle(color: Colors.grey),
+              l10n.noPatientsFound,
+              style: const TextStyle(color: Colors.grey),
             ),
           );
         }
@@ -220,6 +226,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
   }
 
   Widget _buildProductsGrid(User user) {
+    final l10n = AppLocalizations.of(context)!;
     return StreamBuilder<List<StoreProduct>>(
       stream: _databaseService.getStoreProducts(storeId: user.id),
       builder: (context, snapshot) {
@@ -227,10 +234,10 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
           return const Center(child: SpinningLoader());
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
-            'No products yet',
-            style: TextStyle(
+            l10n.noProductsYet,
+            style: const TextStyle(
               fontSize: 16,
               color: Colors.grey,
               ),
@@ -326,15 +333,16 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
   }
 
   Widget _buildPetsGrid() {
+    final l10n = AppLocalizations.of(context)!;
     if (_isLoading) {
       return const Center(child: SpinningLoader());
     }
     
     if (_userPets.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'No pets yet',
-          style: TextStyle(
+          l10n.noPetsYet,
+          style: const TextStyle(
             fontSize: 16,
             color: Colors.grey,
           ),
@@ -434,8 +442,9 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
   }
 
   Widget _buildCustomTabBar(bool isVet, bool isStore) {
-    final firstTabText = isVet ? 'Patients' : (isStore ? 'Products' : 'Pets');
-    const secondTabText = 'Reviews';
+    final l10n = AppLocalizations.of(context)!;
+    final firstTabText = isVet ? l10n.patients : (isStore ? l10n.products : l10n.pets);
+    final secondTabText = l10n.reviews;
     
     // Calculate text widths
     final firstTabWidth = _calculateTextWidth(firstTabText);
@@ -575,6 +584,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
   }
 
   Widget _buildBlurredDropdownMenu(User user) {
+    final l10n = AppLocalizations.of(context)!;
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
@@ -598,7 +608,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
             children: [
               _buildDropdownMenuItem(
                 icon: Icons.message_outlined,
-                title: 'Send a message',
+                title: l10n.sendAMessage,
                 onTap: () {
                   Navigator.pop(context);
                   _navigateToChat(user);
@@ -607,7 +617,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
               const Divider(height: 1, color: Colors.black12),
               _buildDropdownMenuItem(
                 icon: Icons.report_outlined,
-                title: 'Report account',
+                title: l10n.reportAccount,
                 onTap: () {
                   Navigator.pop(context);
                   _showReportDialog(user);
@@ -659,10 +669,11 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
   }
 
   void _navigateToChat(User user) {
+    final l10n = AppLocalizations.of(context)!;
     final currentUser = context.read<AuthService>().currentUser;
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please sign in to send messages')),
+        SnackBar(content: Text(l10n.pleaseSignInToSendMessages)),
       );
       return;
     }
@@ -1198,6 +1209,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return StreamBuilder<User?>(
       stream: _userStream,
       builder: (context, snapshot) {
@@ -1323,7 +1335,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                           _buildCompactDivider(),
                           _buildCompactStat(
                                       (user.followersCount).toString(),
-                            'Followers',
+                            l10n.followers,
                           ),
                           _buildCompactDivider(),
                           _buildCompactStat(
@@ -1338,7 +1350,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                           _buildCompactDivider(),
                           _buildCompactStat(
                             (user.followersCount).toString(),
-                            'Followers',
+                            l10n.followers,
                           ),
                           _buildCompactDivider(),
                           _buildCompactStat(
@@ -1353,7 +1365,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                           _buildCompactDivider(),
                           _buildCompactStat(
                             (user.followersCount).toString(),
-                                'Followers',
+                                l10n.followers,
                           ),
                           _buildCompactDivider(),
                           _buildCompactStat(
@@ -1384,7 +1396,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _buildActionButton(
-                          text: _isFollowing ? 'Following' : 'Follow',
+                          text: _isFollowing ? l10n.following : l10n.follow,
                           onPressed: _isLoadingFollow ? null : _toggleFollow,
                           isLoading: _isLoadingFollow,
                           isPrimary: !_isFollowing,
@@ -1395,7 +1407,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                         if (isVet) ...[
                           const SizedBox(width: 12),
                         _buildActionButton(
-                            text: 'Contact',
+                            text: l10n.contact,
                             onPressed: _contactVet,
                           isLoading: false,
                           isPrimary: false,

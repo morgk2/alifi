@@ -5,6 +5,7 @@ import '../config/mapbox_config.dart';
 import '../services/places_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../widgets/keyboard_dismissible_text_field.dart';
 
 class LocationPickerDialog extends StatefulWidget {
   final latlong.LatLng? initialLocation;
@@ -163,7 +164,7 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                           width: 1,
                         ),
                       ),
-                      child: TextField(
+                      child: KeyboardDismissibleTextField(
                         controller: _searchController,
                         focusNode: _searchFocusNode,
                         decoration: InputDecoration(
@@ -225,6 +226,9 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                       options: MapOptions(
                         initialCenter: _selectedLocation ?? const latlong.LatLng(36.7538, 3.0588),
                         initialZoom: 15,
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.drag | InteractiveFlag.pinchZoom,
+                        ),
                         onTap: (_, point) {
                           setState(() => _selectedLocation = point);
                           _reverseGeocode(point);

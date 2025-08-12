@@ -176,7 +176,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         Consumer<CurrencyService>(
                           builder: (context, currencyService, child) {
                             return Text(
-                              currencyService.formatPrice(widget.product.price),
+                              currencyService.formatProductPrice(widget.product.price, widget.product.currency),
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -259,8 +259,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       const SizedBox(height: 8),
                                              Consumer<CurrencyService>(
                          builder: (context, currencyService, child) {
+                           // Convert to DZD for display
+                           final productPriceInDzd = currencyService.getPaymentAmount(widget.product.price, widget.product.currency);
                            return Text(
-                             'Total: ${currencyService.formatPrice(_quantity * widget.product.price)}',
+                             'Total: ${currencyService.formatProductPrice(_quantity * productPriceInDzd, 'DZD')}',
                              style: const TextStyle(
                                fontSize: 14,
                                fontWeight: FontWeight.w600,
@@ -542,12 +544,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   const SizedBox(height: 16),
                                                        Consumer<CurrencyService>(
                     builder: (context, currencyService, child) {
+                      // Convert product price to DZD for display since we charge in DZD
+                      final productPriceInDzd = currencyService.getPaymentAmount(widget.product.price, widget.product.currency);
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('Subtotal (${_quantity}x)'),
                           Text(
-                            currencyService.formatPrice(_quantity * widget.product.price),
+                            currencyService.formatProductPrice(_quantity * productPriceInDzd, 'DZD'),
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -571,15 +575,33 @@ class _CheckoutPageState extends State<CheckoutPage> {
                    const SizedBox(height: 8),
                                        Consumer<CurrencyService>(
                       builder: (context, currencyService, child) {
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        return Column(
                           children: [
-                            const Text('Tax'),
-                            Text(
-                              currencyService.formatPrice(2.0),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Tax'),
+                                Text(
+                                  currencyService.formatProductPrice(2.0, 'DZD'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('App Fee'),
+                                Text(
+                                  currencyService.formatProductPrice(470.0, 'DZD'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         );
@@ -598,8 +620,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                        ),
                                                Consumer<CurrencyService>(
                           builder: (context, currencyService, child) {
+                            // Convert product price to DZD and add app fee
+                            final productPriceInDzd = currencyService.getPaymentAmount(widget.product.price, widget.product.currency);
+                            final subtotalInDzd = _quantity * productPriceInDzd;
+                            final totalWithAppFee = subtotalInDzd + 2.0 + 470.0; // Tax + App fee
                             return Text(
-                              currencyService.formatPrice(_quantity * widget.product.price + 2.0),
+                              currencyService.formatProductPrice(totalWithAppFee, 'DZD'),
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -634,17 +660,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
              child: ElevatedButton(
                onPressed: _hasAddresses ? () {
                  // Navigate to payment screen
+                 final currencyService = Provider.of<CurrencyService>(context, listen: false);
+                 final productPriceInDzd = currencyService.getPaymentAmount(widget.product.price, widget.product.currency);
+                 final subtotalInDzd = _quantity * productPriceInDzd;
+                 final totalWithAppFee = subtotalInDzd + 2.0 + 470.0; // Tax + App fee
+                 
                  Navigator.push(
                    context,
                    MaterialPageRoute(
-                                           builder: (context) => PaymentPage(
-                        product: widget.product,
-                        selectedAddress: _selectedAddress!,
-                        subtotal: _quantity * widget.product.price,
-                        tax: 2.0,
-                        total: _quantity * widget.product.price + 2.0,
-                        quantity: _quantity,
-                      ),
+                     builder: (context) => PaymentPage(
+                       product: widget.product,
+                       selectedAddress: _selectedAddress!,
+                       subtotal: subtotalInDzd,
+                       tax: 2.0,
+                       total: totalWithAppFee,
+                       quantity: _quantity,
+                     ),
                    ),
                  );
                } : null,

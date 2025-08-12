@@ -24,6 +24,7 @@ class _AddProductPageState extends State<AddProductPage> {
   final _stockController = TextEditingController();
   final _shippingTimeController = TextEditingController();
   String _category = 'Food';
+  String _selectedCurrency = 'DZD'; // Default to DZD for Algerian market
   bool _isFreeShipping = false;
   final List<XFile> _images = [];
   bool _isLoading = false;
@@ -64,15 +65,15 @@ class _AddProductPageState extends State<AddProductPage> {
         _images.map((image) => storageService.uploadPetPhoto(File(image.path))),
       );
 
-      final currencyService = Provider.of<CurrencyService>(context, listen: false);
-      final priceInUsd = currencyService.parsePrice(_priceController.text);
+      // Parse price in the selected currency (no conversion needed)
+      final price = double.tryParse(_priceController.text) ?? 0.0;
       
       final newProduct = StoreProduct(
         id: '', // Firestore will generate
         name: _nameController.text,
         description: _descriptionController.text,
-        price: priceInUsd, // Convert to USD for storage
-        currency: 'USD', // Store in USD
+        price: price, // Store original price in selected currency
+        currency: _selectedCurrency, // Store the selected currency
         stockQuantity: int.parse(_stockController.text),
         category: _category,
         shippingTime: _shippingTimeController.text,
@@ -131,17 +132,16 @@ class _AddProductPageState extends State<AddProductPage> {
                 maxLines: 4,
               ),
               const SizedBox(height: 24),
+              // Currency Selection
+              _buildCurrencyDropdown(),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                    child: Consumer<CurrencyService>(
-                      builder: (context, currencyService, child) {
-                        return _buildTextField(
-                          controller: _priceController,
-                          label: 'Price (${currencyService.currencyName})',
-                          keyboardType: TextInputType.number,
-                        );
-                      },
+                    child: _buildTextField(
+                      controller: _priceController,
+                      label: 'Price ($_selectedCurrency)',
+                      keyboardType: TextInputType.number,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -263,6 +263,63 @@ class _AddProductPageState extends State<AddProductPage> {
                     child: Text(label),
                   ))
               .toList(),
+          decoration: InputDecoration(
+            fillColor: Colors.white,
+            filled: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCurrencyDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Currency',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _selectedCurrency,
+          onChanged: (value) {
+            setState(() {
+              _selectedCurrency = value!;
+            });
+          },
+          items: [
+            DropdownMenuItem(
+              value: 'DZD',
+              child: Row(
+                children: [
+                  const Text('🇩🇿 '),
+                  const SizedBox(width: 8),
+                  const Text('DZD - Algerian Dinar'),
+                ],
+              ),
+            ),
+            DropdownMenuItem(
+              value: 'USD',
+              child: Row(
+                children: [
+                  const Text('🇺🇸 '),
+                  const SizedBox(width: 8),
+                  const Text('USD - US Dollar'),
+                ],
+              ),
+            ),
+          ],
           decoration: InputDecoration(
             fillColor: Colors.white,
             filled: true,

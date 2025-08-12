@@ -5,12 +5,14 @@ import '../services/database_service.dart';
 import '../services/currency_service.dart';
 import 'package:provider/provider.dart';
 import 'skeleton_loader.dart';
+import '../l10n/app_localizations.dart';
 
 class SellerDashboardCard extends StatelessWidget {
   const SellerDashboardCard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final authService = Provider.of<AuthService>(context);
     final user = authService.currentUser;
 
@@ -52,9 +54,9 @@ class SellerDashboardCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  'Store Dashboard',
-                  style: TextStyle(
+                Text(
+                  l10n.storeDashboard,
+                  style: const TextStyle(
                     fontFamily: 'Montserrat',
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -82,7 +84,7 @@ class SellerDashboardCard extends StatelessWidget {
                         Icon(Icons.error_outline, color: Colors.red, size: 40),
                         const SizedBox(height: 8),
                         Text(
-                          'Error loading dashboard',
+                          l10n.errorLoadingDashboard,
                           style: TextStyle(color: Colors.red, fontSize: 14),
                         ),
                       ],
@@ -102,7 +104,7 @@ class SellerDashboardCard extends StatelessWidget {
                         Icon(Icons.info_outline, color: Colors.grey, size: 40),
                         const SizedBox(height: 8),
                         Text(
-                          'No dashboard data available',
+                          l10n.noDashboardDataAvailable,
                           style: TextStyle(color: Colors.grey, fontSize: 14),
                         ),
                       ],
@@ -136,7 +138,7 @@ class SellerDashboardCard extends StatelessWidget {
                           child: Consumer<CurrencyService>(
                             builder: (context, currencyService, child) {
                               return _buildStatCard(
-                                'Total Sales',
+                                l10n.totalSales,
                                 currencyService.formatPrice(totalSales),
                                 Icons.attach_money,
                                 Colors.green,
@@ -147,7 +149,7 @@ class SellerDashboardCard extends StatelessWidget {
                         const SizedBox(width: 16),
                         Expanded(
                           child: _buildStatCard(
-                            'Engagement',
+                            l10n.engagement,
                             engagementCount,
                             Icons.people,
                             Colors.blue,
@@ -160,7 +162,7 @@ class SellerDashboardCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _buildStatCard(
-                            'Total Orders',
+                            l10n.totalOrders,
                             ordersCount,
                             Icons.shopping_bag,
                             Colors.orange,
@@ -169,7 +171,7 @@ class SellerDashboardCard extends StatelessWidget {
                         const SizedBox(width: 16),
                         Expanded(
                           child: _buildStatCard(
-                            'Active Orders',
+                            l10n.activeOrders,
                             activeOrders,
                             Icons.local_shipping,
                             Colors.purple,
@@ -191,7 +193,7 @@ class SellerDashboardCard extends StatelessWidget {
                           );
                         },
                         icon: const Icon(Icons.analytics),
-                        label: const Text('View All Seller Tools'),
+                        label: Text(l10n.viewAllSellerTools),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.green,
                           padding: const EdgeInsets.symmetric(vertical: 12),

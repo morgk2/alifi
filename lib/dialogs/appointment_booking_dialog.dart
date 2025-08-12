@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../widgets/spinning_loader.dart';
 import '../widgets/custom_snackbar.dart';
+import '../l10n/app_localizations.dart';
 
 class AppointmentBookingDialog extends StatefulWidget {
   final User vetUser;
@@ -69,7 +70,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
       if (mounted) {
         CustomSnackBarHelper.showError(
           context,
-          'Error loading pets: $e',
+          AppLocalizations.of(context)!.errorLoadingPets(e),
         );
       }
     } finally {
@@ -94,7 +95,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
       if (mounted) {
         CustomSnackBarHelper.showError(
           context,
-          'Error loading time slots: $e',
+          AppLocalizations.of(context)!.errorLoadingTimeSlots(e),
         );
       }
     } finally {
@@ -108,7 +109,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
     if (_selectedDate == null || _selectedTimeSlot == null || _selectedPet == null) {
       CustomSnackBarHelper.showInfo(
         context,
-        'Please fill in all required fields',
+        AppLocalizations.of(context)!.pleaseFillRequiredFields,
       );
       return;
     }
@@ -143,7 +144,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
           Navigator.of(context).pop();
           CustomSnackBarHelper.showSuccess(
             context,
-            'Appointment request sent successfully!',
+            AppLocalizations.of(context)!.appointmentRequestSent,
           );
         }
       }
@@ -151,7 +152,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
       if (mounted) {
         CustomSnackBarHelper.showError(
           context,
-          'Error booking appointment: $e',
+          AppLocalizations.of(context)!.errorBookingAppointment(e),
         );
       }
     } finally {
@@ -165,8 +166,8 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Select Date',
+        Text(
+          AppLocalizations.of(context)!.selectDate,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -212,7 +213,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
                 Text(
                   _selectedDate != null
                       ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
-                      : 'Select a date',
+                      : AppLocalizations.of(context)!.selectADate,
                   style: TextStyle(
                     fontSize: 16,
                     color: _selectedDate != null ? Colors.black87 : Colors.grey[600],
@@ -234,8 +235,8 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Select Time',
+        Text(
+          AppLocalizations.of(context)!.selectTime,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -251,8 +252,8 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
               color: Colors.grey[100],
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text(
-              'No available time slots for this date',
+            child: Text(
+              AppLocalizations.of(context)!.noAvailableTimeSlotsForThisDate,
               style: TextStyle(color: Colors.grey),
             ),
           )
@@ -297,8 +298,8 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Select Pet',
+          Text(
+            AppLocalizations.of(context)!.selectPet,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -311,9 +312,9 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
               color: Colors.grey[100],
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text(
-              'No pets found. Please add a pet first.',
-              style: TextStyle(color: Colors.grey),
+            child: Text(
+              AppLocalizations.of(context)!.noPetsFoundPleaseAdd,
+              style: const TextStyle(color: Colors.grey),
             ),
           ),
         ],
@@ -323,8 +324,8 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Select Pet',
+        Text(
+          AppLocalizations.of(context)!.selectPet,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -386,8 +387,8 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Appointment Type',
+        Text(
+          AppLocalizations.of(context)!.appointmentType,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -422,8 +423,8 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Reason (Optional)',
+        Text(
+          AppLocalizations.of(context)!.reasonOptional,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -433,7 +434,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
         TextField(
           controller: _reasonController,
           decoration: InputDecoration(
-            hintText: 'Describe the reason for the appointment...',
+            hintText: AppLocalizations.of(context)!.describeAppointmentReason,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -465,8 +466,8 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
           color: Colors.black,
         ),
         ),
-        title: const Text(
-          'Book Appointment',
+        title: Text(
+          AppLocalizations.of(context)!.bookAppointment,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -542,7 +543,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Dr. ${widget.vetUser.displayName ?? 'Veterinarian'}',
+                  'Dr. ${widget.vetUser.displayName ?? AppLocalizations.of(context)!.veterinarian}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -551,7 +552,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Veterinarian',
+                  AppLocalizations.of(context)!.veterinarian,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[600],
@@ -579,7 +580,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No Pets Found',
+              AppLocalizations.of(context)!.noPetsFound,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -588,7 +589,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
             ),
             const SizedBox(height: 8),
             Text(
-              'You need to add a pet before booking an appointment.',
+              AppLocalizations.of(context)!.needToAddPetBeforeBooking,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -609,7 +610,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('Add Pet'),
+              child: Text(AppLocalizations.of(context)!.addPet),
             ),
           ],
         ),
@@ -643,7 +644,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text('Cancel'),
+                child: Text(AppLocalizations.of(context)!.cancel),
               ),
             ),
             const SizedBox(width: 16),
@@ -669,7 +670,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Text('Book Appointment'),
+                     : Text(AppLocalizations.of(context)!.bookAppointment),
               ),
             ),
           ],

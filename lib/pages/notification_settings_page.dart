@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:provider/provider.dart';
 import '../services/push_notification_service.dart';
-import '../services/database_service.dart';
-import '../services/auth_service.dart';
 import '../dialogs/notification_permission_dialog.dart';
 import '../models/notification.dart';
 import '../widgets/custom_snackbar.dart';
+import '../l10n/app_localizations.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
   const NotificationSettingsPage({super.key});
@@ -24,7 +22,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   Map<NotificationType, bool> _notificationPreferences = {};
   
   // General notification settings
-  bool _pushNotifications = true;
   bool _emailNotifications = true;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
@@ -65,14 +62,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       if (mounted) {
         CustomSnackBarHelper.showSuccess(
           context,
-          'Notification preferences saved successfully!',
+          AppLocalizations.of(context)!.notificationPreferencesSavedSuccessfully,
         );
       }
     } catch (e) {
       if (mounted) {
         CustomSnackBarHelper.showError(
           context,
-          'Error saving preferences: $e',
+          AppLocalizations.of(context)!.errorSavingPreferences(e),
         );
       }
     } finally {
@@ -94,14 +91,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       if (mounted) {
         CustomSnackBarHelper.showSuccess(
           context,
-          'Test notification sent!',
+          AppLocalizations.of(context)!.testNotificationSent,
         );
       }
     } catch (e) {
       if (mounted) {
         CustomSnackBarHelper.showError(
           context,
-          'Error sending test notification: $e',
+          AppLocalizations.of(context)!.errorSendingTestNotification(e),
         );
       }
     } finally {
@@ -128,7 +125,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         if (mounted) {
           CustomSnackBarHelper.showSuccess(
             context,
-            'Notifications enabled successfully!',
+            AppLocalizations.of(context)!.notificationsEnabledSuccessfully,
           );
         }
       } else {
@@ -140,7 +137,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       if (mounted) {
         CustomSnackBarHelper.showError(
           context,
-          'Error requesting permission: $e',
+          AppLocalizations.of(context)!.errorRequestingPermission(e),
         );
       }
     } finally {
@@ -232,9 +229,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
-          'Notification Settings',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.notificationSettings,
+          style: const TextStyle(
             fontFamily: 'Inter',
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -286,7 +283,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Push Notifications',
+                              AppLocalizations.of(context)!.pushNotifications,
                               style: const TextStyle(
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w700,
@@ -296,8 +293,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                             ),
                             Text(
                               _notificationsEnabled 
-                                ? 'Notifications are enabled'
-                                : 'Notifications are disabled',
+                                ? AppLocalizations.of(context)!.notificationsEnabled
+                                : AppLocalizations.of(context)!.notificationsDisabled,
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 color: _notificationsEnabled ? Colors.green : Colors.red,
@@ -328,9 +325,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       child: ElevatedButton.icon(
                         onPressed: _isLoading ? null : _requestPermission,
                         icon: const Icon(CupertinoIcons.settings),
-                        label: const Text(
-                          'Enable Notifications',
-                          style: TextStyle(fontFamily: 'Inter'),
+                        label: Text(
+                          AppLocalizations.of(context)!.enableNotifications,
+                          style: const TextStyle(fontFamily: 'Inter'),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
@@ -350,7 +347,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             const SizedBox(height: 24),
 
             // General Settings Section
-            _buildSectionHeader('General Settings', CupertinoIcons.gear),
+            _buildSectionHeader(AppLocalizations.of(context)!.generalSettings, CupertinoIcons.gear),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -362,24 +359,24 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               child: Column(
                 children: [
                   _buildSettingTile(
-                    'Sound',
-                    'Play sound for notifications',
+                    AppLocalizations.of(context)!.sound,
+                    AppLocalizations.of(context)!.playSoundForNotifications,
                     CupertinoIcons.speaker_2,
                     Colors.blue,
                     _soundEnabled,
                     (value) => setState(() => _soundEnabled = value),
                   ),
                   _buildSettingTile(
-                    'Vibration',
-                    'Vibrate device for notifications',
+                    AppLocalizations.of(context)!.vibration,
+                    AppLocalizations.of(context)!.vibrateDeviceForNotifications,
                     CupertinoIcons.device_phone_portrait,
                     Colors.green,
                     _vibrationEnabled,
                     (value) => setState(() => _vibrationEnabled = value),
                   ),
                   _buildSettingTile(
-                    'Email Notifications',
-                    'Receive notifications via email',
+                    AppLocalizations.of(context)!.emailNotifications,
+                    AppLocalizations.of(context)!.receiveNotificationsViaEmail,
                     CupertinoIcons.mail,
                     Colors.purple,
                     _emailNotifications,
@@ -392,7 +389,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             const SizedBox(height: 24),
 
             // Quiet Hours Section
-            _buildSectionHeader('Quiet Hours', CupertinoIcons.moon),
+            _buildSectionHeader(AppLocalizations.of(context)!.quietHours, CupertinoIcons.moon),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -404,8 +401,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               child: Column(
                 children: [
                   _buildSettingTile(
-                    'Enable Quiet Hours',
-                    'Mute notifications during specified hours',
+                    AppLocalizations.of(context)!.enableQuietHours,
+                    AppLocalizations.of(context)!.muteNotificationsDuringSpecifiedHours,
                     CupertinoIcons.moon_fill,
                     Colors.indigo,
                     _quietHoursEnabled,
@@ -417,7 +414,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       children: [
                                                        Expanded(
                                  child: _buildTimeSelector(
-                                   'Start Time',
+                                   AppLocalizations.of(context)!.startTime,
                                    _quietHoursStart,
                                    () => _selectTime(context, true),
                                  ),
@@ -425,7 +422,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                                const SizedBox(width: 16),
                                Expanded(
                                  child: _buildTimeSelector(
-                                   'End Time',
+                                   AppLocalizations.of(context)!.endTime,
                                    _quietHoursEnd,
                                    () => _selectTime(context, false),
                                  ),
@@ -440,7 +437,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             const SizedBox(height: 24),
 
             // Notification Types Section
-            _buildSectionHeader('Notification Types', CupertinoIcons.list_bullet),
+            _buildSectionHeader(AppLocalizations.of(context)!.notificationTypes, CupertinoIcons.list_bullet),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -453,29 +450,29 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 children: [
                   _buildNotificationTypeTile(
                     NotificationType.chatMessage,
-                    'Chat Messages',
-                    'New messages from other users',
+                    AppLocalizations.of(context)!.chatMessages,
+                    AppLocalizations.of(context)!.newMessagesFromOtherUsers,
                     CupertinoIcons.chat_bubble_text,
                     Colors.blue,
                   ),
                   _buildNotificationTypeTile(
                     NotificationType.orderPlaced,
-                    'Order Updates',
-                    'Order status changes and updates',
+                    AppLocalizations.of(context)!.orderUpdates,
+                    AppLocalizations.of(context)!.orderStatusChangesAndUpdates,
                     CupertinoIcons.cart,
                     Colors.green,
                   ),
                   _buildNotificationTypeTile(
                     NotificationType.appointmentRequest,
-                    'Appointments',
-                    'Appointment requests and reminders',
+                    AppLocalizations.of(context)!.appointments,
+                    AppLocalizations.of(context)!.appointmentRequestsAndReminders,
                     CupertinoIcons.calendar,
                     Colors.orange,
                   ),
                   _buildNotificationTypeTile(
                     NotificationType.follow,
-                    'Social Activity',
-                    'New followers and social interactions',
+                    AppLocalizations.of(context)!.socialActivity,
+                    AppLocalizations.of(context)!.newFollowersAndSocialInteractions,
                     CupertinoIcons.person_add,
                     Colors.purple,
                   ),
@@ -486,7 +483,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             const SizedBox(height: 24),
 
                                // Test Section
-                   _buildSectionHeader('Test Notifications', CupertinoIcons.lab_flask),
+                   _buildSectionHeader(AppLocalizations.of(context)!.testNotifications, CupertinoIcons.lab_flask),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -502,9 +499,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                     child: ElevatedButton.icon(
                       onPressed: _isLoading ? null : _testNotification,
                       icon: const Icon(CupertinoIcons.bell),
-                      label: const Text(
-                        'Send Test Notification',
-                        style: TextStyle(fontFamily: 'Inter'),
+                      label: Text(
+                        AppLocalizations.of(context)!.sendTestNotification,
+                        style: const TextStyle(fontFamily: 'Inter'),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
@@ -518,7 +515,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Test notifications to verify they are working on your device.',
+                    AppLocalizations.of(context)!.testNotificationsDescription,
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 12,
@@ -547,9 +544,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 ),
                 child: _isLoading
                     ? const CupertinoActivityIndicator(color: Colors.white)
-                    : const Text(
-                        'Save Preferences',
-                        style: TextStyle(
+                    : Text(
+                        AppLocalizations.of(context)!.savePreferences,
+                        style: const TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -692,23 +689,23 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Text(
-          'Disable Notifications?',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.disableNotificationsTitle,
+          style: const TextStyle(
             fontFamily: 'Inter',
             fontWeight: FontWeight.w600,
           ),
         ),
-        content: const Text(
-          'You will no longer receive push notifications. You can re-enable them at any time.',
-          style: TextStyle(fontFamily: 'Inter'),
+        content: Text(
+          AppLocalizations.of(context)!.disableNotificationsDescription,
+          style: const TextStyle(fontFamily: 'Inter'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(fontFamily: 'Inter'),
+            child: Text(
+              AppLocalizations.of(context)!.cancel,
+              style: const TextStyle(fontFamily: 'Inter'),
             ),
           ),
           ElevatedButton(
@@ -722,9 +719,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text(
-              'Disable',
-              style: TextStyle(fontFamily: 'Inter'),
+            child: Text(
+              AppLocalizations.of(context)!.disable,
+              style: const TextStyle(fontFamily: 'Inter'),
             ),
           ),
         ],

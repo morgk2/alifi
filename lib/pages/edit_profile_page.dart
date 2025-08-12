@@ -14,6 +14,7 @@ import '../services/navigation_service.dart';
 import '../widgets/spinning_loader.dart';
 import 'package:flutter/services.dart';
 import '../services/storage_service.dart';
+import '../l10n/app_localizations.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -44,6 +45,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _pickCover() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final picker = ImagePicker();
       final XFile? image = await picker.pickImage(source: ImageSource.gallery);
@@ -66,7 +68,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error selecting cover: $e')),
+        SnackBar(content: Text(l10n.errorSelectingCover(e.toString()))),
       );
     }
   }
@@ -84,21 +86,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _showDeleteAccountDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Delete Account',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.deleteAccount,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          'Are you sure you want to delete your account? This action cannot be undone.',
+        content: Text(
+          l10n.areYouSureYouWantToDeleteYourAccount,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -106,9 +109,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
               Navigator.pop(context); // Close dialog
               Navigator.pop(context); // Go back to profile
             },
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              l10n.delete,
+              style: const TextStyle(color: Colors.red),
             ),
           ),
         ],
@@ -117,6 +120,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _saveChanges() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
 
     final authService = context.read<AuthService>();
@@ -146,7 +150,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _isSavingNotifier.value = false;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Profile updated successfully!'),
+            content: Text(l10n.profileUpdatedSuccessfully),
             backgroundColor: const Color(0xFFFF9E42),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -159,7 +163,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update profile: $e'),
+            content: Text(l10n.failedToUpdateProfile(e.toString())),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -171,6 +175,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -185,9 +191,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(
+        title: Text(
+          l10n.editProfile,
+          style: const TextStyle(
             color: Colors.black,
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -214,9 +220,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF9E42)),
                     ),
                   )
-                : const Text(
-                    'Save',
-                    style: TextStyle(
+                : Text(
+                    l10n.save,
+                    style: const TextStyle(
                       color: Color(0xFFFF9E42),
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -308,7 +314,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Tap to change photo',
+                              l10n.tapToChangePhoto,
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[600],
@@ -326,9 +332,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Cover photo (optional)',
-                                style: TextStyle(fontWeight: FontWeight.w600),
+                              Text(
+                                l10n.coverPhotoOptional,
+                                style: const TextStyle(fontWeight: FontWeight.w600),
                               ),
                               const SizedBox(height: 12),
                               Stack(
@@ -361,7 +367,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                         elevation: 0,
                                       ),
                                       icon: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
-                                      label: const Text('Change cover', style: TextStyle(color: Colors.white)),
+                                      label: Text(l10n.changeCover, style: const TextStyle(color: Colors.white)),
                                     ),
                                   ),
                                 ],
@@ -378,15 +384,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildFormField(
-                              label: 'Username',
+                              label: l10n.username,
                               controller: _usernameController,
-                              hintText: 'Enter username',
+                              hintText: l10n.enterUsername,
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Username cannot be empty';
+                                  return l10n.usernameCannotBeEmpty;
                                 }
                                 if (!RegExp(r'^[a-zA-Z0-9_]{3,20}$').hasMatch(value.trim())) {
-                                  return 'Invalid username (3-20 chars, letters, numbers, _)';
+                                  return l10n.invalidUsername;
                                 }
                                 return null;
                               },
@@ -398,12 +404,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             const SizedBox(height: 24),
                             
                             _buildFormField(
-                              label: 'Display Name',
+                              label: l10n.displayName,
                               controller: _displayNameController,
-                              hintText: 'Enter display name',
+                              hintText: l10n.enterDisplayName,
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
-                                  return 'Display name cannot be empty';
+                                  return l10n.displayNameCannotBeEmpty;
                                 }
                                 return null;
                               },
@@ -412,9 +418,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             if (isVetOrStore) ...[
                               const SizedBox(height: 24),
                               _buildFormField(
-                                label: 'Professional Info',
+                                label: l10n.professionalInfo,
                                 controller: _basicInfoController,
-                                hintText: 'Enter your qualifications, experience, etc.',
+                                hintText: l10n.enterYourQualificationsExperience,
                                 maxLines: 4,
                                 maxLength: 500,
                                 textCapitalization: TextCapitalization.sentences,
@@ -432,9 +438,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Account Type',
-                                style: TextStyle(
+                              Text(
+                                l10n.accountType,
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black87,
@@ -442,9 +448,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               ),
                               const SizedBox(height: 16),
                               _buildAccountTypeTile(
-                                'Request to be a Vet',
+                                l10n.requestToBeAVet,
                                 AppIcons.petsIcon,
-                                'Join our veterinary network',
+                                l10n.joinOurVeterinaryNetwork,
                                 () {
                                   NavigationService.push(
                                     context,
@@ -454,9 +460,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               ),
                               const SizedBox(height: 12),
                               _buildAccountTypeTile(
-                                'Request to be a Store',
+                                l10n.requestToBeAStore,
                                 AppIcons.storeIcon,
-                                'Sell pet products and services',
+                                l10n.sellPetProductsAndServices,
                                 () {
                                   NavigationService.push(
                                     context,
@@ -478,9 +484,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Linked Accounts',
-                              style: TextStyle(
+                            Text(
+                              l10n.linkedAccounts,
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
@@ -533,9 +539,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 side: BorderSide(color: Colors.red[300]!),
                               ),
                             ),
-                            child: const Text(
-                              'Delete Account',
-                              style: TextStyle(
+                            child: Text(
+                              l10n.deleteAccount,
+                              style: const TextStyle(
                                 color: Colors.red,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
@@ -558,15 +564,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   if (isSaving) {
                     return Container(
                       color: Colors.black.withOpacity(0.3),
-                      child: const Center(
+                      child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            SpinningLoader(size: 64, color: Color(0xFFFF9E42)),
-                            SizedBox(height: 16),
+                            const SpinningLoader(size: 64, color: Color(0xFFFF9E42)),
+                            const SizedBox(height: 16),
                             Text(
-                              'Saving changes...',
-                              style: TextStyle(
+                              l10n.savingChanges,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w500,
@@ -716,6 +722,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     bool isLinked,
     VoidCallback onTap,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -767,7 +774,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Linked',
+                    l10n.linked,
                     style: TextStyle(
                       color: Colors.green[600],
                       fontSize: 12,
@@ -787,9 +794,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: const Text(
-                'Link',
-                style: TextStyle(
+              child: Text(
+                l10n.link,
+                style: const TextStyle(
                   color: Color(0xFFFF9E42),
                   fontSize: 14,
                   fontWeight: FontWeight.w600,

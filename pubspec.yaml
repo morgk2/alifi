@@ -55,7 +55,12 @@ dependencies:
   firebase_messaging: ^15.2.10  # Updated to compatible version
   flutter_local_notifications: ^17.2.2  # Added for local notifications
   cloud_functions: ^5.6.2  # Added for Firebase Functions
-
+  webview_flutter: ^4.4.2  # Added for payment webview
+  webview_flutter_android: ^3.12.0  # Added for Android WebView support
+  webview_flutter_wkwebview: ^3.9.0  # Added for iOS WebView support
+  photo_view: ^0.14.0  # Added for pinch-to-zoom functionality
+  chargily_epay_flutter:
+    path: ./chargily-epay-flutter/chargily_epay_flutter
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
@@ -65,6 +70,10 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.14.4
   flutter_lints: ^2.0.0
+
+# Dependency overrides to resolve logger conflict
+# dependency_overrides:
+#   logger: ^2.0.0
 
 # Flutter launcher icons configuration
 flutter_launcher_icons:
@@ -90,6 +99,7 @@ flutter:
   assets:
     - assets/images/alifi_logo.png
     - assets/images/app_icon.png
+    - assets/images/photo_loader.png
     - assets/images/cat_icon.png
     - assets/images/dog_icon.png
     - assets/images/ai_lufi.png
@@ -153,6 +163,7 @@ flutter:
     - assets/images/notification_icon.png
     - assets/images/back_icon.png
     - assets/images/menu.svg
+    - assets/images/photo_loader.png
     - assets/fonts/Inter-Italic-VariableFont_opsz,wght.ttf
     - assets/fonts/Inter-VariableFont_opsz,wght.ttf
     - assets/fonts/InterDisplay-Regular.ttf

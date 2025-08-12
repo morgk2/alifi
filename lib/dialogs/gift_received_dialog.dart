@@ -1,105 +1,166 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import '../models/gift.dart';
-import '../services/database_service.dart';
+import '../l10n/app_localizations.dart';
 
 class GiftReceivedDialog extends StatelessWidget {
-  final Gift gift;
+  final Map<String, dynamic> gift;
 
-  const GiftReceivedDialog({super.key, required this.gift});
+  const GiftReceivedDialog({
+    super.key,
+    required this.gift,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'You Have a Gift!',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.card_giftcard,
+                size: 48,
+                color: Colors.purple,
+              ),
             ),
-            const SizedBox(height: 16),
-            CircleAvatar(
-              radius: 40,
-              backgroundImage: gift.gifterPhotoUrl != null
-                  ? NetworkImage(gift.gifterPhotoUrl!)
-                  : null,
-              child: gift.gifterPhotoUrl == null
-                  ? const Icon(Icons.person, size: 40)
-                  : null,
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 20),
+            
+            // Title
             Text(
-              gift.gifterName,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Has gifted you:',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              gift.productName,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              AppLocalizations.of(context)!.youHaveAGift,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: CachedNetworkImage(
-                imageUrl: gift.productImageUrl,
-                height: 150,
-                width: 150,
-                fit: BoxFit.cover,
-                placeholder: (context, url) =>
-                    const Center(child: CircularProgressIndicator()),
-                errorWidget: (context, url, error) =>
-                    const Icon(Icons.error),
+            
+            // Gifter info
+            Text(
+              '${gift['gifterName'] ?? AppLocalizations.of(context)!.anonymous} ${AppLocalizations.of(context)!.hasGiftedYou}',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            
+            // Product info
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: CachedNetworkImage(
+                      imageUrl: gift['productImageUrl'] ?? '',
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image, color: Colors.grey),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.error, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          gift['productName'] ?? 'Unknown Product',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '\$${(gift['productPrice'] ?? 0.0).toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
+            
+            // Action buttons
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      DatabaseService().updateGiftStatus(gift.id, 'rejected');
+                      // TODO: Implement refuse gift
                       Navigator.of(context).pop();
                     },
                     style: OutlinedButton.styleFrom(
-                      shape: const StadiumBorder(),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: BorderSide(color: Colors.red.shade300),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: const BorderSide(color: Colors.red),
                     ),
-                    child: const Text('Refuse',
-                        style: TextStyle(fontSize: 16, color: Colors.red)),
+                    child: Text(
+                      AppLocalizations.of(context)!.refuse,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      DatabaseService().updateGiftStatus(gift.id, 'accepted');
+                      // TODO: Implement accept gift
                       Navigator.of(context).pop();
                     },
                     style: ElevatedButton.styleFrom(
-                      shape: const StadiumBorder(),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
                       backgroundColor: Colors.green,
-                      elevation: 0,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: const Text('Accept',
-                        style: TextStyle(fontSize: 16, color: Colors.white)),
+                    child: Text(AppLocalizations.of(context)!.accept),
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),

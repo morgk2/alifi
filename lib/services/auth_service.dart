@@ -573,6 +573,15 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Admin method to set current user without Firebase auth
+  Future<void> setCurrentUser(models.User user) async {
+    _currentUser = user;
+    _isGuestMode = false;
+    await _localStorage.setGuestMode(false);
+    await _prefs?.setString('user_id', user.id);
+    notifyListeners();
+  }
+
   /// Check if the current user needs to set up their business location
   bool needsLocationSetup() {
     if (_currentUser == null) return false;

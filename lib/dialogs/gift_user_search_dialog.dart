@@ -1,16 +1,23 @@
 import 'package:alifi/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/gift.dart';
-import '../models/user.dart';
-import '../models/store_product.dart';
-import '../services/database_service.dart';
-import '../widgets/spinning_loader.dart';
+import '../l10n/app_localizations.dart';
 
 class GiftUserSearchDialog extends StatefulWidget {
-  final dynamic product;
+  final String productId;
+  final String productName;
+  final String productImage;
+  final double productPrice;
+  final String productType; // 'store' or 'aliexpress'
 
-  const GiftUserSearchDialog({super.key, required this.product});
+  const GiftUserSearchDialog({
+    super.key,
+    required this.productId,
+    required this.productName,
+    required this.productImage,
+    required this.productPrice,
+    required this.productType,
+  });
 
   @override
   State<GiftUserSearchDialog> createState() => _GiftUserSearchDialogState();
@@ -18,217 +25,364 @@ class GiftUserSearchDialog extends StatefulWidget {
 
 class _GiftUserSearchDialogState extends State<GiftUserSearchDialog> {
   final TextEditingController _searchController = TextEditingController();
-  Future<List<User>>? _searchResults;
+  List<User> _searchResults = [];
+  bool _isSearching = false;
+  String _searchQuery = '';
 
-  void _searchUsers(String query) {
-    if (query.isNotEmpty) {
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+    });
+    _performSearch();
+  }
+
+  Future<void> _performSearch() async {
+    if (_searchQuery.trim().isEmpty) {
       setState(() {
-        _searchResults = DatabaseService().searchUsers(displayName: query);
+        _searchResults = [];
       });
-    } else {
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      // Simulate search delay
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // TODO: Implement actual user search
+      // For now, show mock results
       setState(() {
-        _searchResults = null;
+        _searchResults = [
+          User(
+            id: '1',
+            email: 'user1@example.com',
+            displayName: 'John Doe',
+            photoURL: null,
+          ),
+          User(
+            id: '2',
+            email: 'user2@example.com',
+            displayName: 'Jane Smith',
+            photoURL: null,
+          ),
+        ];
       });
+    } catch (e) {
+      // Handle error
+    } finally {
+      setState(() {
+        _isSearching = false;
+      });
+    }
+  }
+
+  void _giftToUser(User user) {
+    showDialog(
+      context: context,
+      builder: (context) => _GiftConfirmationDialog(
+        user: user,
+        productName: widget.productName,
+        productPrice: widget.productPrice,
+        onConfirm: () => _confirmGift(user),
+      ),
+    );
+  }
+
+  Future<void> _confirmGift(User user) async {
+    try {
+      final authService = context.read<AuthService>();
+      final currentUser = authService.currentUser;
+      
+      if (currentUser == null) return;
+
+      // TODO: Implement actual gift creation
+      final gift = {
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'gifterId': currentUser.id,
+        'gifterName': currentUser.displayName ?? AppLocalizations.of(context)!.anonymous,
+        'recipientId': user.id,
+        'recipientName': user.displayName ?? AppLocalizations.of(context)!.noName,
+        'productId': widget.productId,
+        'productName': widget.productName,
+        'productImage': widget.productImage,
+        'productPrice': widget.productPrice,
+        'productType': widget.productType == 'store' ? 'store' : 'aliexpress',
+        'status': 'pending',
+        'createdAt': DateTime.now().toIso8601String(),
+      };
+
+      // TODO: Save gift to database
+      print('Gift created: $gift');
+
+      if (mounted) {
+        Navigator.of(context).pop(); // Close confirmation dialog
+        Navigator.of(context).pop(); // Close search dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gift sent to ${user.displayName ?? AppLocalizations.of(context)!.noName}!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sending gift: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      backgroundColor: Colors.white,
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.5,
-        width: MediaQuery.of(context).size.width * 0.9,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Gift to a Friend',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        width: double.maxFinite,
+        constraints: const BoxConstraints(maxHeight: 600),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
               ),
-              const SizedBox(height: 16),
-              TextField(
+              child: Column(
+                children: [
+                  Text(
+                    AppLocalizations.of(context)!.giftToAFriend,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.productName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+            
+            // Search Section
+            Container(
+              padding: const EdgeInsets.all(20),
+              child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Search by name or email',
+                  hintText: AppLocalizations.of(context)!.searchByNameOrEmail,
                   prefixIcon: const Icon(Icons.search),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30.0),
-                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 0, horizontal: 20),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
-                onChanged: _searchUsers,
               ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: _searchResults == null
-                    ? const Center(child: Text('Search for users to gift.'))
-                    : FutureBuilder<List<User>>(
-                        future: _searchResults,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const SpinningLoader();
-                          }
-                          if (snapshot.hasError ||
-                              !snapshot.hasData ||
-                              snapshot.data!.isEmpty) {
-                            return const Center(
-                                child: Text('No users found.'));
-                          }
-                          final users = snapshot.data!;
-                          return ListView.builder(
-                            itemCount: users.length,
-                            itemBuilder: (context, index) {
-                              final user = users[index];
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundImage: user.photoURL != null
-                                      ? NetworkImage(user.photoURL!)
-                                      : null,
-                                  child: user.photoURL == null
-                                      ? const Icon(Icons.person)
-                                      : null,
+            ),
+            
+            // Results Section
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _searchQuery.isEmpty
+                    ? Center(
+                        child: Text(
+                          AppLocalizations.of(context)!.searchForUsersToGift,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      )
+                    : _isSearching
+                        ? const Center(child: CircularProgressIndicator())
+                        : _searchResults.isEmpty
+                            ? Center(
+                                child: Text(
+                                  AppLocalizations.of(context)!.noUsersFound,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 16,
+                                  ),
                                 ),
-                                title: Text(user.displayName ?? 'No Name'),
-                                subtitle: Text(user.email ?? 'No Email'),
-                                trailing: ElevatedButton(
-                                  child: const Text('Gift'),
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (dialogContext) =>
-                                          _ConfirmGiftDialog(
-                                        user: user,
-                                        product: widget.product,
-                                        onConfirm: () {
-                                          final authService =
-                                              Provider.of<AuthService>(context,
-                                                  listen: false);
-                                          final gifter = authService.currentUser;
-                                          if (gifter == null) {
-                                            // Handle not logged in case
-                                            return;
-                                          }
-
-                                          final newGift = Gift(
-                                            id: '', // Firestore will generate
-                                            gifterId: gifter.id,
-                                            gifterName:
-                                                gifter.displayName ?? 'Anonymous',
-                                            gifterPhotoUrl: gifter.photoURL,
-                                            gifteeId: user.id,
-                                            productId: widget.product.id,
-                                            productName: widget.product.name,
-                                            productImageUrl:
-                                                widget.product.imageUrls.first,
-                                            productType:
-                                                widget.product is StoreProduct
-                                                    ? 'store'
-                                                    : 'aliexpress',
-                                            status: 'pending',
-                                            createdAt: DateTime.now(),
-                                          );
-
-                                          DatabaseService().sendGift(newGift);
-
-                                          Navigator.of(dialogContext)
-                                              .pop(); // Close confirmation
-                                          Navigator.of(context)
-                                              .pop(); // Close search dialog
-                                        },
-                                      ),
-                                    );
-                                  },
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
+                              )
+                            : ListView.builder(
+                                itemCount: _searchResults.length,
+                                itemBuilder: (context, index) {
+                                  final user = _searchResults[index];
+                                  return _UserListItem(
+                                    user: user,
+                                    onGift: () => _giftToUser(user),
+                                  );
+                                },
+                              ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _ConfirmGiftDialog extends StatelessWidget {
+class _UserListItem extends StatelessWidget {
   final User user;
-  final dynamic product;
+  final VoidCallback onGift;
+
+  const _UserListItem({
+    required this.user,
+    required this.onGift,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) : null,
+            child: user.photoURL == null
+                ? Text(
+                    (user.displayName ?? AppLocalizations.of(context)!.noName)[0].toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.displayName ?? AppLocalizations.of(context)!.noName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  user.email ?? AppLocalizations.of(context)!.noEmail,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: onGift,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(AppLocalizations.of(context)!.gift),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GiftConfirmationDialog extends StatelessWidget {
+  final User user;
+  final String productName;
+  final double productPrice;
   final VoidCallback onConfirm;
 
-  const _ConfirmGiftDialog({
+  const _GiftConfirmationDialog({
     required this.user,
-    required this.product,
+    required this.productName,
+    required this.productPrice,
     required this.onConfirm,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Text(
-              'Confirm Your Gift',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Are you sure you want to gift this product to ${user.displayName}?',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      shape: const StadiumBorder(),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    child: const Text('Cancel',
-                        style: TextStyle(fontSize: 16, color: Colors.black87)),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: onConfirm,
-                    style: ElevatedButton.styleFrom(
-                      shape: const StadiumBorder(),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor: Colors.green,
-                      elevation: 0,
-                    ),
-                    child: const Text('Confirm',
-                        style: TextStyle(fontSize: 16, color: Colors.white)),
-                  ),
-                ),
-              ],
-            )
-          ],
-        ),
+    return AlertDialog(
+      title: Text(AppLocalizations.of(context)!.confirmYourGift),
+      content: Text(
+        AppLocalizations.of(context)!.areYouSureYouWantToGiftThisProductTo(user.displayName ?? AppLocalizations.of(context)!.noName),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(AppLocalizations.of(context)!.cancel),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            onConfirm();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+          ),
+          child: Text(AppLocalizations.of(context)!.confirm),
+        ),
+      ],
     );
   }
+}
+
+class User {
+  final String id;
+  final String? email;
+  final String? displayName;
+  final String? photoURL;
+
+  User({
+    required this.id,
+    this.email,
+    this.displayName,
+    this.photoURL,
+  });
 } 

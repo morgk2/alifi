@@ -101,7 +101,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _lastBackPressTime = now;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)?.proceed ?? 'Press back again to exit'),
+          content: Text(AppLocalizations.of(context)?.pressBackAgainToExit ?? 'Press back again to exit'),
           duration: Duration(seconds: 2),
           backgroundColor: Colors.black87,
         ),
@@ -409,6 +409,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         _isLoadingPetsNotifier.value = false;
         if (pets.isEmpty) {
           print('No nearby pets found, falling back to recent pets');
+          // Keep loading state true when switching to recent pets
+          _isLoadingPetsNotifier.value = true;
           _loadRecentLostPets();
         } else {
           _lostPetsNotifier.value = pets;
@@ -416,7 +418,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       }
     }, onError: (error) {
       if (kDebugMode) print('Error loading nearby lost pets: $error');
-      _isLoadingPetsNotifier.value = false;
+      // Keep loading state true when falling back to recent pets
+      _isLoadingPetsNotifier.value = true;
       // Fallback to recent pets on error
       _loadRecentLostPets();
     });
@@ -454,13 +457,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final difference = now.difference(dateTime);
     
     if (difference.inDays > 0) {
-      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
+      final days = difference.inDays;
+      final dayText = days == 1 ? AppLocalizations.of(context)!.day : AppLocalizations.of(context)!.days;
+      return '$days $dayText ${AppLocalizations.of(context)!.ago}';
     } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+      final hours = difference.inHours;
+      final hourText = hours == 1 ? AppLocalizations.of(context)!.hour : AppLocalizations.of(context)!.hours;
+      return '$hours $hourText ${AppLocalizations.of(context)!.ago}';
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+      final minutes = difference.inMinutes;
+      final minuteText = minutes == 1 ? AppLocalizations.of(context)!.minute : AppLocalizations.of(context)!.minutes;
+      return '$minutes $minuteText ${AppLocalizations.of(context)!.ago}';
     } else {
-      return 'Just now';
+      return AppLocalizations.of(context)!.justNow;
     }
   }
 
@@ -587,9 +596,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               size: 24,
             ),
             const SizedBox(width: 8),
-            const Text(
-              'Lost Pet Details',
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.lostPetDetails,
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
               ),
@@ -695,9 +704,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Close',
-              style: TextStyle(
+            child: Text(
+              AppLocalizations.of(context)!.close,
+              style: const TextStyle(
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -716,9 +725,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
-              'Open in Maps',
-              style: TextStyle(
+            child: Text(
+              AppLocalizations.of(context)!.openInMaps,
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -852,11 +861,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   // Heavy main content extracted so AnimatedBuilder can reuse it without rebuilding on every tick
   Widget _buildMainContent() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: Colors.white,
-      child: NotificationListener<ScrollNotification>(
+    return GestureDetector(
+      onHorizontalDragEnd: (details) {
+        // Check if the swipe was from left to right (positive velocity)
+        if (details.primaryVelocity != null && details.primaryVelocity! > 0) {
+          // Only open side menu if it's not already open
+          if (!_isSideMenuOpen) {
+            _openSideMenu();
+          }
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: Colors.white,
+        child: NotificationListener<ScrollNotification>(
             onNotification: (notification) {
               if (notification is ScrollStartNotification) {
                 if (_isRefreshingNotifier.value) {
@@ -979,9 +998,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            const Text(
-                              'Fundraising',
-                              style: TextStyle(
+                            Text(
+                              AppLocalizations.of(context)!.fundraising,
+                              style: const TextStyle(
                                 fontFamily: 'Montserrat',
                                 fontSize: 28,
                                 fontWeight: FontWeight.w800,
@@ -994,8 +1013,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         FundraisingCard(
                           fundraising: Fundraising(
                             id: 'fund_001',
-                            title: 'Animal Shelter Expansion',
-                            description: 'Help us expand our shelter to accommodate more animals in need.',
+                            title: AppLocalizations.of(context)!.animalShelterExpansion,
+                            description: AppLocalizations.of(context)!.helpUsExpandOurShelter,
                             currentAmount: 324223.21,
                             goalAmount: 635000.00,
                             creatorId: 'user_001',
@@ -1016,9 +1035,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               color: Colors.black,
                             ),
                             const SizedBox(width: 12),
-                            const Text(
-                              'AI Pet Assistant',
-                              style: TextStyle(
+                            Text(
+                              AppLocalizations.of(context)!.aiPetAssistant,
+                              style: const TextStyle(
                                 fontFamily: 'Montserrat',
                                 fontSize: 28,
                                 fontWeight: FontWeight.w800,
@@ -1040,6 +1059,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
               ],
             ),
+        ),
       ),
     );
   }
@@ -1069,7 +1089,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           // Profile option (now inside a white container like the others)
           _buildMenuGroup([
             _buildMenuItem(
-              title: 'Profile',
+              title: AppLocalizations.of(context)!.profile,
               onTap: () {
                 _closeSideMenu();
                 NavigationService.push(context, const ProfilePage());
@@ -1080,14 +1100,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           // Wishlist and Adoption Center group
           _buildMenuGroup([
             _buildMenuItem(
-              title: 'Wishlist',
+              title: AppLocalizations.of(context)!.wishlist,
               onTap: () {
                 _closeSideMenu();
                 NavigationService.push(context, const WishlistPage());
               },
             ),
             _buildMenuItem(
-              title: 'Adoption Center',
+              title: AppLocalizations.of(context)!.adoptionCenter,
               onTap: () {
                 _closeSideMenu();
                 NavigationService.push(context, const AdoptionCenterPage());
@@ -1098,7 +1118,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           // Orders & Messages group
           _buildMenuGroup([
             _buildMenuItem(
-              title: 'Orders & Messages',
+              title: AppLocalizations.of(context)!.ordersAndMessages,
               onTap: () {
                 _closeSideMenu();
                 NavigationService.push(context, const UserOrdersPage());
@@ -1109,14 +1129,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           // Become a Vet and Become a Store group
           _buildMenuGroup([
             _buildMenuItem(
-              title: 'Become a Vet',
+              title: AppLocalizations.of(context)!.becomeAVet,
               onTap: () {
                 _closeSideMenu();
                 NavigationService.push(context, const VetSignUpPage());
               },
             ),
             _buildMenuItem(
-              title: 'Become a Store',
+              title: AppLocalizations.of(context)!.becomeAStore,
               onTap: () {
                 _closeSideMenu();
                 NavigationService.push(context, const StoreSignUpPage());
@@ -1127,14 +1147,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           // Settings and Logout group
           _buildMenuGroup([
             _buildMenuItem(
-              title: 'Settings',
+              title: AppLocalizations.of(context)!.settings,
               onTap: () {
                 _closeSideMenu();
                 NavigationService.push(context, const SettingsPage());
               },
             ),
             _buildMenuItem(
-              title: 'Log out',
+              title: AppLocalizations.of(context)!.logOut,
               onTap: () async {
                 _closeSideMenu();
                 await Provider.of<AuthService>(context, listen: false).signOut();
@@ -1368,9 +1388,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                     if (!isStoreAccount && !isVetAccount) ...[
                       if (userLocation != null)
-                        const Text(
-                          "Lost pets nearby",
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.lostPetsNearby,
+                          style: const TextStyle(
                             fontFamily: 'Montserrat',
                             fontSize: 34,
                             fontWeight: FontWeight.w800,
@@ -1378,9 +1398,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ),
                         )
                       else
-                        const Text(
-                          "Recent lost pets",
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.recentLostPets,
+                          style: const TextStyle(
                             fontFamily: 'Montserrat',
                             fontSize: 34,
                             fontWeight: FontWeight.w800,
@@ -1551,9 +1571,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               size: 16,
                               color: Colors.white,
                             ),
-                            label: const Text(
-                              'Open in Maps',
-                              style: TextStyle(
+                            label: Text(
+                              AppLocalizations.of(context)!.openInMaps,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -1589,9 +1609,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   color: Colors.red,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  'LOST',
-                  style: TextStyle(
+                child: Text(
+                  AppLocalizations.of(context)!.lost,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -1611,15 +1631,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     String timeGreeting;
     
     if (hour < 12) {
-      timeGreeting = 'Good morning';
+      timeGreeting = AppLocalizations.of(context)!.goodMorning;
     } else if (hour < 17) {
-      timeGreeting = 'Good afternoon';
+      timeGreeting = AppLocalizations.of(context)!.goodAfternoon;
     } else {
-      timeGreeting = 'Good evening';
+      timeGreeting = AppLocalizations.of(context)!.goodEvening;
     }
     
     // Get the user's first name from display name
-    String firstName = 'user';
+    String firstName = AppLocalizations.of(context)!.user;
     if (user?.displayName != null && user!.displayName!.isNotEmpty) {
       final nameParts = user.displayName!.trim().split(' ');
       firstName = nameParts.first;
@@ -1690,8 +1710,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         final isLoadingLocation = _isLoadingLocationNotifier.value;
         final userLocation = _userLocationNotifier.value;
         
-        // Show skeleton only on initial load (no data yet) while loading
-        if (isLoadingPets && !isLoadingLocation && lostPets.isEmpty) {
+        // Show skeleton when loading pets (regardless of location loading status)
+        if (isLoadingPets && lostPets.isEmpty) {
           return _buildLostPetsSkeleton();
         }
         
@@ -1701,11 +1721,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           String subtitle = '';
           
           if (userLocation != null) {
-            message = 'No lost pets reported nearby';
-            subtitle = 'We\'ll notify you when pets are reported in your area';
+            message = AppLocalizations.of(context)!.noLostPetsReportedNearby;
+            subtitle = AppLocalizations.of(context)!.weWillNotifyYouWhenPetsAreReported;
           } else {
-            message = 'No recent lost pets reported';
-            subtitle = 'Enable location to see pets in your area';
+            message = AppLocalizations.of(context)!.noRecentLostPetsReported;
+            subtitle = AppLocalizations.of(context)!.enableLocationToSeePetsInYourArea;
           }
           
           return Center(

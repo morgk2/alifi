@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/fundraising.dart';
 import '../pages/contribute_page.dart';
+import '../l10n/app_localizations.dart';
 
 class FundraisingCard extends StatelessWidget {
   final Fundraising fundraising;
@@ -12,6 +13,7 @@ class FundraisingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final percentage = ((fundraising.currentAmount / fundraising.goalAmount) * 100).round();
 
     return Container(
@@ -33,7 +35,7 @@ class FundraisingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "We've raised ${fundraising.currentAmount.toStringAsFixed(2)} DZD!",
+              l10n.weveRaised(fundraising.currentAmount.toStringAsFixed(2)),
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -86,7 +88,7 @@ class FundraisingCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '${fundraising.goalAmount.toStringAsFixed(2)} Goal',
+                  '${fundraising.goalAmount.toStringAsFixed(2)} ${l10n.goal}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -160,20 +162,20 @@ class FundraisingCard extends StatelessWidget {
                   ),
                   elevation: 0,
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                  'Contribute',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                    ),
-                  ],
-                ),
+                                 child: Row(
+                   mainAxisAlignment: MainAxisAlignment.center,
+                   children: [
+                     const Icon(Icons.add, size: 20),
+                     const SizedBox(width: 8),
+                     Text(
+                   l10n.contribute,
+                   style: const TextStyle(
+                     fontSize: 16,
+                     fontWeight: FontWeight.bold,
+                   ),
+                     ),
+                   ],
+                 ),
               ),
             ),
           ],

@@ -8,7 +8,9 @@ import '../services/notification_service.dart';
 import '../models/chat_message.dart';
 
 import '../dialogs/store_products_dialog.dart';
+import '../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import '../widgets/keyboard_dismissible_text_field.dart';
 
 class StoreChatPage extends StatefulWidget {
   final StoreProduct product;
@@ -202,6 +204,7 @@ class _StoreChatPageState extends State<StoreChatPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SlideTransition(
       position: _slideAnimation,
       child: Scaffold(
@@ -255,7 +258,7 @@ class _StoreChatPageState extends State<StoreChatPage>
                       ),
                     ),
                     Text(
-                      'Online',
+                      l10n.online,
                       style: TextStyle(
                         color: Colors.green[600],
                         fontSize: 14,
@@ -401,10 +404,10 @@ class _StoreChatPageState extends State<StoreChatPage>
                           ),
                         ],
                       ),
-                      child: TextField(
+                      child: KeyboardDismissibleTextField(
                         controller: _messageController,
                         decoration: InputDecoration(
-                          hintText: 'Type your message...',
+                          hintText: l10n.typeMessage,
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                           hintStyle: TextStyle(

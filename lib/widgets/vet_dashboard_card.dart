@@ -5,12 +5,14 @@ import 'package:provider/provider.dart';
 import 'spinning_loader.dart';
 import 'skeleton_loader.dart';
 import '../pages/detailed_vet_dashboard_page.dart';
+import '../l10n/app_localizations.dart';
 
 class VetDashboardCard extends StatelessWidget {
   const VetDashboardCard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final authService = Provider.of<AuthService>(context);
     final user = authService.currentUser;
 
@@ -52,9 +54,9 @@ class VetDashboardCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  'Vet Dashboard',
-                  style: TextStyle(
+                Text(
+                  l10n.vetDashboard,
+                  style: const TextStyle(
                     fontFamily: 'Montserrat',
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -82,7 +84,7 @@ class VetDashboardCard extends StatelessWidget {
                         Icon(Icons.error_outline, color: Colors.red, size: 40),
                         const SizedBox(height: 8),
                         Text(
-                          'Error loading dashboard',
+                          l10n.errorLoadingDashboard,
                           style: TextStyle(color: Colors.red, fontSize: 14),
                         ),
                       ],
@@ -102,7 +104,7 @@ class VetDashboardCard extends StatelessWidget {
                         Icon(Icons.info_outline, color: Colors.grey, size: 40),
                         const SizedBox(height: 8),
                         Text(
-                          'No dashboard data available',
+                          l10n.noDashboardDataAvailable,
                           style: TextStyle(color: Colors.grey, fontSize: 14),
                         ),
                       ],
@@ -134,7 +136,7 @@ class VetDashboardCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _buildStatCard(
-                            'Next Appoint.',
+                            l10n.nextAppoint,
                             nextAppointment,
                             Icons.calendar_today,
                             Colors.blue,
@@ -143,7 +145,7 @@ class VetDashboardCard extends StatelessWidget {
                         const SizedBox(width: 16),
                         Expanded(
                           child: _buildStatCard(
-                            'Patients',
+                            l10n.patients,
                             patientsCount,
                             Icons.people,
                             Colors.green,
@@ -156,7 +158,7 @@ class VetDashboardCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _buildStatCard(
-                            'Today\'s Appoint.',
+                            l10n.todaysAppoint,
                             appointmentsToday,
                             Icons.medical_services,
                             Colors.orange,
@@ -165,7 +167,7 @@ class VetDashboardCard extends StatelessWidget {
                         const SizedBox(width: 16),
                         Expanded(
                           child: _buildStatCard(
-                            'Revenue Today',
+                            l10n.revenueToday,
                             '\$${revenueToday.toStringAsFixed(2)}',
                             Icons.attach_money,
                             Colors.purple,
@@ -186,7 +188,7 @@ class VetDashboardCard extends StatelessWidget {
                           );
                         },
                         icon: const Icon(Icons.analytics),
-                        label: const Text('View All Vet Tools'),
+                        label: Text(l10n.viewAllVetTools),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.blue,
                           padding: const EdgeInsets.symmetric(vertical: 12),

@@ -76,7 +76,7 @@ class GiftNotificationController {
           _processedGifts[gift.id] = 'pending';
           showDialog(
             context: context,
-            builder: (context) => GiftReceivedDialog(gift: gift),
+            builder: (context) => GiftReceivedDialog(gift: gift.toFirestore()),
           );
         }
       });

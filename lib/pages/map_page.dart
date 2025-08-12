@@ -28,6 +28,8 @@ import '../pages/user_profile_page.dart';
 import 'package:intl/intl.dart';
 import '../widgets/custom_snackbar.dart';
 import '../services/map_focus_service.dart';
+import '../l10n/app_localizations.dart';
+import '../widgets/keyboard_dismissible_text_field.dart';
 
 
 class _PhotoCarousel extends StatefulWidget {
@@ -409,16 +411,16 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: const Text('Location Services Disabled'),
-            content: const Text('Please enable location services or enter your location manually.'),
+            title: Text(AppLocalizations.of(context)!.locationServicesDisabled),
+            content: Text(AppLocalizations.of(context)!.pleaseEnableLocationServicesOrEnterManually),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, 'manual'),
-                child: const Text('Enter Manually'),
+                child: Text(AppLocalizations.of(context)!.enterManually),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, 'settings'),
-                child: const Text('Open Settings'),
+                child: Text(AppLocalizations.of(context)!.openSettings),
               ),
             ],
           ),
@@ -457,19 +459,16 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: const Text('Location Permission Required'),
-            content: const Text(
-              'Location permission is required for this feature. '
-              'Please enable it in your app settings.'
-            ),
+            title: Text(AppLocalizations.of(context)!.locationPermissionRequired),
+            content: Text(AppLocalizations.of(context)!.locationPermissionRequiredForFeature),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
+                child: Text(AppLocalizations.of(context)!.cancel),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Open Settings'),
+                child: Text(AppLocalizations.of(context)!.openSettings),
               ),
             ],
           ),
@@ -656,7 +655,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Enter Your Location'),
+          title: Text(AppLocalizations.of(context)!.enterYourLocation),
           content: Form(
             key: formKey,
             child: Column(
@@ -690,7 +689,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             TextButton(
               onPressed: isSearching
@@ -722,7 +721,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                       }
                     }
                   },
-              child: const Text('Search'),
+              child: Text(AppLocalizations.of(context)!.search),
             ),
           ],
         ),
@@ -814,7 +813,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                       ),
                     ],
                   ),
-                  child: TextField(
+                  child: KeyboardDismissibleTextField(
                     controller: _searchController,
                     focusNode: _searchFocusNode,
                     onChanged: _handleSearch,
@@ -1447,7 +1446,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                      result['opening_hours']['open_now'] ? 'Open Now' : 'Closed',
+                      result['opening_hours']['open_now'] ? AppLocalizations.of(context)!.openNow : AppLocalizations.of(context)!.closed,
                       style: TextStyle(
                         color: result['opening_hours']['open_now'] ? Colors.green : Colors.red,
                                           fontWeight: FontWeight.w500,
@@ -1483,8 +1482,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                         ),
                       ),
                       icon: const Icon(Icons.directions),
-                      label: const Text(
-                        'Navigate',
+                      label: Text(
+                        AppLocalizations.of(context)!.navigate,
                         style: TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -1588,7 +1587,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                 ],
                           if (result['opening_hours'] != null)
                             Text(
-                              result['opening_hours']['open_now'] ? 'Open' : 'Closed',
+                              result['opening_hours']['open_now'] ? AppLocalizations.of(context)!.open : AppLocalizations.of(context)!.closed,
                               style: TextStyle(
                                 color: result['opening_hours']['open_now'] 
                                   ? Colors.green 
@@ -2156,11 +2155,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.verified, color: Colors.white, size: 16),
-                                  SizedBox(width: 6),
+                                children: [
+                                  const Icon(Icons.verified, color: Colors.white, size: 16),
+                                  const SizedBox(width: 6),
                                   Text(
-                                    'ALIFI FAVORITE',
+                                    AppLocalizations.of(context)!.alifiFavorite,
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 12,
@@ -2193,11 +2192,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.verified, color: Colors.white, size: 16),
-                                  SizedBox(width: 6),
+                                children: [
+                                  const Icon(Icons.verified, color: Colors.white, size: 16),
+                                  const SizedBox(width: 6),
                                   Text(
-                                    'ALIFI AFFILIATED',
+                                    AppLocalizations.of(context)!.alifiAffiliated,
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 12,
@@ -2245,7 +2244,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                                 shadowColor: Colors.transparent,
                               ),
                               child: Text(
-                                'Visit ${isVet ? 'Clinic' : 'Store'} Profile',
+                                isVet ? AppLocalizations.of(context)!.visitClinicProfile : AppLocalizations.of(context)!.visitStoreProfile,
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
@@ -2637,7 +2636,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
       items: [
         PopupMenuItem(
           child: Text(
-            'Report Missing Pet',
+            AppLocalizations.of(context)!.reportMissingPet,
             style: TextStyle(
               color: Colors.red.shade700,
               fontWeight: FontWeight.w500,
@@ -2646,8 +2645,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
           onTap: () => _showReportMissingPetDialog(context),
         ),
         PopupMenuItem(
-          child: const Text(
-            'Add Your Business',
+          child: Text(
+            AppLocalizations.of(context)!.addYourBusiness,
             style: TextStyle(
               color: Colors.black87,
               fontWeight: FontWeight.w400,
@@ -2670,19 +2669,19 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
               Navigator.pop(context);
               _showReportMissingPetDialog(context);
             },
-            child: const Text('Report Missing Pet'),
+            child: Text(AppLocalizations.of(context)!.reportMissingPet),
           ),
           CupertinoActionSheetAction(
             onPressed: () {
               Navigator.pop(context);
               _showAddBusinessDialog(context);
             },
-            child: const Text('Add Your Business'),
+            child: Text(AppLocalizations.of(context)!.addYourBusiness),
           ),
         ],
         cancelButton: CupertinoActionSheetAction(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.cancel),
         ),
       ),
     );
@@ -2860,6 +2859,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                 initialZoom: 10.0,  // Changed from 15 to 10 to show more markers initially
                 minZoom: 5.0,  // Add minimum zoom level
                 maxZoom: 18.0,  // Add maximum zoom level
+                initialRotation: 0.0,  // Lock rotation to north
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.drag | InteractiveFlag.pinchZoom | InteractiveFlag.flingAnimation | InteractiveFlag.doubleTapZoom,
+                ),
                 onMapEvent: (event) {
                   final currentZoom = event.camera.zoom;
                   if ((_currentZoom < _zoomThreshold && currentZoom >= _zoomThreshold) ||
@@ -2869,6 +2872,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
                       _currentZoom = currentZoom;
                     });
                   }
+                  
+                  // Lock rotation to north (0 degrees)
+                  if (event.camera.rotation != 0.0) {
+                    _mapController.rotate(0.0);
+                  }
+                  
                   // Only hide legend on drag/move, NOT on tap
                   if (event is MapEventMove || event is MapEventMoveStart || event is MapEventMoveEnd) {
                     _hideLegend();

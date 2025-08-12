@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/appointment.dart';
 import '../models/user.dart';
 import '../services/database_service.dart';
@@ -43,7 +44,7 @@ class TodayAppointmentWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Today's Vet Appointment",
+          AppLocalizations.of(context)!.todaysVetAppointment,
           style: const TextStyle(
             fontFamily: 'Montserrat',
             fontSize: 24,
@@ -163,10 +164,10 @@ class TodayAppointmentWidget extends StatelessWidget {
                       ),
                       child: Text(
                         isSoon
-                            ? 'Soon'
+                            ? AppLocalizations.of(context)!.soon
                             : isPast
-                                ? 'Past'
-                                : 'Today',
+                                ? AppLocalizations.of(context)!.past
+                                : AppLocalizations.of(context)!.today,
                         style: TextStyle(
                           color: isSoon
                               ? Colors.orange.shade800
@@ -184,7 +185,7 @@ class TodayAppointmentWidget extends StatelessWidget {
                 const SizedBox(height: 16),
                 
                 // Countdown timer
-                if (!isPast) _buildCountdownTimer(difference),
+                if (!isPast) _buildCountdownTimer(context, difference),
                 
                 const SizedBox(height: 16),
                 
@@ -217,7 +218,7 @@ class TodayAppointmentWidget extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  'Pet',
+                                  AppLocalizations.of(context)!.pet,
                                   style: TextStyle(
                                     color: Colors.grey[600],
                                     fontSize: 12,
@@ -252,15 +253,15 @@ class TodayAppointmentWidget extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      vet?.displayName ?? 'Vet',
+                                     Text(
+                                       vet?.displayName ?? AppLocalizations.of(context)!.vet,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
                                       ),
                                     ),
-                                    Text(
-                                      'Veterinarian',
+                                     Text(
+                                       AppLocalizations.of(context)!.veterinarian,
                                       style: TextStyle(
                                         color: Colors.grey[600],
                                         fontSize: 12,
@@ -291,7 +292,7 @@ class TodayAppointmentWidget extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Notes:',
+                          AppLocalizations.of(context)!.notesLabel,
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: Colors.grey[700],
@@ -331,7 +332,7 @@ class TodayAppointmentWidget extends StatelessWidget {
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Unable to contact vet at this time'),
+                                  content: Text(''),
                                 ),
                               );
                             }
@@ -344,8 +345,8 @@ class TodayAppointmentWidget extends StatelessWidget {
                            ),
                            padding: const EdgeInsets.symmetric(vertical: 16),
                          ),
-                         child: const Text(
-                           'Contact Vet',
+                          child: Text(
+                            AppLocalizations.of(context)!.contactVet,
                            style: TextStyle(
                              fontWeight: FontWeight.w600,
                              fontSize: 16,
@@ -369,8 +370,8 @@ class TodayAppointmentWidget extends StatelessWidget {
                            ),
                            padding: const EdgeInsets.symmetric(vertical: 16),
                          ),
-                         child: const Text(
-                           'View Details',
+                          child: Text(
+                            AppLocalizations.of(context)!.viewDetails,
                            style: TextStyle(
                              fontWeight: FontWeight.w600,
                              fontSize: 16,
@@ -422,18 +423,18 @@ class TodayAppointmentWidget extends StatelessWidget {
     }
   }
 
-  Widget _buildCountdownTimer(Duration difference) {
+  Widget _buildCountdownTimer(BuildContext context, Duration difference) {
     String countdownText;
     Color countdownColor;
     
     if (difference.inHours > 0) {
-      countdownText = '${difference.inHours}h ${difference.inMinutes % 60}m until appointment';
+      countdownText = AppLocalizations.of(context)!.hoursMinutesUntilAppointment(difference.inHours, difference.inMinutes % 60);
       countdownColor = Colors.orange.shade700;
     } else if (difference.inMinutes > 0) {
-      countdownText = '${difference.inMinutes}m until appointment';
+      countdownText = AppLocalizations.of(context)!.minutesUntilAppointment(difference.inMinutes);
       countdownColor = Colors.red.shade700;
     } else {
-      countdownText = 'Appointment starting now!';
+      countdownText = AppLocalizations.of(context)!.appointmentStartingNow;
       countdownColor = Colors.red.shade700;
     }
     

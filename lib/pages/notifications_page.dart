@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/notification.dart';
 import '../services/notification_service.dart';
 import '../services/auth_service.dart';
@@ -28,9 +29,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final currentUser = context.read<AuthService>().currentUser;
     
     if (currentUser == null) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: Text('Please log in to view notifications'),
+          child: Text(AppLocalizations.of(context)!.pleaseLoginToViewNotifications),
         ),
       );
     }
@@ -49,9 +50,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Notifications',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.notifications,
+          style: const TextStyle(
             fontFamily: 'Montserrat',
             fontWeight: FontWeight.bold,
             fontSize: 24,
@@ -93,7 +94,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             child: IconButton(
               onPressed: () => _markAllAsRead(currentUser.id),
               icon: const Icon(CupertinoIcons.checkmark_circle, color: Colors.grey),
-              tooltip: 'Mark all as read',
+              tooltip: AppLocalizations.of(context)!.markAllAsRead,
             ),
           ),
         ],
@@ -147,7 +148,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Error loading notifications',
+                            AppLocalizations.of(context)!.errorLoadingNotifications,
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 16,
@@ -155,7 +156,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Error: ${snapshot.error}',
+                            AppLocalizations.of(context)!.errorWithMessage(snapshot.error ?? ''),
                             style: TextStyle(
                               color: Colors.grey[500],
                               fontSize: 12,
@@ -169,7 +170,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                 // Force rebuild to retry
                               });
                             },
-                            child: const Text('Retry'),
+                            child: Text(AppLocalizations.of(context)!.retry),
                           ),
                         ],
                       ),
@@ -197,7 +198,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'No notifications yet',
+                            AppLocalizations.of(context)!.noNotificationsYet,
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 18,
@@ -206,7 +207,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'You\'ll see notifications here when you receive messages, orders, or follows',
+                            AppLocalizations.of(context)!.notificationsEmptyHint,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.grey[500],
@@ -251,7 +252,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         child: IconButton(
           onPressed: () => _sendTestNotification(currentUser.id),
           icon: const Icon(CupertinoIcons.exclamationmark_triangle, color: Colors.grey, size: 24),
-          tooltip: 'Send test notification',
+          tooltip: AppLocalizations.of(context)!.sendTestNotificationTooltip,
         ),
       ),
     );
@@ -319,7 +320,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
               if (mounted) {
                 CustomSnackBarHelper.showError(
                   context,
-                  'Unable to open chat - user not found',
+                  AppLocalizations.of(context)!.unableToOpenChatUserNotFound,
                 );
               }
             }
@@ -327,7 +328,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             if (mounted) {
               CustomSnackBarHelper.showError(
                 context,
-                'Error opening chat: $e',
+                AppLocalizations.of(context)!.errorOpeningChat(e),
               );
             }
           }
@@ -336,7 +337,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     } else {
       CustomSnackBarHelper.showError(
         context,
-        'Unable to open chat - sender information missing',
+        AppLocalizations.of(context)!.unableToOpenChatSenderMissing,
       );
     }
   }
@@ -365,7 +366,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     } else {
       CustomSnackBarHelper.showError(
         context,
-        'Unable to open order - order information missing',
+        AppLocalizations.of(context)!.unableToOpenOrderMissing,
       );
     }
   }
@@ -386,7 +387,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
           if (mounted) {
             CustomSnackBarHelper.showError(
               context,
-              'Unable to open profile - user not found',
+              AppLocalizations.of(context)!.unableToOpenProfileUserNotFound,
             );
           }
         }
@@ -394,14 +395,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
         if (mounted) {
           CustomSnackBarHelper.showError(
             context,
-            'Error opening profile: $e',
+            AppLocalizations.of(context)!.errorOpeningProfile(e),
           );
         }
       }
     } else {
       CustomSnackBarHelper.showError(
         context,
-        'Unable to open profile - user information missing',
+        AppLocalizations.of(context)!.unableToOpenProfileUserMissing,
       );
     }
   }
@@ -410,7 +411,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     // For now, just show a message. In the future, you can navigate to appointment details
     CustomSnackBarHelper.showInfo(
       context,
-      'Appointment notification - navigation to be implemented',
+      AppLocalizations.of(context)!.appointmentNotificationNavigationTbd,
       duration: const Duration(seconds: 2),
     );
   }
@@ -420,13 +421,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
       await _notificationService.deleteNotification(notificationId);
       CustomSnackBarHelper.showSuccess(
         context,
-        'Notification deleted',
+        AppLocalizations.of(context)!.notificationDeleted,
         duration: const Duration(seconds: 2),
       );
     } catch (e) {
       CustomSnackBarHelper.showError(
         context,
-        'Error deleting notification: $e',
+        AppLocalizations.of(context)!.errorDeletingNotification(e),
       );
     }
   }
@@ -436,13 +437,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
       await _notificationService.markAllNotificationsAsRead(userId);
       CustomSnackBarHelper.showSuccess(
         context,
-        'All notifications marked as read',
+        AppLocalizations.of(context)!.allNotificationsMarkedAsRead,
         duration: const Duration(seconds: 2),
       );
     } catch (e) {
       CustomSnackBarHelper.showError(
         context,
-        'Error marking notifications as read: $e',
+        AppLocalizations.of(context)!.errorMarkingNotificationsAsRead(e),
       );
     }
   }
@@ -452,13 +453,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
       await _notificationService.sendTestNotification(userId);
       CustomSnackBarHelper.showSuccess(
         context,
-        'Test notification sent',
+        AppLocalizations.of(context)!.testNotificationSent,
         duration: const Duration(seconds: 2),
       );
     } catch (e) {
       CustomSnackBarHelper.showError(
         context,
-        'Error sending test notification: $e',
+        AppLocalizations.of(context)!.errorSendingTestNotification(e),
       );
     }
   }

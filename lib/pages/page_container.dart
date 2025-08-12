@@ -11,8 +11,8 @@ import 'user_search_page.dart';
 import 'package:provider/provider.dart';
 import '../services/map_focus_service.dart';
 import '../services/auth_service.dart';
-import '../services/database_service.dart';
-import '../models/user.dart';
+import '../services/display_settings_service.dart';
+import '../services/user_preferences_service.dart';
 import 'location_setup_page.dart';
 
 class PageContainer extends StatefulWidget {
@@ -27,8 +27,7 @@ final GlobalKey<_PageContainerState> pageContainerKey = GlobalKey<_PageContainer
 
 class _PageContainerState extends State<PageContainer> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   int _currentIndex = 0;
-  bool _isVisible = true;
-  bool _isAIAssistantExpanded = false;
+  // AIAssistant expansion state no longer stored locally to avoid unused field
   late AnimationController _hideController;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -51,14 +50,11 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
           });
         },
         onAIAssistantExpanded: (expanded) {
-          setState(() {
-            _isAIAssistantExpanded = expanded;
-            if (expanded) {
-              _hideController.forward();
-            } else {
-              _hideController.reverse();
-            }
-          });
+          if (expanded) {
+            _hideController.forward();
+          } else {
+            _hideController.reverse();
+          }
         },
         onSideMenuProgressChanged: (progress) {
           if (_currentIndex == 0) {
@@ -166,16 +162,7 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
     await _checkLocationSetup();
   }
 
-  void _toggleVisibility() {
-    setState(() {
-      _isVisible = !_isVisible;
-      if (_isVisible) {
-        _hideController.reverse();
-      } else {
-        _hideController.forward();
-      }
-    });
-  }
+  
 
   // Helper to determine if nav bar background is dark based on theme brightness
   bool _isNavBarBackgroundDark(BuildContext context) {
@@ -223,11 +210,19 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
   }
 
   Widget _buildBottomNavBar() {
+    return Consumer<UserPreferencesService>(
+      builder: (context, userPreferences, child) {
+        return _buildBottomNavBarContent(userPreferences.tabBarBlurEnabled);
+      },
+    );
+  }
+
+  Widget _buildBottomNavBarContent(bool blurEnabled) {
     final screenWidth = MediaQuery.of(context).size.width;
     const maxNavWidth = 320.0;
     const minNavWidth = 220.0;
-    const minBarHeight = 44.0;
-    const minIconSize = 16.0;
+    // const minBarHeight = 44.0; // unused
+    // const minIconSize = 16.0; // unused
     double sidePadding = 16.0;
     double barHeight = 64;
     double iconSize = 24;
@@ -294,21 +289,13 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(32),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  width: navWidth,
-                  height: barHeight,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.45),
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(32),
-                    child: Stack(
+            _buildNavContainer(
+              blurEnabled: blurEnabled,
+              width: navWidth,
+              height: barHeight,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: Stack(
                       children: [
                         // Active indicator
                         AnimatedPositioned(
@@ -395,24 +382,15 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
                     ),
                   ),
                 ),
-              ),
-            ),
             const SizedBox(width: 8),
             GestureDetector(
               onTap: () => setState(() => _currentIndex = searchPageIndex),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(32),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    width: searchButtonSize,
-                    height: searchButtonSize,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.45),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: Center(
+              child: _buildNavContainer(
+                blurEnabled: blurEnabled,
+                width: searchButtonSize,
+                height: searchButtonSize,
+                isCircular: true,
+                child: Center(
                       child: SvgPicture.string(
                         AppIcons.searchIcon,
                         width: iconSize,
@@ -425,15 +403,58 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
                         ),
                       ),
                     ),
-                  ),
                 ),
-              ),
             ),
           ],
         ),
-          ),
+        ),
         ],
       ),
+    );
+  }
+
+  Widget _buildNavContainer({
+    required bool blurEnabled,
+    required double width,
+    required double height,
+    bool isCircular = false,
+    required Widget child,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(32),
+      child: blurEnabled
+          ? BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(
+                width: width,
+                height: height,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.45),
+                  borderRadius: isCircular ? null : BorderRadius.circular(32),
+                  shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: child,
+              ),
+            )
+          : Container(
+              width: width,
+              height: height,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: isCircular ? null : BorderRadius.circular(32),
+                shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
+                border: Border.all(color: Colors.grey.shade300, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: child,
+            ),
     );
   }
 }
