@@ -19,3 +19,4 @@ SELECT
   qual
 FROM pg_policies 
 WHERE tablename = 'chargily_payments';
+
