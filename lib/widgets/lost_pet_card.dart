@@ -7,6 +7,8 @@ import '../services/auth_service.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/age_formatter.dart';
+import '../l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class LostPetCard extends StatelessWidget {
@@ -217,7 +219,7 @@ class LostPetCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${lostPet.pet.breed} · ${lostPet.pet.age} years old',
+                      '${lostPet.pet.breed} · ${AgeFormatter.formatAge(lostPet.pet.age)}',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
@@ -283,19 +285,38 @@ class LostPetCard extends StatelessWidget {
                                     ),
                                   ),
                                 )
-                              : OutlinedButton.icon(
-                                  onPressed: _openInMaps,
-                                  icon: const Icon(Icons.map),
-                                  label: const Text('Open in Maps'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.blue,
-                                    side: const BorderSide(color: Colors.blue),
-                                    elevation: 0, // Remove button shadow
-                                    shadowColor: Colors.transparent,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
+                              : Builder(
+                                  builder: (context) {
+                                    final isRTL = Localizations.localeOf(context).languageCode == 'ar';
+                                    final l10n = AppLocalizations.of(context)!;
+                                    
+                                    return OutlinedButton(
+                                      onPressed: _openInMaps,
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.blue,
+                                        side: const BorderSide(color: Colors.blue),
+                                        elevation: 0, // Remove button shadow
+                                        shadowColor: Colors.transparent,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: isRTL
+                                            ? [
+                                                Text(l10n.openInMaps),
+                                                const SizedBox(width: 8),
+                                                const Icon(Icons.map, size: 18),
+                                              ]
+                                            : [
+                                                const Icon(Icons.map, size: 18),
+                                                const SizedBox(width: 8),
+                                                Text(l10n.openInMaps),
+                                              ],
+                                      ),
+                                    );
+                                  },
                                 ),
                         ),
                         if (lostPet.contactNumbers.isNotEmpty && !isCurrentUserPet) ...[

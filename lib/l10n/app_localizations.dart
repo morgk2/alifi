@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_ar.dart';
+import 'app_localizations_dz.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_fr.dart';
 
@@ -93,6 +94,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('ar'),
+    Locale('dz'),
     Locale('en'),
     Locale('fr')
   ];
@@ -628,8 +630,26 @@ abstract class AppLocalizations {
   /// No description provided for @vet.
   ///
   /// In en, this message translates to:
-  /// **'Vet'**
+  /// **'Vets'**
   String get vet;
+
+  /// No description provided for @vetsNearMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Vets Near Me'**
+  String get vetsNearMe;
+
+  /// No description provided for @recommendedVets.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended Vets'**
+  String get recommendedVets;
+
+  /// No description provided for @topVets.
+  ///
+  /// In en, this message translates to:
+  /// **'Top Vets'**
+  String get topVets;
 
   /// No description provided for @store.
   ///
@@ -646,8 +666,14 @@ abstract class AppLocalizations {
   /// No description provided for @petStore.
   ///
   /// In en, this message translates to:
-  /// **'pet store'**
+  /// **'Pet Stores'**
   String get petStore;
+
+  /// No description provided for @services.
+  ///
+  /// In en, this message translates to:
+  /// **'Services'**
+  String get services;
 
   /// No description provided for @myPets.
   ///
@@ -2713,7 +2739,7 @@ abstract class AppLocalizations {
   /// **'Wishlist'**
   String get wishlist;
 
-  /// No description provided for @adoptionCenter.
+  /// Adoption center related strings
   ///
   /// In en, this message translates to:
   /// **'Adoption Center'**
@@ -4558,7 +4584,7 @@ abstract class AppLocalizations {
   /// No description provided for @newListings.
   ///
   /// In en, this message translates to:
-  /// **'New Listings'**
+  /// **'New listings'**
   String get newListings;
 
   /// No description provided for @recommended.
@@ -5460,6 +5486,1344 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} results found'**
   String resultsFound(Object count);
+
+  /// No description provided for @whatTypeOfPetDoYouHave.
+  ///
+  /// In en, this message translates to:
+  /// **'What type of pet do you have?'**
+  String get whatTypeOfPetDoYouHave;
+
+  /// No description provided for @next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get next;
+
+  /// No description provided for @petsNearMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Pets near me'**
+  String get petsNearMe;
+
+  /// No description provided for @basedOnYourCurrentLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on your current location'**
+  String get basedOnYourCurrentLocation;
+
+  /// No description provided for @noAdoptionListingsInYourArea.
+  ///
+  /// In en, this message translates to:
+  /// **'No adoption listings in your area'**
+  String get noAdoptionListingsInYourArea;
+
+  /// No description provided for @noAdoptionListingsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No adoption listings yet'**
+  String get noAdoptionListingsYet;
+
+  /// No description provided for @beTheFirstToAddPetForAdoption.
+  ///
+  /// In en, this message translates to:
+  /// **'Be the first to add a pet for adoption!'**
+  String get beTheFirstToAddPetForAdoption;
+
+  /// No description provided for @addListing.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Listing'**
+  String get addListing;
+
+  /// No description provided for @searchPets.
+  ///
+  /// In en, this message translates to:
+  /// **'Search pets...'**
+  String get searchPets;
+
+  /// No description provided for @gettingYourLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting your location...'**
+  String get gettingYourLocation;
+
+  /// No description provided for @locationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission denied'**
+  String get locationPermissionDenied;
+
+  /// No description provided for @locationPermissionPermanentlyDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission permanently denied'**
+  String get locationPermissionPermanentlyDenied;
+
+  /// No description provided for @unableToGetLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to get location'**
+  String get unableToGetLocation;
+
+  /// No description provided for @filtersApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters applied: {count} active'**
+  String filtersApplied(Object count);
+
+  /// No description provided for @pleaseLoginToManageListings.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in to manage your listings'**
+  String get pleaseLoginToManageListings;
+
+  /// No description provided for @errorLoadingListings.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading listings'**
+  String get errorLoadingListings;
+
+  /// No description provided for @noPetsNearMe.
+  ///
+  /// In en, this message translates to:
+  /// **'No pets near me'**
+  String get noPetsNearMe;
+
+  /// No description provided for @posting.
+  ///
+  /// In en, this message translates to:
+  /// **'Posting...'**
+  String get posting;
+
+  /// No description provided for @postForAdoption.
+  ///
+  /// In en, this message translates to:
+  /// **'Post for Adoption'**
+  String get postForAdoption;
+
+  /// No description provided for @listingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listing Title'**
+  String get listingTitle;
+
+  /// No description provided for @enterTitleForListing.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a title for your listing'**
+  String get enterTitleForListing;
+
+  /// No description provided for @describePetAndAdopter.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your pet and what you\'re looking for in an adopter'**
+  String get describePetAndAdopter;
+
+  /// No description provided for @location.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get location;
+
+  /// No description provided for @enterLocationForAdoption.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the location for adoption'**
+  String get enterLocationForAdoption;
+
+  /// No description provided for @petInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet Information'**
+  String get petInformation;
+
+  /// No description provided for @listingDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Listing Details'**
+  String get listingDetails;
+
+  /// No description provided for @adoptionFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Fee (DZD)'**
+  String get adoptionFee;
+
+  /// No description provided for @freeAdoption.
+  ///
+  /// In en, this message translates to:
+  /// **'0 for free adoption'**
+  String get freeAdoption;
+
+  /// No description provided for @pleaseEnterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a title for the listing'**
+  String get pleaseEnterTitle;
+
+  /// No description provided for @pleaseEnterDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a description for the listing'**
+  String get pleaseEnterDescription;
+
+  /// No description provided for @pleaseEnterLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a location for the listing'**
+  String get pleaseEnterLocation;
+
+  /// No description provided for @petPostedForAdoptionSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'{petName} has been posted for adoption successfully!'**
+  String petPostedForAdoptionSuccessfully(Object petName);
+
+  /// No description provided for @failedToPostAdoptionListing.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to post adoption listing: {error}'**
+  String failedToPostAdoptionListing(Object error);
+
+  /// No description provided for @offerForAdoption.
+  ///
+  /// In en, this message translates to:
+  /// **'Offer for Adoption'**
+  String get offerForAdoption;
+
+  /// No description provided for @deletePet.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Pet'**
+  String get deletePet;
+
+  /// No description provided for @areYouSureDeletePet.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete {petName}?'**
+  String areYouSureDeletePet(Object petName);
+
+  /// No description provided for @petDeletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'{petName} has been deleted successfully'**
+  String petDeletedSuccessfully(Object petName);
+
+  /// No description provided for @failedToDeletePet.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete pet: {error}'**
+  String failedToDeletePet(Object error);
+
+  /// No description provided for @myListings.
+  ///
+  /// In en, this message translates to:
+  /// **'My Listings'**
+  String get myListings;
+
+  /// No description provided for @noListingsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No listings found'**
+  String get noListingsFound;
+
+  /// No description provided for @editListing.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Listing'**
+  String get editListing;
+
+  /// No description provided for @deleteListing.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Listing'**
+  String get deleteListing;
+
+  /// No description provided for @listingDeletedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Listing deleted successfully'**
+  String get listingDeletedSuccessfully;
+
+  /// No description provided for @failedToDeleteListing.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete listing: {error}'**
+  String failedToDeleteListing(Object error);
+
+  /// No description provided for @areYouSureDeleteListing.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this listing?'**
+  String get areYouSureDeleteListing;
+
+  /// No description provided for @contactInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Information'**
+  String get contactInformation;
+
+  /// No description provided for @postedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Posted by'**
+  String get postedBy;
+
+  /// No description provided for @contactOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Owner'**
+  String get contactOwner;
+
+  /// No description provided for @adoptionFeeValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Fee: {fee} DZD'**
+  String adoptionFeeValue(Object fee);
+
+  /// No description provided for @free.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get free;
+
+  /// No description provided for @active.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get active;
+
+  /// No description provided for @inactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get inactive;
+
+  /// No description provided for @requirements.
+  ///
+  /// In en, this message translates to:
+  /// **'Requirements'**
+  String get requirements;
+
+  /// No description provided for @noRequirements.
+  ///
+  /// In en, this message translates to:
+  /// **'No specific requirements'**
+  String get noRequirements;
+
+  /// No description provided for @contactNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Number'**
+  String get contactNumber;
+
+  /// No description provided for @noContactNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'No contact number provided'**
+  String get noContactNumber;
+
+  /// No description provided for @lastUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Last updated'**
+  String get lastUpdated;
+
+  /// No description provided for @createdOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Created on'**
+  String get createdOn;
+
+  /// No description provided for @adoptionListingDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Listing Details'**
+  String get adoptionListingDetails;
+
+  /// No description provided for @petDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet Details'**
+  String get petDetails;
+
+  /// No description provided for @petType.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet Type'**
+  String get petType;
+
+  /// No description provided for @petAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Age'**
+  String get petAge;
+
+  /// No description provided for @petGender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get petGender;
+
+  /// No description provided for @petColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get petColor;
+
+  /// No description provided for @petWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get petWeight;
+
+  /// No description provided for @petBreed.
+  ///
+  /// In en, this message translates to:
+  /// **'Breed'**
+  String get petBreed;
+
+  /// No description provided for @petLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get petLocation;
+
+  /// No description provided for @petImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Images'**
+  String get petImages;
+
+  /// No description provided for @noImages.
+  ///
+  /// In en, this message translates to:
+  /// **'No images available'**
+  String get noImages;
+
+  /// No description provided for @viewAllImages.
+  ///
+  /// In en, this message translates to:
+  /// **'View all images'**
+  String get viewAllImages;
+
+  /// No description provided for @adoptionProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Process'**
+  String get adoptionProcess;
+
+  /// No description provided for @adoptionSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Steps'**
+  String get adoptionSteps;
+
+  /// No description provided for @step1.
+  ///
+  /// In en, this message translates to:
+  /// **'Step 1'**
+  String get step1;
+
+  /// No description provided for @step2.
+  ///
+  /// In en, this message translates to:
+  /// **'Step 2'**
+  String get step2;
+
+  /// No description provided for @step3.
+  ///
+  /// In en, this message translates to:
+  /// **'Step 3'**
+  String get step3;
+
+  /// No description provided for @step4.
+  ///
+  /// In en, this message translates to:
+  /// **'Step 4'**
+  String get step4;
+
+  /// No description provided for @contactOwnerStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact the owner'**
+  String get contactOwnerStep;
+
+  /// No description provided for @meetPetStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Meet the pet'**
+  String get meetPetStep;
+
+  /// No description provided for @completeAdoptionStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete adoption'**
+  String get completeAdoptionStep;
+
+  /// No description provided for @followUpStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow up care'**
+  String get followUpStep;
+
+  /// No description provided for @contactOwnerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach out to the pet owner to express your interest and ask questions about the pet.'**
+  String get contactOwnerDescription;
+
+  /// No description provided for @meetPetDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrange to meet the pet in person to ensure it\'s a good match for your family.'**
+  String get meetPetDescription;
+
+  /// No description provided for @completeAdoptionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'If everything goes well, complete the adoption process with the owner.'**
+  String get completeAdoptionDescription;
+
+  /// No description provided for @followUpDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Provide ongoing care and follow up with the owner if needed.'**
+  String get followUpDescription;
+
+  /// No description provided for @adoptionTips.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Tips'**
+  String get adoptionTips;
+
+  /// No description provided for @adoptionTipsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Here are some tips to help you through the adoption process:'**
+  String get adoptionTipsDescription;
+
+  /// No description provided for @tip1.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask lots of questions about the pet\'s history, health, and behavior'**
+  String get tip1;
+
+  /// No description provided for @tip2.
+  ///
+  /// In en, this message translates to:
+  /// **'Meet the pet in person before making a decision'**
+  String get tip2;
+
+  /// No description provided for @tip3.
+  ///
+  /// In en, this message translates to:
+  /// **'Consider your lifestyle and living situation'**
+  String get tip3;
+
+  /// No description provided for @tip4.
+  ///
+  /// In en, this message translates to:
+  /// **'Be patient and don\'t rush the decision'**
+  String get tip4;
+
+  /// No description provided for @tip5.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare your home for the new pet'**
+  String get tip5;
+
+  /// No description provided for @tip6.
+  ///
+  /// In en, this message translates to:
+  /// **'Have a plan for ongoing care and expenses'**
+  String get tip6;
+
+  /// No description provided for @adoptionSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Success'**
+  String get adoptionSuccess;
+
+  /// No description provided for @adoptionSuccessDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Congratulations on finding your new companion! Remember to:'**
+  String get adoptionSuccessDescription;
+
+  /// No description provided for @successTip1.
+  ///
+  /// In en, this message translates to:
+  /// **'Give your new pet time to adjust to their new home'**
+  String get successTip1;
+
+  /// No description provided for @successTip2.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule a vet checkup within the first week'**
+  String get successTip2;
+
+  /// No description provided for @successTip3.
+  ///
+  /// In en, this message translates to:
+  /// **'Update microchip information if applicable'**
+  String get successTip3;
+
+  /// No description provided for @successTip4.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep in touch with the previous owner if needed'**
+  String get successTip4;
+
+  /// No description provided for @successTip5.
+  ///
+  /// In en, this message translates to:
+  /// **'Provide lots of love and patience during the transition'**
+  String get successTip5;
+
+  /// No description provided for @adoptionResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Resources'**
+  String get adoptionResources;
+
+  /// No description provided for @adoptionResourcesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Here are some helpful resources for new pet parents:'**
+  String get adoptionResourcesDescription;
+
+  /// No description provided for @resource1.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet care guides and tips'**
+  String get resource1;
+
+  /// No description provided for @resource2.
+  ///
+  /// In en, this message translates to:
+  /// **'Local vet recommendations'**
+  String get resource2;
+
+  /// No description provided for @resource3.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet training resources'**
+  String get resource3;
+
+  /// No description provided for @resource4.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency pet care information'**
+  String get resource4;
+
+  /// No description provided for @resource5.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet-friendly housing resources'**
+  String get resource5;
+
+  /// No description provided for @adoptionSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Support'**
+  String get adoptionSupport;
+
+  /// No description provided for @adoptionSupportDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Need help with your adoption? We\'re here to support you:'**
+  String get adoptionSupportDescription;
+
+  /// No description provided for @support1.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact our adoption support team'**
+  String get support1;
+
+  /// No description provided for @support2.
+  ///
+  /// In en, this message translates to:
+  /// **'Join our community forums'**
+  String get support2;
+
+  /// No description provided for @support3.
+  ///
+  /// In en, this message translates to:
+  /// **'Access educational resources'**
+  String get support3;
+
+  /// No description provided for @support4.
+  ///
+  /// In en, this message translates to:
+  /// **'Get vet recommendations'**
+  String get support4;
+
+  /// No description provided for @support5.
+  ///
+  /// In en, this message translates to:
+  /// **'Find pet care services'**
+  String get support5;
+
+  /// No description provided for @adoptionFaq.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption FAQ'**
+  String get adoptionFaq;
+
+  /// No description provided for @adoptionFaqDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Common questions about pet adoption:'**
+  String get adoptionFaqDescription;
+
+  /// No description provided for @faq1.
+  ///
+  /// In en, this message translates to:
+  /// **'What should I ask the pet owner?'**
+  String get faq1;
+
+  /// No description provided for @faq2.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I know if a pet is right for me?'**
+  String get faq2;
+
+  /// No description provided for @faq3.
+  ///
+  /// In en, this message translates to:
+  /// **'What documents do I need for adoption?'**
+  String get faq3;
+
+  /// No description provided for @faq4.
+  ///
+  /// In en, this message translates to:
+  /// **'How much does pet care cost?'**
+  String get faq4;
+
+  /// No description provided for @faq5.
+  ///
+  /// In en, this message translates to:
+  /// **'What if the adoption doesn\'t work out?'**
+  String get faq5;
+
+  /// No description provided for @adoptionGuidelines.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Guidelines'**
+  String get adoptionGuidelines;
+
+  /// No description provided for @adoptionGuidelinesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Please follow these guidelines for a successful adoption:'**
+  String get adoptionGuidelinesDescription;
+
+  /// No description provided for @guideline1.
+  ///
+  /// In en, this message translates to:
+  /// **'Be honest about your experience and living situation'**
+  String get guideline1;
+
+  /// No description provided for @guideline2.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask detailed questions about the pet\'s needs'**
+  String get guideline2;
+
+  /// No description provided for @guideline3.
+  ///
+  /// In en, this message translates to:
+  /// **'Consider the long-term commitment'**
+  String get guideline3;
+
+  /// No description provided for @guideline4.
+  ///
+  /// In en, this message translates to:
+  /// **'Have a backup plan for emergencies'**
+  String get guideline4;
+
+  /// No description provided for @guideline5.
+  ///
+  /// In en, this message translates to:
+  /// **'Be respectful of the owner\'s time and decision'**
+  String get guideline5;
+
+  /// No description provided for @adoptionSafety.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Safety'**
+  String get adoptionSafety;
+
+  /// No description provided for @adoptionSafetyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay safe during the adoption process:'**
+  String get adoptionSafetyDescription;
+
+  /// No description provided for @safety1.
+  ///
+  /// In en, this message translates to:
+  /// **'Meet in a public place for the first meeting'**
+  String get safety1;
+
+  /// No description provided for @safety2.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring a friend or family member'**
+  String get safety2;
+
+  /// No description provided for @safety3.
+  ///
+  /// In en, this message translates to:
+  /// **'Trust your instincts'**
+  String get safety3;
+
+  /// No description provided for @safety4.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t feel pressured to make a quick decision'**
+  String get safety4;
+
+  /// No description provided for @safety5.
+  ///
+  /// In en, this message translates to:
+  /// **'Report any suspicious behavior'**
+  String get safety5;
+
+  /// No description provided for @adoptionPreparation.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Preparation'**
+  String get adoptionPreparation;
+
+  /// No description provided for @adoptionPreparationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare for your new pet:'**
+  String get adoptionPreparationDescription;
+
+  /// No description provided for @preparation1.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet-proof your home'**
+  String get preparation1;
+
+  /// No description provided for @preparation2.
+  ///
+  /// In en, this message translates to:
+  /// **'Gather necessary supplies'**
+  String get preparation2;
+
+  /// No description provided for @preparation3.
+  ///
+  /// In en, this message translates to:
+  /// **'Research pet care requirements'**
+  String get preparation3;
+
+  /// No description provided for @preparation4.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan for ongoing expenses'**
+  String get preparation4;
+
+  /// No description provided for @preparation5.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrange for pet care when you\'re away'**
+  String get preparation5;
+
+  /// No description provided for @adoptionTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Timeline'**
+  String get adoptionTimeline;
+
+  /// No description provided for @adoptionTimelineDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Typical adoption process timeline:'**
+  String get adoptionTimelineDescription;
+
+  /// No description provided for @timeline1.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial contact (1-2 days)'**
+  String get timeline1;
+
+  /// No description provided for @timeline2.
+  ///
+  /// In en, this message translates to:
+  /// **'Meet and greet (3-7 days)'**
+  String get timeline2;
+
+  /// No description provided for @timeline3.
+  ///
+  /// In en, this message translates to:
+  /// **'Home visit (optional, 1-2 weeks)'**
+  String get timeline3;
+
+  /// No description provided for @timeline4.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption completion (1-4 weeks)'**
+  String get timeline4;
+
+  /// No description provided for @timeline5.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up care (ongoing)'**
+  String get timeline5;
+
+  /// No description provided for @adoptionCosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Costs'**
+  String get adoptionCosts;
+
+  /// No description provided for @adoptionCostsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Consider these costs when adopting:'**
+  String get adoptionCostsDescription;
+
+  /// No description provided for @cost1.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption fee (if any)'**
+  String get cost1;
+
+  /// No description provided for @cost2.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial vet visit and vaccinations'**
+  String get cost2;
+
+  /// No description provided for @cost3.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet supplies and equipment'**
+  String get cost3;
+
+  /// No description provided for @cost4.
+  ///
+  /// In en, this message translates to:
+  /// **'Ongoing food and care expenses'**
+  String get cost4;
+
+  /// No description provided for @cost5.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency vet care fund'**
+  String get cost5;
+
+  /// No description provided for @adoptionBenefits.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Benefits'**
+  String get adoptionBenefits;
+
+  /// No description provided for @adoptionBenefitsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Benefits of adopting a pet:'**
+  String get adoptionBenefitsDescription;
+
+  /// No description provided for @benefit1.
+  ///
+  /// In en, this message translates to:
+  /// **'Save a life and give a home to a pet in need'**
+  String get benefit1;
+
+  /// No description provided for @benefit2.
+  ///
+  /// In en, this message translates to:
+  /// **'Often more affordable than buying from a breeder'**
+  String get benefit2;
+
+  /// No description provided for @benefit3.
+  ///
+  /// In en, this message translates to:
+  /// **'Many adopted pets are already trained'**
+  String get benefit3;
+
+  /// No description provided for @benefit4.
+  ///
+  /// In en, this message translates to:
+  /// **'Support animal welfare organizations'**
+  String get benefit4;
+
+  /// No description provided for @benefit5.
+  ///
+  /// In en, this message translates to:
+  /// **'Experience the joy of pet companionship'**
+  String get benefit5;
+
+  /// No description provided for @adoptionChallenges.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Challenges'**
+  String get adoptionChallenges;
+
+  /// No description provided for @adoptionChallengesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Be prepared for these challenges:'**
+  String get adoptionChallengesDescription;
+
+  /// No description provided for @challenge1.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjustment period for the pet'**
+  String get challenge1;
+
+  /// No description provided for @challenge2.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown health or behavior history'**
+  String get challenge2;
+
+  /// No description provided for @challenge3.
+  ///
+  /// In en, this message translates to:
+  /// **'Potential training needs'**
+  String get challenge3;
+
+  /// No description provided for @challenge4.
+  ///
+  /// In en, this message translates to:
+  /// **'Ongoing time and financial commitment'**
+  String get challenge4;
+
+  /// No description provided for @challenge5.
+  ///
+  /// In en, this message translates to:
+  /// **'Emotional attachment and responsibility'**
+  String get challenge5;
+
+  /// No description provided for @adoptionSuccessStories.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Success Stories'**
+  String get adoptionSuccessStories;
+
+  /// No description provided for @adoptionSuccessStoriesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Read inspiring adoption stories:'**
+  String get adoptionSuccessStoriesDescription;
+
+  /// No description provided for @story1.
+  ///
+  /// In en, this message translates to:
+  /// **'How Max found his forever home'**
+  String get story1;
+
+  /// No description provided for @story2.
+  ///
+  /// In en, this message translates to:
+  /// **'Luna\'s journey to recovery'**
+  String get story2;
+
+  /// No description provided for @story3.
+  ///
+  /// In en, this message translates to:
+  /// **'A family\'s first adoption experience'**
+  String get story3;
+
+  /// No description provided for @story4.
+  ///
+  /// In en, this message translates to:
+  /// **'Senior pet adoption success'**
+  String get story4;
+
+  /// No description provided for @story5.
+  ///
+  /// In en, this message translates to:
+  /// **'Special needs pet adoption'**
+  String get story5;
+
+  /// No description provided for @adoptionCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Community'**
+  String get adoptionCommunity;
+
+  /// No description provided for @adoptionCommunityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect with other pet parents:'**
+  String get adoptionCommunityDescription;
+
+  /// No description provided for @community1.
+  ///
+  /// In en, this message translates to:
+  /// **'Join local pet groups'**
+  String get community1;
+
+  /// No description provided for @community2.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your adoption story'**
+  String get community2;
+
+  /// No description provided for @community3.
+  ///
+  /// In en, this message translates to:
+  /// **'Get advice from experienced owners'**
+  String get community3;
+
+  /// No description provided for @community4.
+  ///
+  /// In en, this message translates to:
+  /// **'Participate in pet events'**
+  String get community4;
+
+  /// No description provided for @community5.
+  ///
+  /// In en, this message translates to:
+  /// **'Volunteer at animal shelters'**
+  String get community5;
+
+  /// No description provided for @adoptionEducation.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Education'**
+  String get adoptionEducation;
+
+  /// No description provided for @adoptionEducationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn more about pet adoption:'**
+  String get adoptionEducationDescription;
+
+  /// No description provided for @education1.
+  ///
+  /// In en, this message translates to:
+  /// **'Understanding pet behavior'**
+  String get education1;
+
+  /// No description provided for @education2.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet health and nutrition'**
+  String get education2;
+
+  /// No description provided for @education3.
+  ///
+  /// In en, this message translates to:
+  /// **'Training and socialization'**
+  String get education3;
+
+  /// No description provided for @education4.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency pet care'**
+  String get education4;
+
+  /// No description provided for @education5.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet law and regulations'**
+  String get education5;
+
+  /// No description provided for @adoptionAdvocacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Advocacy'**
+  String get adoptionAdvocacy;
+
+  /// No description provided for @adoptionAdvocacyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Help promote pet adoption:'**
+  String get adoptionAdvocacyDescription;
+
+  /// No description provided for @advocacy1.
+  ///
+  /// In en, this message translates to:
+  /// **'Share adoption stories on social media'**
+  String get advocacy1;
+
+  /// No description provided for @advocacy2.
+  ///
+  /// In en, this message translates to:
+  /// **'Volunteer at local shelters'**
+  String get advocacy2;
+
+  /// No description provided for @advocacy3.
+  ///
+  /// In en, this message translates to:
+  /// **'Donate to animal welfare organizations'**
+  String get advocacy3;
+
+  /// No description provided for @advocacy4.
+  ///
+  /// In en, this message translates to:
+  /// **'Educate others about adoption benefits'**
+  String get advocacy4;
+
+  /// No description provided for @advocacy5.
+  ///
+  /// In en, this message translates to:
+  /// **'Support spay/neuter programs'**
+  String get advocacy5;
+
+  /// No description provided for @adoptionMyths.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Myths'**
+  String get adoptionMyths;
+
+  /// No description provided for @adoptionMythsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Common misconceptions about pet adoption:'**
+  String get adoptionMythsDescription;
+
+  /// No description provided for @myth1.
+  ///
+  /// In en, this message translates to:
+  /// **'Adopted pets have behavior problems'**
+  String get myth1;
+
+  /// No description provided for @myth2.
+  ///
+  /// In en, this message translates to:
+  /// **'You can\'t find purebred pets for adoption'**
+  String get myth2;
+
+  /// No description provided for @myth3.
+  ///
+  /// In en, this message translates to:
+  /// **'Adopted pets are unhealthy'**
+  String get myth3;
+
+  /// No description provided for @myth4.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption is too complicated'**
+  String get myth4;
+
+  /// No description provided for @myth5.
+  ///
+  /// In en, this message translates to:
+  /// **'Adopted pets don\'t bond with new owners'**
+  String get myth5;
+
+  /// No description provided for @adoptionFacts.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption Facts'**
+  String get adoptionFacts;
+
+  /// No description provided for @adoptionFactsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Facts about pet adoption:'**
+  String get adoptionFactsDescription;
+
+  /// No description provided for @fact1.
+  ///
+  /// In en, this message translates to:
+  /// **'Millions of pets are waiting for homes'**
+  String get fact1;
+
+  /// No description provided for @fact2.
+  ///
+  /// In en, this message translates to:
+  /// **'Adopted pets are often already trained'**
+  String get fact2;
+
+  /// No description provided for @fact3.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption fees help support animal care'**
+  String get fact3;
+
+  /// No description provided for @fact4.
+  ///
+  /// In en, this message translates to:
+  /// **'Many adopted pets are healthy and well-behaved'**
+  String get fact4;
+
+  /// No description provided for @fact5.
+  ///
+  /// In en, this message translates to:
+  /// **'Adoption saves lives and reduces overpopulation'**
+  String get fact5;
+
+  /// No description provided for @groomers.
+  ///
+  /// In en, this message translates to:
+  /// **'Groomers'**
+  String get groomers;
+
+  /// No description provided for @trainers.
+  ///
+  /// In en, this message translates to:
+  /// **'Trainers'**
+  String get trainers;
+
+  /// No description provided for @professionalGroomers.
+  ///
+  /// In en, this message translates to:
+  /// **'Professional Groomers'**
+  String get professionalGroomers;
+
+  /// No description provided for @professionalTrainers.
+  ///
+  /// In en, this message translates to:
+  /// **'Professional Trainers'**
+  String get professionalTrainers;
+
+  /// No description provided for @findBestGroomingServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the best grooming services for your pet'**
+  String get findBestGroomingServices;
+
+  /// No description provided for @findBestTrainingServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the best training services for your pet'**
+  String get findBestTrainingServices;
+
+  /// No description provided for @listingsNearMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Listings Near Me'**
+  String get listingsNearMe;
+
+  /// No description provided for @topListings.
+  ///
+  /// In en, this message translates to:
+  /// **'Top Listings'**
+  String get topListings;
+
+  /// No description provided for @noGroomersNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'No groomers nearby'**
+  String get noGroomersNearby;
+
+  /// No description provided for @noTopGroomers.
+  ///
+  /// In en, this message translates to:
+  /// **'No top groomers available'**
+  String get noTopGroomers;
+
+  /// No description provided for @noTrainersNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'No trainers nearby'**
+  String get noTrainersNearby;
+
+  /// No description provided for @noTopTrainers.
+  ///
+  /// In en, this message translates to:
+  /// **'No top trainers available'**
+  String get noTopTrainers;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
@@ -5471,7 +6835,7 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['ar', 'en', 'fr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['ar', 'dz', 'en', 'fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -5483,6 +6847,7 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
     case 'ar': return AppLocalizationsAr();
+    case 'dz': return AppLocalizationsDz();
     case 'en': return AppLocalizationsEn();
     case 'fr': return AppLocalizationsFr();
   }

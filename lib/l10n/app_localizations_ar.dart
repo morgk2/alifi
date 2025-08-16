@@ -36,7 +36,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get privacyPolicy => 'سياسة الخصوصية';
 
   @override
-  String get aiPetAssistant => 'مساعد الحيوانات الأليفة الذكي';
+  String get aiPetAssistant => 'مساعد الحيوانات الذكي';
 
   @override
   String get typeYourMessage => 'اكتب رسالتك...';
@@ -48,13 +48,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get goodAfternoonUser => 'مساء الخير، مستخدم!';
 
   @override
-  String get loadingNearbyPets => 'جاري تحميل الحيوانات الأليفة القريبة...';
+  String get loadingNearbyPets => 'جاري تحميل الحيوانات القريبة...';
 
   @override
-  String get lostPetsNearby => 'الحيوانات المفقودة القريبة';
+  String get lostPetsNearby => 'حيوانات مفقودة بالقرب';
 
   @override
-  String get recentLostPets => 'الحيوانات المفقودة حديثاً';
+  String get recentLostPets => 'الحيوانات المفقودة مؤخراً';
 
   @override
   String get lost => 'مفقود';
@@ -84,11 +84,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get contact => 'اتصال';
 
   @override
-  String get petMarkedAsFoundSuccessfully => 'تم تمييز الحيوان الأليف كأنه تم العثور عليه بنجاح!';
+  String get petMarkedAsFoundSuccessfully => 'تم تمييز الحيوان كأنه تم العثور عليه بنجاح!';
 
   @override
   String errorMarkingPetAsFound(Object error) {
-    return 'خطأ في تمييز الحيوان الأليف كأنه تم العثور عليه: $error';
+    return 'خطأ في تمييز الحيوان كأنه تم العثور عليه: $error';
   }
 
   @override
@@ -163,7 +163,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get addedVetClinicToMap => 'تمت إضافة العيادة البيطرية إلى الخريطة';
 
   @override
-  String get addedPetStoreToMap => 'تمت إضافة متجر الحيوانات الأليفة إلى الخريطة';
+  String get addedPetStoreToMap => 'تمت إضافة متجر الحيوانات إلى الخريطة';
 
   @override
   String errorAddingBusiness(Object error) {
@@ -174,7 +174,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get migrateLocations => 'ترحيل المواقع';
 
   @override
-  String get migrateLocationsDescription => 'سيتم ترحيل جميع مواقع الحيوانات الأليفة الموجودة إلى التنسيق الجديد. لا يمكن التراجع عن هذه العملية.';
+  String get migrateLocationsDescription => 'سيتم ترحيل جميع مواقع الحيوانات الموجودة إلى التنسيق الجديد. لا يمكن التراجع عن هذه العملية.';
 
   @override
   String get migrationComplete => 'اكتمل الترحيل';
@@ -263,7 +263,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String error(Object error) {
-    return 'خطأ: $error';
+    return 'خطأ';
   }
 
   @override
@@ -271,7 +271,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String physicalPetIdFor(Object petName) {
-    return 'هوية الحيوان الأليف المادية لـ $petName';
+    return 'هوية الحيوان المادية لـ $petName';
   }
 
   @override
@@ -294,13 +294,25 @@ class AppLocalizationsAr extends AppLocalizations {
   String get vet => 'طبيب بيطري';
 
   @override
+  String get vetsNearMe => 'الأطباء البيطريون القريبون';
+
+  @override
+  String get recommendedVets => 'الأطباء البيطريون الموصى بهم';
+
+  @override
+  String get topVets => 'أفضل الأطباء البيطريون';
+
+  @override
   String get store => 'المتجر';
 
   @override
   String get vetClinic => 'عيادة بيطرية';
 
   @override
-  String get petStore => 'متجر الحيوانات الأليفة';
+  String get petStore => 'متجر الحيوانات';
+
+  @override
+  String get services => 'الخدمات';
 
   @override
   String get myPets => 'حيواناتي الأليفة';
@@ -444,7 +456,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String errorOpeningChat(Object error) {
-    return 'خطأ في فتح المحادثة: $error';
+    return 'خطأ في فتح الدردشة: $error';
   }
 
   @override
@@ -509,7 +521,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get today => 'اليوم';
 
   @override
-  String get pet => 'الحيوان الأليف';
+  String get pet => 'الحيوان';
 
   @override
   String get veterinarian => 'طبيب بيطري';
@@ -541,7 +553,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String errorLoadingPets(Object error) {
-    return 'خطأ في تحميل الحيوانات الأليفة: $error';
+    return 'خطأ في تحميل الحيوانات: $error';
   }
 
   @override
@@ -573,7 +585,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noAvailableTimeSlotsForThisDate => 'لا توجد أوقات متاحة لهذا التاريخ';
 
   @override
-  String get selectPet => 'اختر الحيوان الأليف';
+  String get selectPet => 'اختر الحيوان';
 
   @override
   String get noPetsFoundPleaseAdd => 'لم يتم العثور على حيوانات أليفة. يرجى إضافة حيوان أليف أولاً.';
@@ -614,7 +626,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get appointments => 'المواعيد';
 
   @override
-  String get pets => 'الحيوانات الأليفة';
+  String get pets => 'الحيوانات';
 
   @override
   String get noResultsFound => 'لم يتم العثور على نتائج';
@@ -656,13 +668,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get howToReportLostPet => 'كيف أبلغ عن حيوان أليف مفقود؟';
 
   @override
-  String get reportLostPetInstructions => 'انتقل إلى قسم \"الحيوانات الأليفة المفقودة\"، اضغط \"الإبلاغ عن حيوان أليف مفقود\"، املأ التفاصيل بما في ذلك الصور والموقع ومعلومات الاتصال.';
+  String get reportLostPetInstructions => 'انتقل إلى قسم \"الحيوانات المفقودة\"، اضغط \"الإبلاغ عن حيوان أليف مفقود\"، املأ التفاصيل بما في ذلك الصور والموقع ومعلومات الاتصال.';
 
   @override
-  String get lostPets => 'الحيوانات الأليفة المفقودة';
+  String get lostPets => 'الحيوانات المفقودة';
 
   @override
-  String get howToOrderPetSupplies => 'كيف أطلب مستلزمات الحيوانات الأليفة؟';
+  String get howToOrderPetSupplies => 'كيف أطلب مستلزمات الحيوانات؟';
 
   @override
   String get orderPetSuppliesInstructions => 'اذهب إلى قسم \"المتجر\"، تصفح المنتجات، أضف العناصر إلى السلة، وتابع للدفع بطريقة الدفع الخاصة بك.';
@@ -707,10 +719,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get trackOrdersAndDeliveryStatus => 'تتبع طلباتك وحالة التوصيل';
 
   @override
-  String get petCareReminders => 'تذكيرات رعاية الحيوانات الأليفة';
+  String get petCareReminders => 'تذكيرات رعاية الحيوانات';
 
   @override
-  String get neverMissImportantPetCareAppointments => 'لا تفوت أبداً مواعيد رعاية الحيوانات الأليفة المهمة';
+  String get neverMissImportantPetCareAppointments => 'لا تفوت أبداً مواعيد رعاية الحيوانات المهمة';
 
   @override
   String get youCanChangeThisLaterInDeviceSettings => 'يمكنك تغيير هذا لاحقاً في إعدادات جهازك';
@@ -954,19 +966,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get goodEvening => 'مساء الخير';
 
   @override
-  String get user => 'المستخدم';
+  String get user => 'مستخدم';
 
   @override
-  String get noLostPetsReportedNearby => 'لا توجد حيوانات مفقودة تم الإبلاغ عنها قريباً';
+  String get noLostPetsReportedNearby => 'لا توجد حيوانات أليفة مفقودة مبلغ عنها في المنطقة';
 
   @override
-  String get weWillNotifyYouWhenPetsAreReported => 'سنخطرك عندما يتم الإبلاغ عن حيوانات في منطقتك';
+  String get weWillNotifyYouWhenPetsAreReported => 'سنقوم بإشعارك عندما يتم الإبلاغ عن حيوانات أليفة في منطقتك';
 
   @override
-  String get noRecentLostPetsReported => 'لا توجد حيوانات مفقودة حديثاً تم الإبلاغ عنها';
+  String get noRecentLostPetsReported => 'لا توجد حيوانات أليفة مفقودة مبلغ عنها مؤخراً';
 
   @override
-  String get enableLocationToSeePetsInYourArea => 'تفعيل الموقع لرؤية الحيوانات في منطقتك';
+  String get enableLocationToSeePetsInYourArea => 'فعّل الموقع لرؤية الحيوانات في منطقتك';
 
   @override
   String get navigate => 'التنقل';
@@ -1068,7 +1080,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get missingFeatures => 'ميزات مفقودة';
 
   @override
-  String get petListingIssues => 'مشاكل قائمة الحيوانات الأليفة';
+  String get petListingIssues => 'مشاكل قائمة الحيوانات';
 
   @override
   String get mapNotWorking => 'الخريطة لا تعمل';
@@ -1158,7 +1170,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get requestToBeAStore => 'طلب أن تكون متجر';
 
   @override
-  String get sellPetProductsAndServices => 'بيع منتجات وخدمات الحيوانات الأليفة';
+  String get sellPetProductsAndServices => 'بيع منتجات وخدمات الحيوانات';
 
   @override
   String get linkedAccounts => 'الحسابات المرتبطة';
@@ -1297,13 +1309,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get aboutAlifi => 'حول أليفي';
 
   @override
-  String get alifiIsAComprehensivePetCarePlatform => 'أليفي هو منصة شاملة لرعاية الحيوانات الأليفة تربط أصحاب الحيوانات الأليفة بالأطباء البيطريين ومتاجر الحيوانات الأليفة وخدمات رعاية الحيوانات الأليفة الأخرى. مهمتنا هي جعل رعاية الحيوانات الأليفة سهلة المنال ومريحة وموثوقة للجميع.';
+  String get alifiIsAComprehensivePetCarePlatform => 'أليفي هو منصة شاملة لرعاية الحيوانات تربط أصحاب الحيوانات بالأطباء البيطريين ومتاجر الحيوانات وخدمات رعاية الحيوانات الأخرى. مهمتنا هي جعل رعاية الحيوانات سهلة المنال ومريحة وموثوقة للجميع.';
 
   @override
   String get verifiedServices => 'الخدمات الموثقة';
 
   @override
-  String get allVeterinariansAndPetStoresOnOurPlatformAreVerified => 'جميع الأطباء البيطريين ومتاجر الحيوانات الأليفة في منصتنا موثقون لضمان أعلى جودة رعاية لحيواناتك الأليفة المحبوبة.';
+  String get allVeterinariansAndPetStoresOnOurPlatformAreVerified => 'جميع الأطباء البيطريين ومتاجر الحيوانات في منصتنا موثقون لضمان أعلى جودة رعاية لحيواناتك الأليفة المحبوبة.';
 
   @override
   String get secureAndPrivate => 'آمن وخاص';
@@ -1447,7 +1459,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get specifications => 'المواصفات';
 
   @override
-  String get reviews => 'المراجعات';
+  String get reviews => 'التقييمات';
 
   @override
   String get relatedProducts => 'المنتجات ذات الصلة';
@@ -1978,7 +1990,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get thisActionCannotBeUndone => 'لا يمكن التراجع عن هذا الإجراء';
 
   @override
-  String get accountDeleted => 'تم حذف الحساب';
+  String get accountDeleted => 'تم حذف الحساب بنجاح';
 
   @override
   String errorDeletingAccount(Object error) {
@@ -2062,7 +2074,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get searching => 'جاري البحث...';
 
   @override
-  String get searchPeoplePetsVets => 'البحث عن الأشخاص والحيوانات الأليفة والأطباء البيطريين...';
+  String get searchPeoplePetsVets => 'البحث عن الأشخاص والحيوانات والأطباء البيطريين...';
 
   @override
   String get recommendedVetsAndStores => 'الأطباء البيطريون والمتاجر الموصى بها';
@@ -2101,27 +2113,27 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get pleaseSignInToFollowUsers => 'يرجى تسجيل الدخول لمتابعة المستخدمين';
+  String get pleaseSignInToFollowUsers => 'Please sign in to follow users';
 
   @override
   String errorUpdatingFollowStatus(Object error) {
-    return 'خطأ في تحديث حالة المتابعة: $error';
+    return 'Error updating follow status: $error';
   }
 
   @override
-  String get followers => 'المتابعون';
+  String get followers => 'Followers';
 
   @override
-  String get following => 'يتبع';
+  String get following => 'Following';
 
   @override
-  String get follow => 'متابعة';
+  String get follow => 'Follow';
 
   @override
-  String get unfollow => 'إلغاء المتابعة';
+  String get unfollow => 'Unfollow';
 
   @override
-  String get viewInMap => 'عرض في الخريطة';
+  String get viewInMap => 'View in Map';
 
   @override
   String get message => 'رسالة';
@@ -2133,111 +2145,111 @@ class AppLocalizationsAr extends AppLocalizations {
   String get address => 'العنوان';
 
   @override
-  String get phone => 'الهاتف';
+  String get phone => 'Phone';
 
   @override
-  String get bio => 'السيرة الذاتية';
+  String get bio => 'Bio';
 
   @override
-  String get posts => 'المنشورات';
+  String get posts => 'Posts';
 
   @override
-  String get photos => 'الصور';
+  String get photos => 'Photos';
 
   @override
-  String get videos => 'الفيديوهات';
+  String get videos => 'Videos';
 
   @override
-  String get friends => 'الأصدقاء';
+  String get friends => 'Friends';
 
   @override
-  String get mutualFriends => 'الأصدقاء المشتركون';
+  String get mutualFriends => 'Mutual Friends';
 
   @override
-  String get shareProfile => 'مشاركة الملف الشخصي';
+  String get shareProfile => 'Share Profile';
 
   @override
-  String get copyProfileLink => 'نسخ رابط الملف الشخصي';
+  String get copyProfileLink => 'Copy Profile Link';
 
   @override
-  String get profileLinkCopied => 'تم نسخ رابط الملف الشخصي إلى الحافظة';
+  String get profileLinkCopied => 'Profile link copied to clipboard';
 
   @override
-  String get errorCopyingProfileLink => 'خطأ في نسخ رابط الملف الشخصي';
+  String get errorCopyingProfileLink => 'Error copying profile link';
 
   @override
-  String get noPostsYet => 'لا توجد منشورات بعد';
+  String get noPostsYet => 'No posts yet';
 
   @override
-  String get noPhotosYet => 'لا توجد صور بعد';
+  String get noPhotosYet => 'No photos yet';
 
   @override
-  String get noVideosYet => 'لا توجد فيديوهات بعد';
+  String get noVideosYet => 'No videos yet';
 
   @override
-  String get noFriendsYet => 'لا توجد أصدقاء بعد';
+  String get noFriendsYet => 'No friends yet';
 
   @override
-  String get noMutualFriends => 'لا توجد أصدقاء مشتركون';
+  String get noMutualFriends => 'No mutual friends';
 
   @override
-  String get loadingProfile => 'جاري تحميل الملف الشخصي...';
+  String get loadingProfile => 'Loading profile...';
 
   @override
   String errorLoadingProfile(Object error) {
-    return 'خطأ في تحميل الملف الشخصي: $error';
+    return 'Error loading profile: $error';
   }
 
   @override
-  String get profileNotFound => 'الملف الشخصي غير موجود';
+  String get profileNotFound => 'Profile not found';
 
   @override
-  String get accountSuspended => 'تم تعليق الحساب';
+  String get accountSuspended => 'Account suspended';
 
   @override
-  String get accountPrivate => 'هذا الحساب خاص';
+  String get accountPrivate => 'This account is private';
 
   @override
-  String get followToSeeContent => 'تابع لرؤية المحتوى';
+  String get followToSeeContent => 'Follow to see content';
 
   @override
-  String get requestToFollow => 'طلب متابعة';
+  String get requestToFollow => 'Request to Follow';
 
   @override
-  String get requestSent => 'تم إرسال الطلب';
+  String get requestSent => 'Request sent';
 
   @override
-  String get cancelRequest => 'إلغاء الطلب';
+  String get cancelRequest => 'Cancel Request';
 
   @override
-  String get acceptRequest => 'قبول الطلب';
+  String get acceptRequest => 'Accept Request';
 
   @override
-  String get declineRequest => 'رفض الطلب';
+  String get declineRequest => 'Decline Request';
 
   @override
-  String get removeFollower => 'إزالة المتابع';
+  String get removeFollower => 'Remove Follower';
 
   @override
-  String get muteUser => 'كتم المستخدم';
+  String get muteUser => 'Mute User';
 
   @override
-  String get unmuteUser => 'إلغاء كتم المستخدم';
+  String get unmuteUser => 'Unmute User';
 
   @override
-  String get userMuted => 'تم كتم المستخدم';
+  String get userMuted => 'User muted';
 
   @override
-  String get userUnmuted => 'تم إلغاء كتم المستخدم';
+  String get userUnmuted => 'User unmuted';
 
   @override
   String errorMutingUser(Object error) {
-    return 'خطأ في كتم المستخدم: $error';
+    return 'Error muting user: $error';
   }
 
   @override
   String errorUnmutingUser(Object error) {
-    return 'خطأ في إلغاء كتم المستخدم: $error';
+    return 'Error unmuting user: $error';
   }
 
   @override
@@ -2247,62 +2259,62 @@ class AppLocalizationsAr extends AppLocalizations {
   String get yourRecentProfileVisitsWillAppearHere => 'ستظهر زيارات ملفك الشخصي الحديثة هنا';
 
   @override
-  String get noProductsYet => 'لا توجد منتجات بعد';
+  String get noProductsYet => 'No products yet';
 
   @override
-  String get noPetsYet => 'لا توجد حيوانات أليفة بعد';
+  String get noPetsYet => 'No pets yet';
 
   @override
-  String get rating => 'التقييم';
+  String get rating => 'Rating';
 
   @override
-  String get sendAMessage => 'إرسال رسالة';
+  String get sendAMessage => 'Send a message';
 
   @override
-  String get reportAccount => 'الإبلاغ عن الحساب';
+  String get reportAccount => 'Report account';
 
   @override
-  String get pleaseSignInToSendMessages => 'يرجى تسجيل الدخول لإرسال الرسائل';
+  String get pleaseSignInToSendMessages => 'Please sign in to send messages';
 
   @override
-  String get helpUsUnderstandWhatsHappening => 'ساعدنا في فهم ما يحدث';
+  String get helpUsUnderstandWhatsHappening => 'Help us understand what\'s happening';
 
   @override
-  String get unknownUser => 'مستخدم غير معروف';
+  String get unknownUser => 'Unknown User';
 
   @override
-  String get whyAreYouReportingThisAccount => 'لماذا تبلغ عن هذا الحساب؟';
+  String get whyAreYouReportingThisAccount => 'Why are you reporting this account?';
 
   @override
-  String get submitReport => 'إرسال البلاغ';
+  String get submitReport => 'Submit Report';
 
   @override
-  String get spamOrUnwantedContent => 'محتوى مزعج أو غير مرغوب فيه';
+  String get spamOrUnwantedContent => 'Spam or unwanted content';
 
   @override
-  String get inappropriateBehavior => 'سلوك غير لائق';
+  String get inappropriateBehavior => 'Inappropriate behavior';
 
   @override
-  String get fakeOrMisleadingInformation => 'معلومات مزيفة أو مضللة';
+  String get fakeOrMisleadingInformation => 'Fake or misleading information';
 
   @override
-  String get harassmentOrBullying => 'مضايقة أو تنمر';
+  String get harassmentOrBullying => 'Harassment or bullying';
 
   @override
-  String get scamOrFraud => 'احتيال أو نصب';
+  String get scamOrFraud => 'Scam or fraud';
 
   @override
-  String get hateSpeechOrSymbols => 'خطاب كراهية أو رموز';
+  String get hateSpeechOrSymbols => 'Hate speech or symbols';
 
   @override
-  String get violenceOrDangerousContent => 'عنف أو محتوى خطير';
+  String get violenceOrDangerousContent => 'Violence or dangerous content';
 
   @override
-  String get intellectualPropertyViolation => 'انتهاك الملكية الفكرية';
+  String get intellectualPropertyViolation => 'Intellectual property violation';
 
   @override
   String reportSubmittedFor(Object user) {
-    return 'تم إرسال البلاغ عن $user';
+    return 'Report submitted for $user';
   }
 
   @override
@@ -2368,7 +2380,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noPopularProductsAvailable => 'لا توجد منتجات شائعة متاحة';
 
   @override
-  String get viewAllVetTools => 'عرض جميع أدوات الطبيب البيطري';
+  String get viewAllVetTools => 'View All Vet Tools';
 
   @override
   String weveRaised(Object amount) {
@@ -2376,19 +2388,19 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get goal => 'الهدف';
+  String get goal => 'Goal';
 
   @override
   String get contribute => 'تبرع';
 
   @override
-  String get hiAskMeAboutAnyPetAdvice => 'مرحباً! اسألني عن أي نصيحة للحيوانات الأليفة،\nوسأبذل قصارى جهدي لمساعدتك\nوصغيرك!';
+  String get hiAskMeAboutAnyPetAdvice => 'Hi! ask me about any pet advice,\nand I\'ll do my best to help you, and\nyour little one!';
 
   @override
-  String get tapToChat => 'اضغط للدردشة...';
+  String get tapToChat => 'Tap to chat...';
 
   @override
-  String get sorryIEncounteredAnError => 'عذراً، واجهت خطأ. يرجى المحاولة مرة أخرى.';
+  String get sorryIEncounteredAnError => 'Sorry, I encountered an error. Please try again.';
 
   @override
   String get youMayBeInterested => 'قد يهمك';
@@ -2397,82 +2409,82 @@ class AppLocalizationsAr extends AppLocalizations {
   String get seeAll => 'عرض الكل';
 
   @override
-  String get errorLoadingProducts => 'خطأ في تحميل المنتجات';
+  String get errorLoadingProducts => 'Error loading products';
 
   @override
-  String get noProductsAvailable => 'لا توجد منتجات متاحة';
+  String get noProductsAvailable => 'No products available';
 
   @override
-  String get loadingCombinedProducts => 'جاري تحميل المنتجات المجمعة...';
+  String get loadingCombinedProducts => 'Loading combined products...';
 
   @override
   String loadedAliExpressProducts(Object count) {
-    return 'تم تحميل $count منتج من علي إكسبرس';
+    return 'Loaded $count AliExpress products';
   }
 
   @override
   String errorLoadingAliExpressProducts(Object error) {
-    return 'خطأ في تحميل منتجات علي إكسبرس: $error';
+    return 'Error loading AliExpress products: $error';
   }
 
   @override
   String loadedStoreProducts(Object count) {
-    return 'تم تحميل $count منتج من المتجر';
+    return 'Loaded $count store products';
   }
 
   @override
   String errorLoadingStoreProducts(Object error) {
-    return 'خطأ في تحميل منتجات المتجر: $error';
+    return 'Error loading store products: $error';
   }
 
   @override
-  String get noProductsFoundFromEitherSource => 'لم يتم العثور على منتجات من أي مصدر';
+  String get noProductsFoundFromEitherSource => 'No products found from either source';
 
   @override
-  String get creatingMockDataForTesting => 'إنشاء بيانات وهمية للاختبار...';
+  String get creatingMockDataForTesting => 'Creating mock data for testing...';
 
   @override
   String totalCombinedProducts(Object count) {
-    return 'إجمالي المنتجات المجمعة: $count';
+    return 'Total combined products: $count';
   }
 
   @override
   String errorInGetCombinedProducts(Object error) {
-    return 'خطأ في _getCombinedProducts: $error';
+    return 'Error in _getCombinedProducts: $error';
   }
 
   @override
-  String get petToySet => 'مجموعة ألعاب الحيوانات الأليفة';
+  String get petToySet => 'Pet Toy Set';
 
   @override
-  String get interactiveToysForPets => 'ألعاب تفاعلية للحيوانات الأليفة';
+  String get interactiveToysForPets => 'Interactive toys for pets';
 
   @override
-  String get petFoodBowl => 'وعاء طعام الحيوانات الأليفة';
+  String get petFoodBowl => 'Pet Food Bowl';
 
   @override
-  String get stainlessSteelFoodBowl => 'وعاء طعام من الفولاذ المقاوم للصدأ';
+  String get stainlessSteelFoodBowl => 'Stainless steel food bowl';
 
   @override
-  String get days => 'أيام';
+  String get days => 'days';
 
   @override
-  String get day => 'يوم';
+  String get day => 'day';
 
   @override
-  String get hour => 'ساعة';
+  String get hour => 'hour';
 
   @override
-  String get hours => 'ساعات';
+  String get hours => 'hours';
 
   @override
-  String get minute => 'دقيقة';
+  String get minute => 'minute';
 
   @override
-  String get justNow => 'الآن';
+  String get justNow => 'Just now';
 
   @override
-  String get ago => 'منذ';
+  String get ago => 'ago';
 
   @override
   String get totalAppointments => 'إجمالي المواعيد';
@@ -2557,28 +2569,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String get vetInformation => 'معلومات الطبيب البيطري';
 
   @override
-  String get petId => 'هوية الحيوان الأليف';
+  String get petId => 'هوية الحيوان';
 
   @override
-  String get editPets => 'تعديل الحيوانات الأليفة';
+  String get editPets => 'تعديل الحيوانات';
 
   @override
-  String get editExistingPet => 'تعديل الحيوان الأليف الموجود';
+  String get editExistingPet => 'تعديل الحيوان الموجود';
 
   @override
   String get whatsYourPetsName => 'ما اسم حيوانك الأليف؟';
 
   @override
-  String get petsName => 'اسم الحيوان الأليف';
+  String get petsName => 'اسم الحيوان';
 
   @override
   String get whatBreedIsYourPet => 'ما سلالة حيوانك الأليف؟';
 
   @override
-  String get petsBreed => 'سلالة الحيوان الأليف';
+  String get petsBreed => 'سلالة الحيوان';
 
   @override
-  String get selectPetType => 'اختر نوع الحيوان الأليف';
+  String get selectPetType => 'اختر نوع الحيوان';
 
   @override
   String get dog => 'كلب';
@@ -2648,7 +2660,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String errorAddingPet(Object error) {
-    return 'خطأ في إضافة الحيوان الأليف: $error';
+    return 'خطأ في إضافة الحيوان: $error';
   }
 
   @override
@@ -2670,13 +2682,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get logAnIllness => 'تسجيل مرض';
 
   @override
-  String get noLoggedVaccines => 'لا توجد لقاحات مسجلة لهذا الحيوان الأليف';
+  String get noLoggedVaccines => 'لا توجد لقاحات مسجلة لهذا الحيوان';
 
   @override
-  String get noLoggedIllnesses => 'لا توجد أمراض مسجلة لهذا الحيوان الأليف';
+  String get noLoggedIllnesses => 'لا توجد أمراض مسجلة لهذا الحيوان';
 
   @override
-  String get noLoggedChronicIllnesses => 'لا توجد أمراض مزمنة مسجلة لهذا الحيوان الأليف';
+  String get noLoggedChronicIllnesses => 'لا توجد أمراض مزمنة مسجلة لهذا الحيوان';
 
   @override
   String get vaccineAdded => 'تم إضافة اللقاح!';
@@ -2748,31 +2760,31 @@ class AppLocalizationsAr extends AppLocalizations {
   String get illnesses => 'الأمراض';
 
   @override
-  String get selectPetForPetId => 'اختر الحيوان الأليف الذي تريد طلب هويته';
+  String get selectPetForPetId => 'اختر الحيوان الذي تريد طلب هويته';
 
   @override
   String get pleaseSelectPetFirst => 'يرجى اختيار حيوان أليف أولاً';
 
   @override
-  String get petIdRequestSubmitted => 'تم تقديم طلب هوية الحيوان الأليف بنجاح!';
+  String get petIdRequestSubmitted => 'تم تقديم طلب هوية الحيوان بنجاح!';
 
   @override
   String get yourPetIdIsBeingProcessed => 'هوية حيوانك الأليف قيد المعالجة والتصنيع، يرجى التحلي بالصبر';
 
   @override
-  String get petIdManagement => 'إدارة هويات الحيوانات الأليفة';
+  String get petIdManagement => 'إدارة هويات الحيوانات';
 
   @override
-  String get digitalPetIds => 'هويات الحيوانات الأليفة الرقمية';
+  String get digitalPetIds => 'هويات الحيوانات الرقمية';
 
   @override
-  String get physicalPetIds => 'هويات الحيوانات الأليفة المادية';
+  String get physicalPetIds => 'هويات الحيوانات المادية';
 
   @override
   String get ready => 'جاهز';
 
   @override
-  String get editPhysicalPetId => 'تعديل هوية الحيوان الأليف المادية';
+  String get editPhysicalPetId => 'تعديل هوية الحيوان المادية';
 
   @override
   String get customer => 'العميل';
@@ -2787,15 +2799,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get update => 'تحديث';
 
   @override
-  String get petIdStatusUpdated => 'تم تحديث حالة هوية الحيوان الأليف بنجاح';
+  String get petIdStatusUpdated => 'تم تحديث حالة هوية الحيوان بنجاح';
 
   @override
   String errorUpdatingPetId(Object error) {
-    return 'خطأ في تحديث هوية الحيوان الأليف: $error';
+    return 'خطأ في تحديث هوية الحيوان: $error';
   }
 
   @override
-  String get physicalPetIdRequestSubmitted => 'تم تقديم طلب هوية الحيوان الأليف المادية بنجاح! سيتم الاتصال بك للدفع.';
+  String get physicalPetIdRequestSubmitted => 'تم تقديم طلب هوية الحيوان المادية بنجاح! سيتم الاتصال بك للدفع.';
 
   @override
   String get requestPhysicalPetId => 'طلب هوية حيوان أليف مادية';
@@ -2817,7 +2829,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String errorCheckingPetIdStatus(Object error) {
-    return 'خطأ في التحقق من حالة هوية الحيوان الأليف: $error';
+    return 'خطأ في التحقق من حالة هوية الحيوان: $error';
   }
 
   @override
@@ -2845,4 +2857,689 @@ class AppLocalizationsAr extends AppLocalizations {
   String resultsFound(Object count) {
     return 'تم العثور على $count نتيجة';
   }
+
+  @override
+  String get whatTypeOfPetDoYouHave => 'ما نوع الحيوان الذي لديك؟';
+
+  @override
+  String get next => 'التالي';
+
+  @override
+  String get petsNearMe => 'الحيوانات القريبة مني';
+
+  @override
+  String get basedOnYourCurrentLocation => 'بناءً على موقعك الحالي';
+
+  @override
+  String get noAdoptionListingsInYourArea => 'لا توجد قوائم تبني في منطقتك';
+
+  @override
+  String get noAdoptionListingsYet => 'لا توجد قوائم تبني بعد';
+
+  @override
+  String get beTheFirstToAddPetForAdoption => 'كن أول من يضيف حيوان أليف للتبني!';
+
+  @override
+  String get addListing => 'إضافة قائمة';
+
+  @override
+  String get searchPets => 'البحث عن الحيوانات...';
+
+  @override
+  String get gettingYourLocation => 'جاري الحصول على موقعك...';
+
+  @override
+  String get locationPermissionDenied => 'تم رفض إذن الموقع';
+
+  @override
+  String get locationPermissionPermanentlyDenied => 'تم رفض إذن الموقع نهائياً';
+
+  @override
+  String get unableToGetLocation => 'غير قادر على الحصول على الموقع';
+
+  @override
+  String filtersApplied(Object count) {
+    return 'تم تطبيق المرشحات: $count نشط';
+  }
+
+  @override
+  String get pleaseLoginToManageListings => 'يرجى تسجيل الدخول لإدارة قوائمك';
+
+  @override
+  String get errorLoadingListings => 'خطأ في تحميل القوائم';
+
+  @override
+  String get noPetsNearMe => 'لا توجد حيوانات أليفة قريبة مني';
+
+  @override
+  String get posting => 'جاري النشر...';
+
+  @override
+  String get postForAdoption => 'نشر للتبني';
+
+  @override
+  String get listingTitle => 'عنوان القائمة';
+
+  @override
+  String get enterTitleForListing => 'أدخل عنواناً لقائمتك';
+
+  @override
+  String get describePetAndAdopter => 'صف حيوانك الأليف وما تبحث عنه في المتبني';
+
+  @override
+  String get location => 'الموقع';
+
+  @override
+  String get enterLocationForAdoption => 'أدخل موقع التبني';
+
+  @override
+  String get petInformation => 'معلومات الحيوان';
+
+  @override
+  String get listingDetails => 'تفاصيل القائمة';
+
+  @override
+  String get adoptionFee => 'رسوم التبني (دينار جزائري)';
+
+  @override
+  String get freeAdoption => '0 للتبني المجاني';
+
+  @override
+  String get pleaseEnterTitle => 'يرجى إدخال عنوان للقائمة';
+
+  @override
+  String get pleaseEnterDescription => 'يرجى إدخال وصف للقائمة';
+
+  @override
+  String get pleaseEnterLocation => 'يرجى إدخال موقع للقائمة';
+
+  @override
+  String petPostedForAdoptionSuccessfully(Object petName) {
+    return 'تم نشر $petName للتبني بنجاح!';
+  }
+
+  @override
+  String failedToPostAdoptionListing(Object error) {
+    return 'فشل في نشر قائمة التبني: $error';
+  }
+
+  @override
+  String get offerForAdoption => 'عرض للتبني';
+
+  @override
+  String get deletePet => 'حذف الحيوان';
+
+  @override
+  String areYouSureDeletePet(Object petName) {
+    return 'هل أنت متأكد من حذف $petName؟';
+  }
+
+  @override
+  String petDeletedSuccessfully(Object petName) {
+    return 'تم حذف $petName بنجاح';
+  }
+
+  @override
+  String failedToDeletePet(Object error) {
+    return 'فشل في حذف الحيوان: $error';
+  }
+
+  @override
+  String get myListings => 'قوائمي';
+
+  @override
+  String get noListingsFound => 'لم يتم العثور على قوائم';
+
+  @override
+  String get editListing => 'تعديل القائمة';
+
+  @override
+  String get deleteListing => 'حذف القائمة';
+
+  @override
+  String get listingDeletedSuccessfully => 'تم حذف القائمة بنجاح';
+
+  @override
+  String failedToDeleteListing(Object error) {
+    return 'فشل في حذف القائمة: $error';
+  }
+
+  @override
+  String get areYouSureDeleteListing => 'هل أنت متأكد من حذف هذه القائمة؟';
+
+  @override
+  String get contactInformation => 'معلومات الاتصال';
+
+  @override
+  String get postedBy => 'نشر بواسطة';
+
+  @override
+  String get contactOwner => 'اتصال بالمالك';
+
+  @override
+  String adoptionFeeValue(Object fee) {
+    return 'رسوم التبني: $fee دينار جزائري';
+  }
+
+  @override
+  String get free => 'مجاني';
+
+  @override
+  String get active => 'نشط';
+
+  @override
+  String get inactive => 'غير نشط';
+
+  @override
+  String get requirements => 'المتطلبات';
+
+  @override
+  String get noRequirements => 'لا توجد متطلبات محددة';
+
+  @override
+  String get contactNumber => 'رقم الاتصال';
+
+  @override
+  String get noContactNumber => 'لا يوجد رقم اتصال';
+
+  @override
+  String get lastUpdated => 'آخر تحديث';
+
+  @override
+  String get createdOn => 'تم الإنشاء في';
+
+  @override
+  String get adoptionListingDetails => 'تفاصيل قائمة التبني';
+
+  @override
+  String get petDetails => 'تفاصيل الحيوان';
+
+  @override
+  String get petType => 'نوع الحيوان';
+
+  @override
+  String get petAge => 'العمر';
+
+  @override
+  String get petGender => 'الجنس';
+
+  @override
+  String get petColor => 'اللون';
+
+  @override
+  String get petWeight => 'الوزن';
+
+  @override
+  String get petBreed => 'السلالة';
+
+  @override
+  String get petLocation => 'الموقع';
+
+  @override
+  String get petImages => 'الصور';
+
+  @override
+  String get noImages => 'لا توجد صور متاحة';
+
+  @override
+  String get viewAllImages => 'عرض جميع الصور';
+
+  @override
+  String get adoptionProcess => 'عملية التبني';
+
+  @override
+  String get adoptionSteps => 'خطوات التبني';
+
+  @override
+  String get step1 => 'الخطوة 1';
+
+  @override
+  String get step2 => 'الخطوة 2';
+
+  @override
+  String get step3 => 'الخطوة 3';
+
+  @override
+  String get step4 => 'الخطوة 4';
+
+  @override
+  String get contactOwnerStep => 'اتصال بالمالك';
+
+  @override
+  String get meetPetStep => 'مقابلة الحيوان';
+
+  @override
+  String get completeAdoptionStep => 'إكمال التبني';
+
+  @override
+  String get followUpStep => 'المتابعة والرعاية';
+
+  @override
+  String get contactOwnerDescription => 'تواصل مع مالك الحيوان لإبداء اهتمامك وطرح أسئلة حول الحيوان.';
+
+  @override
+  String get meetPetDescription => 'رتب لمقابلة الحيوان شخصياً للتأكد من أنه مناسب لعائلتك.';
+
+  @override
+  String get completeAdoptionDescription => 'إذا سار كل شيء على ما يرام، أكمل عملية التبني مع المالك.';
+
+  @override
+  String get followUpDescription => 'قدم رعاية مستمرة وتابع مع المالك إذا لزم الأمر.';
+
+  @override
+  String get adoptionTips => 'نصائح التبني';
+
+  @override
+  String get adoptionTipsDescription => 'إليك بعض النصائح لمساعدتك في عملية التبني:';
+
+  @override
+  String get tip1 => 'اطرح الكثير من الأسئلة حول تاريخ الحيوان وصحته وسلوكه';
+
+  @override
+  String get tip2 => 'قابل الحيوان شخصياً قبل اتخاذ القرار';
+
+  @override
+  String get tip3 => 'فكر في نمط حياتك ووضعك المعيشي';
+
+  @override
+  String get tip4 => 'كن صبوراً ولا تستعجل في اتخاذ القرار';
+
+  @override
+  String get tip5 => 'جهز منزلك للحيوان الأليف الجديد';
+
+  @override
+  String get tip6 => 'لديك خطة للرعاية المستمرة والمصروفات';
+
+  @override
+  String get adoptionSuccess => 'نجاح التبني';
+
+  @override
+  String get adoptionSuccessDescription => 'تهانينا على العثور على رفيقك الجديد! تذكر:';
+
+  @override
+  String get successTip1 => 'امنح حيوانك الأليف الجديد وقتاً للتكيف مع منزله الجديد';
+
+  @override
+  String get successTip2 => 'حدد موعد فحص بيطري في الأسبوع الأول';
+
+  @override
+  String get successTip3 => 'حدث معلومات الشريحة الإلكترونية إذا كانت متاحة';
+
+  @override
+  String get successTip4 => 'حافظ على التواصل مع المالك السابق إذا لزم الأمر';
+
+  @override
+  String get successTip5 => 'قدم الكثير من الحب والصبر أثناء الانتقال';
+
+  @override
+  String get adoptionResources => 'موارد التبني';
+
+  @override
+  String get adoptionResourcesDescription => 'إليك بعض الموارد المفيدة لأولياء الأمور الجدد:';
+
+  @override
+  String get resource1 => 'أدلة رعاية الحيوانات ونصائح';
+
+  @override
+  String get resource2 => 'توصيات الأطباء البيطريين المحليين';
+
+  @override
+  String get resource3 => 'موارد تدريب الحيوانات';
+
+  @override
+  String get resource4 => 'معلومات رعاية الحيوانات في الطوارئ';
+
+  @override
+  String get resource5 => 'موارد السكن الصديق للحيوانات الأليفة';
+
+  @override
+  String get adoptionSupport => 'دعم التبني';
+
+  @override
+  String get adoptionSupportDescription => 'تحتاج مساعدة في تبني؟ نحن هنا لدعمك:';
+
+  @override
+  String get support1 => 'تواصل مع فريق دعم التبني';
+
+  @override
+  String get support2 => 'انضم إلى منتديات مجتمعنا';
+
+  @override
+  String get support3 => 'الوصول إلى الموارد التعليمية';
+
+  @override
+  String get support4 => 'احصل على توصيات الأطباء البيطريين';
+
+  @override
+  String get support5 => 'اعثر على خدمات رعاية الحيوانات';
+
+  @override
+  String get adoptionFaq => 'الأسئلة الشائعة حول التبني';
+
+  @override
+  String get adoptionFaqDescription => 'الأسئلة الشائعة حول تبني الحيوانات:';
+
+  @override
+  String get faq1 => 'ماذا يجب أن أسأل مالك الحيوان؟';
+
+  @override
+  String get faq2 => 'كيف أعرف إذا كان الحيوان مناسب لي؟';
+
+  @override
+  String get faq3 => 'ما المستندات التي أحتاجها للتبني؟';
+
+  @override
+  String get faq4 => 'كم تكلفة رعاية الحيوان؟';
+
+  @override
+  String get faq5 => 'ماذا لو لم ينجح التبني؟';
+
+  @override
+  String get adoptionGuidelines => 'إرشادات التبني';
+
+  @override
+  String get adoptionGuidelinesDescription => 'يرجى اتباع هذه الإرشادات لتبني ناجح:';
+
+  @override
+  String get guideline1 => 'كن صادقاً بشأن خبرتك والوضع المعيشي';
+
+  @override
+  String get guideline2 => 'اطرح أسئلة مفصلة حول احتياجات الحيوان';
+
+  @override
+  String get guideline3 => 'فكر في الالتزام طويل المدى';
+
+  @override
+  String get guideline4 => 'لديك خطة احتياطية للطوارئ';
+
+  @override
+  String get guideline5 => 'كن محترماً لوقت المالك وقراره';
+
+  @override
+  String get adoptionSafety => 'سلامة التبني';
+
+  @override
+  String get adoptionSafetyDescription => 'ابق آمناً أثناء عملية التبني:';
+
+  @override
+  String get safety1 => 'قابل في مكان عام للمقابلة الأولى';
+
+  @override
+  String get safety2 => 'أحضر صديقاً أو أحد أفراد العائلة';
+
+  @override
+  String get safety3 => 'ثق بحدسك';
+
+  @override
+  String get safety4 => 'لا تشعر بالضغط لاتخاذ قرار سريع';
+
+  @override
+  String get safety5 => 'أبلغ عن أي سلوك مشبوه';
+
+  @override
+  String get adoptionPreparation => 'تحضير التبني';
+
+  @override
+  String get adoptionPreparationDescription => 'جهز لحيوانك الأليف الجديد:';
+
+  @override
+  String get preparation1 => 'أمّن منزلك للحيوان الأليف';
+
+  @override
+  String get preparation2 => 'اجمع الإمدادات اللازمة';
+
+  @override
+  String get preparation3 => 'ابحث عن متطلبات رعاية الحيوان';
+
+  @override
+  String get preparation4 => 'خطط للمصروفات المستمرة';
+
+  @override
+  String get preparation5 => 'رتب لرعاية الحيوان عندما تكون بعيداً';
+
+  @override
+  String get adoptionTimeline => 'الجدول الزمني للتبني';
+
+  @override
+  String get adoptionTimelineDescription => 'الجدول الزمني النموذجي لعملية التبني:';
+
+  @override
+  String get timeline1 => 'التواصل الأولي (1-2 يوم)';
+
+  @override
+  String get timeline2 => 'اللقاء والتعارف (3-7 أيام)';
+
+  @override
+  String get timeline3 => 'زيارة المنزل (اختياري، 1-2 أسبوع)';
+
+  @override
+  String get timeline4 => 'إكمال التبني (1-4 أسابيع)';
+
+  @override
+  String get timeline5 => 'رعاية المتابعة (مستمر)';
+
+  @override
+  String get adoptionCosts => 'تكاليف التبني';
+
+  @override
+  String get adoptionCostsDescription => 'فكر في هذه التكاليف عند التبني:';
+
+  @override
+  String get cost1 => 'رسوم التبني (إن وجدت)';
+
+  @override
+  String get cost2 => 'الزيارة البيطرية الأولية والتطعيمات';
+
+  @override
+  String get cost3 => 'إمدادات الحيوان والمعدات';
+
+  @override
+  String get cost4 => 'مصروفات الطعام والرعاية المستمرة';
+
+  @override
+  String get cost5 => 'صندوق الرعاية البيطرية في الطوارئ';
+
+  @override
+  String get adoptionBenefits => 'فوائد التبني';
+
+  @override
+  String get adoptionBenefitsDescription => 'فوائد تبني حيوان أليف:';
+
+  @override
+  String get benefit1 => 'أنقذ حياة وأعطِ منزلاً لحيوان أليف محتاج';
+
+  @override
+  String get benefit2 => 'غالباً ما يكون أكثر تكلفة من الشراء من مربي';
+
+  @override
+  String get benefit3 => 'العديد من الحيوانات المتبناة مدربة بالفعل';
+
+  @override
+  String get benefit4 => 'ادعم منظمات رعاية الحيوان';
+
+  @override
+  String get benefit5 => 'اختبر فرحة رفقة الحيوان';
+
+  @override
+  String get adoptionChallenges => 'تحديات التبني';
+
+  @override
+  String get adoptionChallengesDescription => 'كن مستعداً لهذه التحديات:';
+
+  @override
+  String get challenge1 => 'فترة التكيف للحيوان الأليف';
+
+  @override
+  String get challenge2 => 'تاريخ صحي أو سلوكي غير معروف';
+
+  @override
+  String get challenge3 => 'احتياجات تدريب محتملة';
+
+  @override
+  String get challenge4 => 'التزام مستمر بالوقت والمال';
+
+  @override
+  String get challenge5 => 'التعلق العاطفي والمسؤولية';
+
+  @override
+  String get adoptionSuccessStories => 'قصص نجاح التبني';
+
+  @override
+  String get adoptionSuccessStoriesDescription => 'اقرأ قصص التبني الملهمة:';
+
+  @override
+  String get story1 => 'كيف وجد ماكس منزله الدائم';
+
+  @override
+  String get story2 => 'رحلة لونا للشفاء';
+
+  @override
+  String get story3 => 'تجربة التبني الأولى لعائلة';
+
+  @override
+  String get story4 => 'نجاح تبني حيوان أليف مسن';
+
+  @override
+  String get story5 => 'تبني حيوان أليف ذو احتياجات خاصة';
+
+  @override
+  String get adoptionCommunity => 'مجتمع التبني';
+
+  @override
+  String get adoptionCommunityDescription => 'تواصل مع آباء الحيوانات الآخرين:';
+
+  @override
+  String get community1 => 'انضم إلى مجموعات الحيوانات المحلية';
+
+  @override
+  String get community2 => 'شارك قصة تبني';
+
+  @override
+  String get community3 => 'احصل على نصيحة من المالكين ذوي الخبرة';
+
+  @override
+  String get community4 => 'شارك في أحداث الحيوانات';
+
+  @override
+  String get community5 => 'تطوع في ملاجئ الحيوانات';
+
+  @override
+  String get adoptionEducation => 'تعليم التبني';
+
+  @override
+  String get adoptionEducationDescription => 'تعلم المزيد عن تبني الحيوانات:';
+
+  @override
+  String get education1 => 'فهم سلوك الحيوان';
+
+  @override
+  String get education2 => 'صحة الحيوان والتغذية';
+
+  @override
+  String get education3 => 'التدريب والتنشئة الاجتماعية';
+
+  @override
+  String get education4 => 'رعاية الحيوان في الطوارئ';
+
+  @override
+  String get education5 => 'قانون الحيوان واللوائح';
+
+  @override
+  String get adoptionAdvocacy => 'الدفاع عن التبني';
+
+  @override
+  String get adoptionAdvocacyDescription => 'ساعد في تعزيز تبني الحيوانات:';
+
+  @override
+  String get advocacy1 => 'شارك قصص التبني على وسائل التواصل الاجتماعي';
+
+  @override
+  String get advocacy2 => 'تطوع في الملاجئ المحلية';
+
+  @override
+  String get advocacy3 => 'تبرع لمنظمات رعاية الحيوان';
+
+  @override
+  String get advocacy4 => 'علم الآخرين عن فوائد التبني';
+
+  @override
+  String get advocacy5 => 'ادعم برامج التعقيم';
+
+  @override
+  String get adoptionMyths => 'أساطير التبني';
+
+  @override
+  String get adoptionMythsDescription => 'المفاهيم الخاطئة الشائعة حول تبني الحيوانات:';
+
+  @override
+  String get myth1 => 'الحيوانات المتبناة لديها مشاكل سلوكية';
+
+  @override
+  String get myth2 => 'لا يمكنك العثور على حيوانات أليفة أصيلة للتبني';
+
+  @override
+  String get myth3 => 'الحيوانات المتبناة غير صحية';
+
+  @override
+  String get myth4 => 'التبني معقد جداً';
+
+  @override
+  String get myth5 => 'الحيوانات المتبناة لا ترتبط بالمالكين الجدد';
+
+  @override
+  String get adoptionFacts => 'حقائق التبني';
+
+  @override
+  String get adoptionFactsDescription => 'حقائق حول تبني الحيوانات:';
+
+  @override
+  String get fact1 => 'ملايين الحيوانات تنتظر منازل';
+
+  @override
+  String get fact2 => 'الحيوانات المتبناة غالباً ما تكون مدربة بالفعل';
+
+  @override
+  String get fact3 => 'رسوم التبني تساعد في دعم رعاية الحيوان';
+
+  @override
+  String get fact4 => 'العديد من الحيوانات المتبناة صحية ومطيعة';
+
+  @override
+  String get fact5 => 'التبني ينقذ الأرواح ويقلل من الاكتظاظ السكاني';
+
+  @override
+  String get groomers => 'Groomers';
+
+  @override
+  String get trainers => 'Trainers';
+
+  @override
+  String get professionalGroomers => 'Professional Groomers';
+
+  @override
+  String get professionalTrainers => 'Professional Trainers';
+
+  @override
+  String get findBestGroomingServices => 'Find the best grooming services for your pet';
+
+  @override
+  String get findBestTrainingServices => 'Find the best training services for your pet';
+
+  @override
+  String get listingsNearMe => 'Listings Near Me';
+
+  @override
+  String get topListings => 'Top Listings';
+
+  @override
+  String get noGroomersNearby => 'No groomers nearby';
+
+  @override
+  String get noTopGroomers => 'No top groomers available';
+
+  @override
+  String get noTrainersNearby => 'No trainers nearby';
+
+  @override
+  String get noTopTrainers => 'No top trainers available';
 }

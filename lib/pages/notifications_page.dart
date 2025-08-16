@@ -13,6 +13,7 @@ import 'user_orders_page.dart';
 import 'user_profile_page.dart';
 import '../services/database_service.dart';
 import '../widgets/custom_snackbar.dart';
+import '../utils/app_fonts.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -52,8 +53,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ),
         title: Text(
           AppLocalizations.of(context)!.notifications,
-          style: const TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontWeight: FontWeight.bold,
             fontSize: 24,
             color: Colors.black,

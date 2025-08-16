@@ -644,7 +644,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ),
              bottomNavigationBar: SafeArea(
          child: Container(
-           padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
+           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
            decoration: BoxDecoration(
              color: Colors.white,
              boxShadow: [
@@ -656,7 +656,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
              ],
            ),
            child: SizedBox(
-             height: 64,
+             height: 56,
              child: ElevatedButton(
                onPressed: _hasAddresses ? () {
                  // Navigate to payment screen
@@ -682,14 +682,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
                style: ElevatedButton.styleFrom(
                  backgroundColor: _hasAddresses ? Colors.green : Colors.grey,
                  shape: RoundedRectangleBorder(
-                   borderRadius: BorderRadius.circular(16),
+                   borderRadius: BorderRadius.circular(28),
                  ),
                  elevation: 0,
                ),
                child: Text(
                  _hasAddresses ? 'Next' : 'Add Address to Continue',
                  style: TextStyle(
-                   fontSize: 18,
+                   fontSize: 16,
                    fontWeight: FontWeight.bold,
                    color: _hasAddresses ? Colors.white : Colors.grey[600],
                  ),

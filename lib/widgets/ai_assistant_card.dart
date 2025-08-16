@@ -279,6 +279,10 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: Colors.grey[300]!,
+                width: 1.0,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.15),

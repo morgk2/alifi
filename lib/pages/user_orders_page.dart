@@ -12,6 +12,7 @@ import '../dialogs/order_action_dialog.dart';
 import '../widgets/product_review_dialog.dart';
 import '../widgets/badge_widget.dart';
 import 'package:provider/provider.dart';
+import '../utils/app_fonts.dart';
 
 class UserOrdersPage extends StatefulWidget {
   const UserOrdersPage({super.key});
@@ -67,13 +68,12 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
         ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
+        title: Text(
           'Orders & Messages',
-          style: TextStyle(
-            color: Colors.black,
+          style: TextStyle(color: Colors.black,
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            fontFamily: 'Montserrat',
+            fontFamily: context.titleFont,
           ),
         ),
         centerTitle: true,

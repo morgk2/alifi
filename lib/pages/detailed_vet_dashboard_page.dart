@@ -16,6 +16,7 @@ import '../l10n/app_localizations.dart';
 
 import 'vet_schedule_page.dart';
 import 'detailed_schedule_page.dart';
+import '../utils/app_fonts.dart';
 
 class DetailedVetDashboardPage extends StatefulWidget {
   const DetailedVetDashboardPage({super.key});
@@ -133,8 +134,7 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                   Expanded(
                     child: Text(
                       l10n.vetDashboard,
-                      style: const TextStyle(
-                        fontFamily: 'Montserrat',
+                      style: TextStyle(fontFamily: context.titleFont,
                         fontWeight: FontWeight.w700,
                         color: Colors.black,
                         fontSize: 20,
@@ -341,10 +341,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
           // Quick Actions
           Text(
             l10n.quickActions,
-            style: const TextStyle(
-              fontSize: 24,
+            style: TextStyle(fontSize: 24,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Montserrat',
+              fontFamily: context.titleFont,
             ),
           ),
           const SizedBox(height: 16),
@@ -387,10 +386,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
           // Recent Activity
           Text(
             l10n.recentActivity,
-            style: const TextStyle(
-              fontSize: 24,
+            style: TextStyle(fontSize: 24,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Montserrat',
+              fontFamily: context.titleFont,
             ),
           ),
           const SizedBox(height: 16),
@@ -500,10 +498,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
           const SizedBox(height: 24),
           Text(
                 l10n.myPatients,
-            style: const TextStyle(
-              fontSize: 20,
+            style: TextStyle(fontSize: 20,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Montserrat',
+              fontFamily: context.titleFont,
             ),
           ),
           const SizedBox(height: 16),
@@ -680,10 +677,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
               children: [
                 Text(
                   l10n.thisMonth,
-                  style: const TextStyle(
-                    fontSize: 18,
+                  style: TextStyle(fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
+                    fontFamily: context.titleFont,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -712,10 +708,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
         children: [
                 Text(
                   l10n.appointmentStatus,
-                style: const TextStyle(
-                    fontSize: 18,
+                style: TextStyle(fontSize: 18,
               fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
+                    fontFamily: context.titleFont,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -871,10 +866,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Text(
                   '${l10n.upcomingAppointments} (${upcomingAppointments.length})',
-                  style: const TextStyle(
-                    fontSize: 18,
+                  style: TextStyle(fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
+                    fontFamily: context.titleFont,
                   ),
                 ),
               ),
@@ -888,10 +882,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Text(
                   '${l10n.completedAppointments} (${completedAppointments.length})',
-                  style: TextStyle(
-                    fontSize: 18,
+                  style: TextStyle(fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
+                    fontFamily: context.titleFont,
                     color: Colors.grey[600],
                   ),
                 ),
@@ -906,10 +899,9 @@ class _DetailedVetDashboardPageState extends State<DetailedVetDashboardPage>
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Text(
                   '${l10n.cancelledAppointments} (${cancelledAppointments.length})',
-                  style: TextStyle(
-                    fontSize: 18,
+                  style: TextStyle(fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
+                    fontFamily: context.titleFont,
                     color: Colors.grey[600],
                   ),
                 ),

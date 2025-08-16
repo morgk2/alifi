@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/ios_toggle.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/app_fonts.dart';
 
 class PrivacySecurityPage extends StatefulWidget {
   const PrivacySecurityPage({super.key});
@@ -26,8 +27,7 @@ class _PrivacySecurityPageState extends State<PrivacySecurityPage> {
       appBar: AppBar(
         title: Text(
           l10n.privacyAndSecurity,
-          style: const TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),

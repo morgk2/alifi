@@ -23,6 +23,7 @@ import 'services/device_performance.dart';
 import 'services/storage_service.dart';
 import 'services/navigation_service.dart';
 import 'utils/navigation_bar_detector.dart';
+import 'utils/adaptive_theme.dart';
 import 'config/supabase_config.dart';
 import 'firebase_options.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
@@ -390,39 +391,7 @@ class _MainAppState extends State<MainApp> {
       ],
       child: MaterialApp(
         navigatorKey: NavigationService.navigatorKey,
-        theme: ThemeData(
-          fontFamily: 'InterDisplay',
-          primarySwatch: Colors.blue,
-          scaffoldBackgroundColor: Colors.white,
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          splashFactory: NoSplash.splashFactory,
-          pageTransitionsTheme: const PageTransitionsTheme(
-            builders: {
-              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.fuchsia: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
-            },
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              splashFactory: NoSplash.splashFactory,
-            ),
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              splashFactory: NoSplash.splashFactory,
-            ),
-          ),
-          iconButtonTheme: IconButtonThemeData(
-            style: IconButton.styleFrom(
-              splashFactory: NoSplash.splashFactory,
-            ),
-          ),
-        ),
+        theme: AdaptiveTheme.createTheme(locale),
         home: const AuthWrapper(),
         locale: locale,
         supportedLocales: const [

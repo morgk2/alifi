@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 // import '../widgets/optimized_image.dart';
+import '../utils/app_fonts.dart';
 
 class WishlistPage extends StatefulWidget {
   const WishlistPage({super.key});
@@ -227,10 +228,9 @@ class _WishlistPageState extends State<WishlistPage> {
         ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Wishlist',
-          style: TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontWeight: FontWeight.w800,
             color: Colors.black,
           ),

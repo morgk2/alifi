@@ -8,6 +8,7 @@ import '../services/database_service.dart';
 import '../models/appointment.dart';
 import '../models/user.dart';
 import '../models/pet.dart';
+import '../utils/app_fonts.dart';
 
 class DetailedSchedulePage extends StatefulWidget {
   const DetailedSchedulePage({super.key});
@@ -92,10 +93,9 @@ class _DetailedSchedulePageState extends State<DetailedSchedulePage>
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Detailed Schedule',
-          style: TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -126,15 +126,13 @@ class _DetailedSchedulePageState extends State<DetailedSchedulePage>
                indicatorSize: TabBarIndicatorSize.tab,
                labelColor: Colors.white,
                unselectedLabelColor: Colors.grey[600],
-               labelStyle: const TextStyle(
-                 fontWeight: FontWeight.w600,
+               labelStyle: TextStyle(fontWeight: FontWeight.w600,
                  fontSize: 14,
-                 fontFamily: 'Montserrat',
+                 fontFamily: context.titleFont,
                ),
-               unselectedLabelStyle: const TextStyle(
-                 fontWeight: FontWeight.w500,
+               unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500,
                  fontSize: 14,
-                 fontFamily: 'Montserrat',
+                 fontFamily: context.titleFont,
                ),
                dividerColor: Colors.transparent,
                tabs: const [
@@ -200,10 +198,9 @@ class _DetailedSchedulePageState extends State<DetailedSchedulePage>
               ),
               Text(
                 DateFormat('MMMM yyyy').format(_focusedDate),
-                style: const TextStyle(
-                  fontSize: 18,
+                style: TextStyle(fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Montserrat',
+                  fontFamily: context.titleFont,
                 ),
               ),
               IconButton(
@@ -235,10 +232,9 @@ class _DetailedSchedulePageState extends State<DetailedSchedulePage>
               children: [
                 Text(
                   'Appointments for ${DateFormat('EEEE, MMMM d').format(_selectedDate)}',
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: TextStyle(fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat',
+                    fontFamily: context.titleFont,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -414,10 +410,9 @@ class _DetailedSchedulePageState extends State<DetailedSchedulePage>
               ),
               Text(
                 DateFormat('EEEE, MMMM d').format(_selectedDate),
-                style: const TextStyle(
-                  fontSize: 18,
+                style: TextStyle(fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Montserrat',
+                  fontFamily: context.titleFont,
                 ),
               ),
               IconButton(

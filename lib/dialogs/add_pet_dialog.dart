@@ -12,6 +12,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
 import 'package:path/path.dart' as path;
 import '../l10n/app_localizations.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AddPetDialog extends StatefulWidget {
   final Pet? pet;
@@ -107,6 +108,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
   
   // Photo Selection
   File? _selectedImage;
+  String? _existingImageUrl;
   
   // Color Selection
   Color _selectedColor = Colors.blue;
@@ -183,14 +185,17 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
       _nameController.text = widget.pet!.name;
       _breedController.text = widget.pet!.breed;
       _selectedGender = widget.pet!.gender;
-      _selectedDate = DateTime.now().subtract(Duration(days: widget.pet!.age * 365));
+      _selectedDate = DateTime.now().subtract(Duration(days: (widget.pet!.age * 365).round()));
       _weight = widget.pet!.weight ?? 0.0;
       _weightNotifier.value = _weight;
       _isKg = true;
       _isKgNotifier.value = true;
       _weightController.text = _weight > 0 ? _weight.toStringAsFixed(1) : '';
       _selectedColor = _parseColor(widget.pet!.color);
-      // _selectedImage: not prefilled (would require loading from URL)
+      // Load existing pet image if available
+      if (widget.pet!.imageUrls.isNotEmpty) {
+        _existingImageUrl = widget.pet!.imageUrls.first;
+      }
       
       // Check if pet is lost
       _checkPetStatus();
@@ -342,7 +347,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         _nameController.text.isEmpty || 
         _selectedDate == null || 
         _weightNotifier.value == 0 || 
-        _selectedImage == null) {
+        (_selectedImage == null && _existingImageUrl == null)) {
       _errorMessageNotifier.value = AppLocalizations.of(context)!.pleaseFillInAllFields;
       print('Validation failed:  [31m [1m [4m${_errorMessageNotifier.value} [0m');
       return;
@@ -355,29 +360,56 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final storageService = Provider.of<StorageService>(context, listen: false);
+      final isEdit = widget.pet != null;
       
       if (authService.currentUser == null) {
         throw Exception('No user logged in');
       }
 
-      _loadingMessageNotifier.value = AppLocalizations.of(context)!.uploadingPhoto;
-      print('Uploading image to Supabase...');
-      // Upload image to Supabase first
+      // Handle image upload or use existing image
       String imageUrl = '';
-      try {
-        imageUrl = await storageService.uploadPetPhoto(_selectedImage!);
-        print('Successfully uploaded image to Supabase: $imageUrl');
-      } catch (e, stackTrace) {
-        print('Error uploading image to Supabase: $e');
-        print('Stack trace: $stackTrace');
-        throw Exception('Failed to upload image: $e');
+      if (_selectedImage != null) {
+        _loadingMessageNotifier.value = AppLocalizations.of(context)!.uploadingPhoto;
+        print('Uploading new image to Supabase...');
+        try {
+          imageUrl = await storageService.uploadPetPhoto(_selectedImage!);
+          print('Successfully uploaded image to Supabase: $imageUrl');
+          
+          // If editing and there was an existing image, delete the old one
+          if (isEdit && _existingImageUrl != null && _existingImageUrl!.isNotEmpty) {
+            print('Deleting old pet photo: $_existingImageUrl');
+            try {
+              // Extract file path from the old image URL
+              final uri = Uri.parse(_existingImageUrl!);
+              final pathSegments = uri.pathSegments;
+              if (pathSegments.length >= 5 && pathSegments[3] == 'public' && pathSegments[4] == 'pet-photos') {
+                final fileName = pathSegments.sublist(5).join('/');
+                print('Extracted old filename: $fileName');
+                await storageService.deleteFile(fileName);
+                print('Successfully deleted old pet photo: $fileName');
+              } else {
+                print('Invalid old image URL format: $_existingImageUrl');
+              }
+            } catch (e) {
+              print('Error deleting old pet photo: $e');
+              // Don't throw here - we don't want to fail the whole operation if old photo deletion fails
+            }
+          }
+        } catch (e, stackTrace) {
+          print('Error uploading image to Supabase: $e');
+          print('Stack trace: $stackTrace');
+          throw Exception('Failed to upload image: $e');
+        }
+      } else if (_existingImageUrl != null) {
+        // Use existing image URL
+        imageUrl = _existingImageUrl!;
+        print('Using existing image URL: $imageUrl');
       }
 
-      // Calculate age in years
+      // Calculate age in years (as decimal to preserve months)
       final now = DateTime.now();
-      final age = now.difference(_selectedDate!).inDays ~/ 365;
+      final age = now.difference(_selectedDate!).inDays / 365.0;
 
-      final isEdit = widget.pet != null;
       final pet = Pet(
         id: isEdit ? widget.pet!.id : '', // Use existing ID if editing
         name: _nameController.text,
@@ -434,9 +466,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          'What type of pet do you have?',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)!.whatTypeOfPetDoYouHave,
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
@@ -494,7 +526,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                           ),
                           child: Center(
                             child: Text(
-                              'Other',
+                              AppLocalizations.of(context)!.other,
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontWeight: FontWeight.bold,
@@ -1082,20 +1114,40 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(20),
-                  image: _selectedImage != null
-                      ? DecorationImage(
-                          image: FileImage(_selectedImage!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
                 ),
-                child: _selectedImage == null
-                    ? const Icon(
-                        Icons.add_photo_alternate,
-                        size: 64,
-                        color: Colors.grey,
+                child: _selectedImage != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.file(
+                          _selectedImage!,
+                          fit: BoxFit.cover,
+                          width: 200,
+                          height: 200,
+                        ),
                       )
-                    : null,
+                    : _existingImageUrl != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: CachedNetworkImage(
+                              imageUrl: _existingImageUrl!,
+                              fit: BoxFit.cover,
+                              width: 200,
+                              height: 200,
+                              placeholder: (context, url) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              errorWidget: (context, url, error) => const Icon(
+                                Icons.add_photo_alternate,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.add_photo_alternate,
+                            size: 64,
+                            color: Colors.grey,
+                          ),
               ),
             ),
           ],
@@ -1540,8 +1592,13 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                   ValueListenableBuilder<bool>(
                     valueListenable: _isSavingNotifier,
                     builder: (context, isSaving, _) {
+                      final isLastStep = _currentStep == 6;
+                      final buttonText = isLastStep 
+                          ? (widget.pet != null ? AppLocalizations.of(context)!.saveChanges : AppLocalizations.of(context)!.addPet)
+                          : AppLocalizations.of(context)!.next;
+                      
                       return ElevatedButton(
-                        onPressed: isSaving ? null : _savePet,
+                        onPressed: isSaving ? null : (isLastStep ? _savePet : _nextStep),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           foregroundColor: Colors.white,
@@ -1554,7 +1611,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                           ),
                         ),
                         child: Text(
-                          widget.pet != null ? AppLocalizations.of(context)!.saveChanges : AppLocalizations.of(context)!.addPet,
+                          buttonText,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

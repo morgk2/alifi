@@ -12,6 +12,7 @@ import 'store/add_product_page.dart';
 import 'store_messages_tab.dart';
 import 'store_orders_tab.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/app_fonts.dart';
 
 class DetailedSellerDashboardPage extends StatefulWidget {
   const DetailedSellerDashboardPage({super.key});
@@ -45,8 +46,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
       appBar: AppBar(
         title: Text(
           l10n.sellerDashboard,
-          style: const TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -196,8 +196,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
         children: [
           Text(
             l10n.revenueAnalytics,
-            style: const TextStyle(
-              fontFamily: 'Montserrat',
+            style: TextStyle(fontFamily: context.titleFont,
               fontSize: 24,
               fontWeight: FontWeight.w800,
             ),
@@ -390,8 +389,7 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
           const SizedBox(height: 24),
           Text(
             l10n.keyMetrics,
-            style: const TextStyle(
-              fontFamily: 'Montserrat',
+            style: TextStyle(fontFamily: context.titleFont,
               fontSize: 24,
               fontWeight: FontWeight.w800,
             ),
@@ -455,10 +453,9 @@ class _DetailedSellerDashboardPageState extends State<DetailedSellerDashboardPag
             },
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Sales Analytics',
-            style: TextStyle(
-              fontFamily: 'Montserrat',
+            style: TextStyle(fontFamily: context.titleFont,
               fontSize: 24,
               fontWeight: FontWeight.w800,
             ),

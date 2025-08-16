@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/app_fonts.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import 'package:provider/provider.dart';
@@ -56,8 +57,8 @@ class VetDashboardCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   l10n.vetDashboard,
-                  style: const TextStyle(
-                    fontFamily: 'Montserrat',
+                                      style: TextStyle(
+                      fontFamily: context.titleFont,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -1.1,

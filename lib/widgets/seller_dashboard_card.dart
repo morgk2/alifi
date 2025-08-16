@@ -6,6 +6,7 @@ import '../services/currency_service.dart';
 import 'package:provider/provider.dart';
 import 'skeleton_loader.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/app_fonts.dart';
 
 class SellerDashboardCard extends StatelessWidget {
   const SellerDashboardCard({super.key});
@@ -56,8 +57,7 @@ class SellerDashboardCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   l10n.storeDashboard,
-                  style: const TextStyle(
-                    fontFamily: 'Montserrat',
+                  style: TextStyle(fontFamily: context.titleFont,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -1.1,

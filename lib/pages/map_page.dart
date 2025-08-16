@@ -308,7 +308,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
       parent: _minimizeController,
       curve: Curves.easeInOut,
     ));
-    _initializeLocation();
     _loadNearbyLostPets();
     _loadVetLocations();
     _loadStoreLocations();
@@ -327,7 +326,21 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     
     // Handle focus user if provided
     if (widget.focusUser != null) {
-      _handleFocusUser();
+      // Delay focus user handling to ensure map is rendered first
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _handleFocusUser();
+        }
+      });
+      // Delay location initialization when there's a focus user
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _initializeLocation();
+        }
+      });
+    } else {
+      // Initialize location immediately if no focus user
+      _initializeLocation();
     }
   }
 
@@ -345,36 +358,59 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     final focusUser = widget.focusUser!;
     print('MapPage: Handling focus user ${focusUser.displayName}, location: ${focusUser.location}, accountType: ${focusUser.accountType}');
     
-    // If user has location, center map on their location
+    // Check for different types of location data
+    LatLng? targetLocation;
+    String? locationName;
+    
     if (focusUser.location != null) {
-      // Wait a bit longer for the map and user markers to initialize
-      Future.delayed(const Duration(milliseconds: 1000), () {
+      // Primary: Use LatLng location if available
+      targetLocation = LatLng(focusUser.location!.latitude, focusUser.location!.longitude);
+      locationName = focusUser.businessName ?? focusUser.clinicName ?? focusUser.storeName ?? focusUser.displayName;
+    } else if (focusUser.businessLocation != null && focusUser.businessLocation!.isNotEmpty) {
+      // Secondary: Use business location string
+      locationName = focusUser.businessLocation;
+      // For string locations, we'll show the dialog but not move the map
+      // since we don't have coordinates
+    } else if (focusUser.clinicLocation != null && focusUser.clinicLocation!.isNotEmpty) {
+      // Tertiary: Use clinic location string
+      locationName = focusUser.clinicLocation;
+      // For string locations, we'll show the dialog but not move the map
+      // since we don't have coordinates
+    }
+    
+    if (targetLocation != null) {
+      // Move to focus user location after ensuring map is rendered
+      Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted) {
-          print('MapPage: Moving map to ${focusUser.location!.latitude}, ${focusUser.location!.longitude}');
-          _mapController.move(
-            LatLng(focusUser.location!.latitude, focusUser.location!.longitude),
-            15.0,
-          );
+          print('MapPage: Moving map to ${targetLocation!.latitude}, ${targetLocation!.longitude}');
+          _mapController.move(targetLocation!, 15.0);
           
-          // Show business dialog for vet/store accounts after another short delay
+          // Show business dialog for vet/store accounts after a short delay
           if (focusUser.accountType == 'vet' || focusUser.accountType == 'store') {
             Future.delayed(const Duration(milliseconds: 500), () {
               if (mounted) {
                 print('MapPage: Showing business dialog for ${focusUser.displayName}');
                 _showBusinessDialog(focusUser);
-                // Clear the focus user after handling
-                Provider.of<MapFocusService>(context, listen: false).clearFocusUser();
+                // Don't clear the focus user immediately - let the dialog handle it
+                // The focus user will be cleared when the dialog is dismissed
               }
             });
-          } else {
-            // Clear the focus user even if not showing dialog
-            Provider.of<MapFocusService>(context, listen: false).clearFocusUser();
           }
         }
       });
+    } else if (locationName != null && (focusUser.accountType == 'vet' || focusUser.accountType == 'store')) {
+      // If we have a location name but no coordinates, just show the dialog
+      if (mounted) {
+        print('MapPage: Showing business dialog for ${focusUser.displayName} (no coordinates)');
+        _showBusinessDialog(focusUser);
+        // Don't clear the focus user immediately - let the dialog handle it
+      }
     } else {
-      print('MapPage: Focus user has no location');
-      Provider.of<MapFocusService>(context, listen: false).clearFocusUser();
+      print('MapPage: Focus user has no location data');
+      // Only clear focus user if there's no location data and no dialog to show
+      if (focusUser.accountType != 'vet' && focusUser.accountType != 'store') {
+        Provider.of<MapFocusService>(context, listen: false).clearFocusUser();
+      }
     }
   }
 
@@ -512,11 +548,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
         _isLoading = false;
       });
 
-      // Move map to current location
-      _mapController.move(
-        LatLng(position.latitude, position.longitude),
-        15.0,
-      );
+      // Only move map to current location if no focus user is provided
+      if (widget.focusUser == null) {
+        _mapController.move(
+          LatLng(position.latitude, position.longitude),
+          15.0,
+        );
+      }
 
       // Start listening to location updates
       Geolocator.getPositionStream(
@@ -2013,271 +2051,358 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
     return null;
   }
 
+  void _navigateToLocation(User user) {
+    // Get the location from user data
+    LatLng? location;
+    String? locationName;
+    
+    if (user.location != null) {
+      location = LatLng(user.location!.latitude, user.location!.longitude);
+      locationName = user.businessName ?? user.clinicName ?? user.storeName ?? user.displayName;
+    } else if (user.businessLocation != null && user.businessLocation!.isNotEmpty) {
+      // businessLocation is a string, so we'll use it as the destination name
+      locationName = user.businessLocation;
+      // Try to get coordinates from the location string or use the business name
+      final destination = user.businessName ?? user.businessLocation ?? user.displayName ?? 'Unknown Location';
+      final url = 'https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(destination)}';
+      launchUrl(Uri.parse(url));
+      return;
+    } else if (user.clinicLocation != null && user.clinicLocation!.isNotEmpty) {
+      // clinicLocation is a string, so we'll use it as the destination name
+      locationName = user.clinicLocation;
+      // Try to get coordinates from the location string or use the clinic name
+      final destination = user.clinicName ?? user.clinicLocation ?? user.displayName ?? 'Unknown Location';
+      final url = 'https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(destination)}';
+      launchUrl(Uri.parse(url));
+      return;
+    }
+    
+    if (location != null) {
+      final url = 'https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}';
+      if (locationName != null && locationName.isNotEmpty) {
+        final encodedName = Uri.encodeComponent(locationName);
+        final urlWithName = 'https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}&destination_place_id=$encodedName';
+        launchUrl(Uri.parse(urlWithName));
+      } else {
+        launchUrl(Uri.parse(url));
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No location data available for ${user.displayName}')),
+      );
+    }
+  }
+
   void _showBusinessDialog(User user) {
     showDialog(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.transparent, // no global blur/dim
       builder: (dialogContext) {
-        final bool isVet = user.accountType == 'vet';
-        final bool isFavorite = (user.subscriptionPlan ?? '').toLowerCase() == 'alifi favorite';
-        final String displayName = [user.firstName, user.lastName]
-            .where((p) => (p ?? '').trim().isNotEmpty)
-            .join(' ');
-        final String basicInfo = user.basicInfo ?? '';
-        final int followers = user.followersCount != 0
-            ? user.followersCount
-            : (user.followers).length;
-        final int orders = user.totalOrders;
-        final String rating = user.rating.toStringAsFixed(1);
-
-        return TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 350),
-          tween: Tween(begin: 1.0, end: 0.0),
-          curve: Curves.easeOutCubic,
-          builder: (context, value, child) {
-            return Transform.translate(
-              offset: Offset(0, value * 400), // Slide up from bottom
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  margin: const EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    bottom: 100, // Position above navigation bar
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(28),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                            child: Container(
-                              width: MediaQuery.of(context).size.width * 0.9,
-                              constraints: const BoxConstraints(maxWidth: 520),
-                              padding: const EdgeInsets.all(22),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.7),
-                                borderRadius: BorderRadius.circular(28),
-                                border: Border.all(color: Colors.grey.shade300, width: 1),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 64,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isVet ? Colors.blue : Colors.orange,
-                                    width: 3,
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(32),
-                                  child: (user.photoURL != null && user.photoURL!.isNotEmpty)
-                                      ? Image.network(
-                                          user.photoURL!,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => _buildDefaultProfileImage(user),
-                                        )
-                                      : _buildDefaultProfileImage(user),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      displayName.isNotEmpty
-                                          ? displayName
-                                          : (isVet ? (user.clinicName ?? 'Veterinary Clinic') : (user.storeName ?? 'Pet Store')),
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w800,
-                                        fontFamily: 'InterDisplay',
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    if (basicInfo.isNotEmpty)
-                                      Text(
-                                        basicInfo,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[700],
-                                          fontFamily: 'InterDisplay',
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          if (isFavorite)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFFFF6B35).withOpacity(0.25),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.verified, color: Colors.white, size: 16),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    AppLocalizations.of(context)!.alifiFavorite,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      fontFamily: 'InterDisplay',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          // Alifi Affiliated badge
-                          if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated')
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF3B82F6).withOpacity(0.25),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.verified, color: Colors.white, size: 16),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    AppLocalizations.of(context)!.alifiAffiliated,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      fontFamily: 'InterDisplay',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          if (isFavorite || (user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated') const SizedBox(height: 16),
-
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _buildStatItem('Followers', followers.toString(), Icons.people, Colors.blue),
-                              _buildStatItem('Orders', orders.toString(), Icons.shopping_bag, Colors.green),
-                              _buildStatItem('Rating', rating, Icons.star, Colors.amber),
-                            ],
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.of(dialogContext).pop();
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => UserProfilePage(user: user),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isVet ? Colors.blue : Colors.orange,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                elevation: 0,
-                                shadowColor: Colors.transparent,
-                              ),
-                              child: Text(
-                                isVet ? AppLocalizations.of(context)!.visitClinicProfile : AppLocalizations.of(context)!.visitStoreProfile,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  fontFamily: 'InterDisplay',
-                                ),
-                              ),
-                            ),
-                          ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        Positioned(
-                          top: -6,
-                          right: -6,
-                          child: Transform.rotate(
-                            angle: -0.2,
-                            child: Image.asset(
-                              'assets/images/stamp.png',
-                              width: 84,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
+        // Clear focus user when dialog is dismissed
+        return PopScope(
+          onPopInvoked: (didPop) {
+            if (didPop) {
+              Provider.of<MapFocusService>(context, listen: false).clearFocusUser();
+            }
           },
+          child: Builder(
+            builder: (context) {
+              final bool isVet = user.accountType == 'vet';
+              final bool isFavorite = (user.subscriptionPlan ?? '').toLowerCase() == 'alifi favorite';
+              final String displayName = [user.firstName, user.lastName]
+                  .where((p) => (p ?? '').trim().isNotEmpty)
+                  .join(' ');
+              final String basicInfo = user.basicInfo ?? '';
+              final int followers = user.followersCount != 0
+                  ? user.followersCount
+                  : (user.followers).length;
+              final int orders = user.totalOrders;
+              final String rating = user.rating.toStringAsFixed(1);
+
+              return TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 350),
+                tween: Tween(begin: 1.0, end: 0.0),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, value * 400), // Slide up from bottom
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        margin: const EdgeInsets.only(
+                          left: 20,
+                          right: 20,
+                          bottom: 100, // Position above navigation bar
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(28),
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                                  child: Container(
+                                    width: MediaQuery.of(context).size.width * 0.9,
+                                    constraints: const BoxConstraints(maxWidth: 520),
+                                    padding: const EdgeInsets.all(22),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.7),
+                                      borderRadius: BorderRadius.circular(28),
+                                      border: Border.all(color: Colors.grey.shade300, width: 1),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.08),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            Container(
+                                              width: 64,
+                                              height: 64,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: isVet ? Colors.blue : Colors.orange,
+                                                  width: 3,
+                                                ),
+                                              ),
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(32),
+                                                child: (user.photoURL != null && user.photoURL!.isNotEmpty)
+                                                    ? Image.network(
+                                                        user.photoURL!,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder: (context, error, stackTrace) => _buildDefaultProfileImage(user),
+                                                      )
+                                                    : _buildDefaultProfileImage(user),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    displayName.isNotEmpty
+                                                        ? displayName
+                                                        : (isVet ? (user.clinicName ?? 'Veterinary Clinic') : (user.storeName ?? 'Pet Store')),
+                                                    style: const TextStyle(
+                                                      fontSize: 20,
+                                                      fontWeight: FontWeight.w800,
+                                                      fontFamily: 'InterDisplay',
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 6),
+                                                  if (basicInfo.isNotEmpty)
+                                                    Text(
+                                                      basicInfo,
+                                                      maxLines: 2,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        color: Colors.grey[700],
+                                                        fontFamily: 'InterDisplay',
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+
+                                        const SizedBox(height: 16),
+
+                                        if (isFavorite)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              gradient: const LinearGradient(
+                                                colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
+                                                begin: Alignment.centerLeft,
+                                                end: Alignment.centerRight,
+                                              ),
+                                              borderRadius: BorderRadius.circular(20),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: const Color(0xFFFF6B35).withOpacity(0.25),
+                                                  blurRadius: 10,
+                                                  offset: const Offset(0, 3),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.verified, color: Colors.white, size: 16),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  AppLocalizations.of(context)!.alifiFavorite,
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontFamily: 'InterDisplay',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+
+                                        // Alifi Affiliated badge
+                                        if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated')
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              gradient: const LinearGradient(
+                                                colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
+                                                begin: Alignment.centerLeft,
+                                                end: Alignment.centerRight,
+                                              ),
+                                              borderRadius: BorderRadius.circular(20),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: const Color(0xFF3B82F6).withOpacity(0.25),
+                                                  blurRadius: 10,
+                                                  offset: const Offset(0, 3),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.verified, color: Colors.white, size: 16),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  AppLocalizations.of(context)!.alifiAffiliated,
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontFamily: 'InterDisplay',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+
+                                        if (isFavorite || (user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated') const SizedBox(height: 16),
+
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            _buildStatItem('Followers', followers.toString(), Icons.people, Colors.blue),
+                                            _buildStatItem('Orders', orders.toString(), Icons.shopping_bag, Colors.green),
+                                            _buildStatItem('Rating', rating, Icons.star, Colors.amber),
+                                          ],
+                                        ),
+
+                                        const SizedBox(height: 20),
+
+                                        // Action buttons row
+                                        Row(
+                                          children: [
+                                            // Navigate button
+                                            Expanded(
+                                              child: ElevatedButton.icon(
+                                                onPressed: () {
+                                                  _navigateToLocation(user);
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.green,
+                                                  foregroundColor: Colors.white,
+                                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(16),
+                                                  ),
+                                                  elevation: 0,
+                                                  shadowColor: Colors.transparent,
+                                                ),
+                                                icon: const Icon(Icons.directions, size: 20),
+                                                label: Text(
+                                                  AppLocalizations.of(context)!.navigate,
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontFamily: 'InterDisplay',
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            // Visit Profile button
+                                            Expanded(
+                                              child: ElevatedButton(
+                                                onPressed: () {
+                                                  Navigator.of(dialogContext).pop();
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) => UserProfilePage(user: user),
+                                                    ),
+                                                  );
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: isVet ? Colors.blue : Colors.orange,
+                                                  foregroundColor: Colors.white,
+                                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(16),
+                                                  ),
+                                                  elevation: 0,
+                                                  shadowColor: Colors.transparent,
+                                                ),
+                                                child: Text(
+                                                  isVet ? AppLocalizations.of(context)!.visitClinicProfile : AppLocalizations.of(context)!.visitStoreProfile,
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontFamily: 'InterDisplay',
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              Positioned(
+                                top: -6,
+                                right: -6,
+                                child: Transform.rotate(
+                                  angle: -0.2,
+                                  child: Image.asset(
+                                    'assets/images/stamp.png',
+                                    width: 84,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         );
       },
     );
@@ -2891,10 +3016,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
               children: [
                 TileLayer(
                   urlTemplate: MapboxConfig.mapboxStyleUrl,
-                  additionalOptions: const {
-                    'accessToken': MapboxConfig.mapboxAccessToken,
-                    'id': MapboxConfig.mapboxStyleId,
-                  },
                   tileBuilder: (context, widget, tile) {
                     return RepaintBoundary(
                       child: widget,

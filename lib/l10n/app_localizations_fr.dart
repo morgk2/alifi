@@ -134,7 +134,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get locationPermissionRequired => 'Autorisation de localisation requise';
 
   @override
-  String get locationPermissionRequiredDescription => 'La permission de localisation est requise pour utiliser cette fonctionnalité. Veuillez l\'activer dans les paramètres de votre appareil.';
+  String get locationPermissionRequiredDescription => 'L\'autorisation de localisation est requise pour cette fonctionnalité. Veuillez l\'activer dans les paramètres de l\'application.';
 
   @override
   String get enterYourLocation => 'Entrez votre emplacement';
@@ -294,6 +294,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get vet => 'Vétérinaire';
 
   @override
+  String get vetsNearMe => 'Vétérinaires Près de Moi';
+
+  @override
+  String get recommendedVets => 'Vétérinaires Recommandés';
+
+  @override
+  String get topVets => 'Meilleurs Vétérinaires';
+
+  @override
   String get store => 'Magasin';
 
   @override
@@ -301,6 +310,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get petStore => 'Animalerie';
+
+  @override
+  String get services => 'Services';
 
   @override
   String get myPets => 'Mes Animaux';
@@ -2112,13 +2124,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get followers => 'Abonnés';
 
   @override
-  String get following => 'Abonnements';
+  String get following => 'Abonné';
 
   @override
   String get follow => 'Aboner';
 
   @override
-  String get unfollow => 'désabonner';
+  String get unfollow => 'Désabonner';
 
   @override
   String get viewInMap => 'Voir sur la map';
@@ -2348,7 +2360,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get filterByCategory => 'Filtrer par Catégorie';
 
   @override
-  String get newListings => 'Nouvelles Annonces';
+  String get newListings => 'Nouvelles annonces';
 
   @override
   String get recommended => 'Recommandé';
@@ -2845,4 +2857,689 @@ class AppLocalizationsFr extends AppLocalizations {
   String resultsFound(Object count) {
     return '$count résultats trouvés';
   }
+
+  @override
+  String get whatTypeOfPetDoYouHave => 'Quel type d\'animal avez-vous ?';
+
+  @override
+  String get next => 'Suivant';
+
+  @override
+  String get petsNearMe => 'Animaux près de moi';
+
+  @override
+  String get basedOnYourCurrentLocation => 'Basé sur votre localisation actuelle';
+
+  @override
+  String get noAdoptionListingsInYourArea => 'Aucune annonce d\'adoption dans votre région';
+
+  @override
+  String get noAdoptionListingsYet => 'Aucune annonce d\'adoption pour le moment';
+
+  @override
+  String get beTheFirstToAddPetForAdoption => 'Soyez le premier à ajouter un animal à l\'adoption !';
+
+  @override
+  String get addListing => 'Ajouter une annonce';
+
+  @override
+  String get searchPets => 'Rechercher des animaux...';
+
+  @override
+  String get gettingYourLocation => 'Obtention de votre localisation...';
+
+  @override
+  String get locationPermissionDenied => 'Permission de localisation refusée';
+
+  @override
+  String get locationPermissionPermanentlyDenied => 'Permission de localisation refusée définitivement';
+
+  @override
+  String get unableToGetLocation => 'Impossible d\'obtenir la localisation';
+
+  @override
+  String filtersApplied(Object count) {
+    return 'Filtres appliqués : $count actif';
+  }
+
+  @override
+  String get pleaseLoginToManageListings => 'Veuillez vous connecter pour gérer vos annonces';
+
+  @override
+  String get errorLoadingListings => 'Erreur lors du chargement des annonces';
+
+  @override
+  String get noPetsNearMe => 'Aucun animal près de moi';
+
+  @override
+  String get posting => 'Publication...';
+
+  @override
+  String get postForAdoption => 'Publier pour l\'adoption';
+
+  @override
+  String get listingTitle => 'Titre de l\'annonce';
+
+  @override
+  String get enterTitleForListing => 'Entrez un titre pour votre annonce';
+
+  @override
+  String get describePetAndAdopter => 'Décrivez votre animal et ce que vous recherchez chez un adoptant';
+
+  @override
+  String get location => 'Localisation';
+
+  @override
+  String get enterLocationForAdoption => 'Entrez la localisation pour l\'adoption';
+
+  @override
+  String get petInformation => 'Informations sur l\'animal';
+
+  @override
+  String get listingDetails => 'Détails de l\'annonce';
+
+  @override
+  String get adoptionFee => 'Frais d\'adoption (DZD)';
+
+  @override
+  String get freeAdoption => '0 pour adoption gratuite';
+
+  @override
+  String get pleaseEnterTitle => 'Veuillez entrer un titre pour l\'annonce';
+
+  @override
+  String get pleaseEnterDescription => 'Veuillez entrer une description pour l\'annonce';
+
+  @override
+  String get pleaseEnterLocation => 'Veuillez entrer une localisation pour l\'annonce';
+
+  @override
+  String petPostedForAdoptionSuccessfully(Object petName) {
+    return '$petName a été publié pour l\'adoption avec succès !';
+  }
+
+  @override
+  String failedToPostAdoptionListing(Object error) {
+    return 'Échec de la publication de l\'annonce d\'adoption : $error';
+  }
+
+  @override
+  String get offerForAdoption => 'Offrir à l\'adoption';
+
+  @override
+  String get deletePet => 'Supprimer l\'animal';
+
+  @override
+  String areYouSureDeletePet(Object petName) {
+    return 'Êtes-vous sûr de vouloir supprimer $petName ?';
+  }
+
+  @override
+  String petDeletedSuccessfully(Object petName) {
+    return '$petName a été supprimé avec succès';
+  }
+
+  @override
+  String failedToDeletePet(Object error) {
+    return 'Échec de la suppression de l\'animal : $error';
+  }
+
+  @override
+  String get myListings => 'Mes annonces';
+
+  @override
+  String get noListingsFound => 'Aucune annonce trouvée';
+
+  @override
+  String get editListing => 'Modifier l\'annonce';
+
+  @override
+  String get deleteListing => 'Supprimer l\'annonce';
+
+  @override
+  String get listingDeletedSuccessfully => 'Annonce supprimée avec succès';
+
+  @override
+  String failedToDeleteListing(Object error) {
+    return 'Échec de la suppression de l\'annonce : $error';
+  }
+
+  @override
+  String get areYouSureDeleteListing => 'Êtes-vous sûr de vouloir supprimer cette annonce ?';
+
+  @override
+  String get contactInformation => 'Informations de contact';
+
+  @override
+  String get postedBy => 'Publié par';
+
+  @override
+  String get contactOwner => 'Contacter le propriétaire';
+
+  @override
+  String adoptionFeeValue(Object fee) {
+    return 'Frais d\'adoption : $fee DZD';
+  }
+
+  @override
+  String get free => 'Gratuit';
+
+  @override
+  String get active => 'Actif';
+
+  @override
+  String get inactive => 'Inactif';
+
+  @override
+  String get requirements => 'Exigences';
+
+  @override
+  String get noRequirements => 'Aucune exigence spécifique';
+
+  @override
+  String get contactNumber => 'Numéro de contact';
+
+  @override
+  String get noContactNumber => 'Aucun numéro de contact fourni';
+
+  @override
+  String get lastUpdated => 'Dernière mise à jour';
+
+  @override
+  String get createdOn => 'Créé le';
+
+  @override
+  String get adoptionListingDetails => 'Détails de l\'annonce d\'adoption';
+
+  @override
+  String get petDetails => 'Détails de l\'animal';
+
+  @override
+  String get petType => 'Type d\'animal';
+
+  @override
+  String get petAge => 'Âge';
+
+  @override
+  String get petGender => 'Sexe';
+
+  @override
+  String get petColor => 'Couleur';
+
+  @override
+  String get petWeight => 'Poids';
+
+  @override
+  String get petBreed => 'Race';
+
+  @override
+  String get petLocation => 'Localisation';
+
+  @override
+  String get petImages => 'Images';
+
+  @override
+  String get noImages => 'Aucune image disponible';
+
+  @override
+  String get viewAllImages => 'Voir toutes les images';
+
+  @override
+  String get adoptionProcess => 'Processus d\'adoption';
+
+  @override
+  String get adoptionSteps => 'Étapes d\'adoption';
+
+  @override
+  String get step1 => 'Étape 1';
+
+  @override
+  String get step2 => 'Étape 2';
+
+  @override
+  String get step3 => 'Étape 3';
+
+  @override
+  String get step4 => 'Étape 4';
+
+  @override
+  String get contactOwnerStep => 'Contacter le propriétaire';
+
+  @override
+  String get meetPetStep => 'Rencontrer l\'animal';
+
+  @override
+  String get completeAdoptionStep => 'Finaliser l\'adoption';
+
+  @override
+  String get followUpStep => 'Suivi et soins';
+
+  @override
+  String get contactOwnerDescription => 'Contactez le propriétaire de l\'animal pour exprimer votre intérêt et poser des questions sur l\'animal.';
+
+  @override
+  String get meetPetDescription => 'Organisez une rencontre en personne avec l\'animal pour vous assurer qu\'il convient à votre famille.';
+
+  @override
+  String get completeAdoptionDescription => 'Si tout se passe bien, finalisez le processus d\'adoption avec le propriétaire.';
+
+  @override
+  String get followUpDescription => 'Fournissez des soins continus et suivez avec le propriétaire si nécessaire.';
+
+  @override
+  String get adoptionTips => 'Conseils d\'adoption';
+
+  @override
+  String get adoptionTipsDescription => 'Voici quelques conseils pour vous aider dans le processus d\'adoption :';
+
+  @override
+  String get tip1 => 'Posez beaucoup de questions sur l\'historique, la santé et le comportement de l\'animal';
+
+  @override
+  String get tip2 => 'Rencontrez l\'animal en personne avant de prendre une décision';
+
+  @override
+  String get tip3 => 'Considérez votre mode de vie et votre situation de logement';
+
+  @override
+  String get tip4 => 'Soyez patient et ne vous précipitez pas dans la décision';
+
+  @override
+  String get tip5 => 'Préparez votre maison pour le nouvel animal';
+
+  @override
+  String get tip6 => 'Ayez un plan pour les soins continus et les dépenses';
+
+  @override
+  String get adoptionSuccess => 'Succès de l\'adoption';
+
+  @override
+  String get adoptionSuccessDescription => 'Félicitations pour avoir trouvé votre nouveau compagnon ! N\'oubliez pas :';
+
+  @override
+  String get successTip1 => 'Donnez à votre nouvel animal le temps de s\'adapter à son nouveau foyer';
+
+  @override
+  String get successTip2 => 'Planifiez une visite vétérinaire dans la première semaine';
+
+  @override
+  String get successTip3 => 'Mettez à jour les informations de puce si applicable';
+
+  @override
+  String get successTip4 => 'Restez en contact avec l\'ancien propriétaire si nécessaire';
+
+  @override
+  String get successTip5 => 'Fournissez beaucoup d\'amour et de patience pendant la transition';
+
+  @override
+  String get adoptionResources => 'Ressources d\'adoption';
+
+  @override
+  String get adoptionResourcesDescription => 'Voici quelques ressources utiles pour les nouveaux parents d\'animaux :';
+
+  @override
+  String get resource1 => 'Guides de soins et conseils pour animaux';
+
+  @override
+  String get resource2 => 'Recommandations de vétérinaires locaux';
+
+  @override
+  String get resource3 => 'Ressources de formation pour animaux';
+
+  @override
+  String get resource4 => 'Informations sur les soins d\'urgence';
+
+  @override
+  String get resource5 => 'Ressources de logement adapté aux animaux';
+
+  @override
+  String get adoptionSupport => 'Soutien à l\'adoption';
+
+  @override
+  String get adoptionSupportDescription => 'Besoin d\'aide pour votre adoption ? Nous sommes là pour vous soutenir :';
+
+  @override
+  String get support1 => 'Contactez notre équipe de soutien à l\'adoption';
+
+  @override
+  String get support2 => 'Rejoignez nos forums communautaires';
+
+  @override
+  String get support3 => 'Accédez aux ressources éducatives';
+
+  @override
+  String get support4 => 'Obtenez des recommandations vétérinaires';
+
+  @override
+  String get support5 => 'Trouvez des services de soins pour animaux';
+
+  @override
+  String get adoptionFaq => 'FAQ sur l\'adoption';
+
+  @override
+  String get adoptionFaqDescription => 'Questions courantes sur l\'adoption d\'animaux :';
+
+  @override
+  String get faq1 => 'Que dois-je demander au propriétaire de l\'animal ?';
+
+  @override
+  String get faq2 => 'Comment savoir si un animal me convient ?';
+
+  @override
+  String get faq3 => 'Quels documents ai-je besoin pour l\'adoption ?';
+
+  @override
+  String get faq4 => 'Combien coûte les soins d\'un animal ?';
+
+  @override
+  String get faq5 => 'Et si l\'adoption ne fonctionne pas ?';
+
+  @override
+  String get adoptionGuidelines => 'Directives d\'adoption';
+
+  @override
+  String get adoptionGuidelinesDescription => 'Veuillez suivre ces directives pour une adoption réussie :';
+
+  @override
+  String get guideline1 => 'Soyez honnête sur votre expérience et votre situation de logement';
+
+  @override
+  String get guideline2 => 'Posez des questions détaillées sur les besoins de l\'animal';
+
+  @override
+  String get guideline3 => 'Considérez l\'engagement à long terme';
+
+  @override
+  String get guideline4 => 'Ayez un plan de secours pour les urgences';
+
+  @override
+  String get guideline5 => 'Soyez respectueux du temps et de la décision du propriétaire';
+
+  @override
+  String get adoptionSafety => 'Sécurité de l\'adoption';
+
+  @override
+  String get adoptionSafetyDescription => 'Restez en sécurité pendant le processus d\'adoption :';
+
+  @override
+  String get safety1 => 'Rencontrez dans un lieu public pour la première rencontre';
+
+  @override
+  String get safety2 => 'Amenez un ami ou un membre de la famille';
+
+  @override
+  String get safety3 => 'Faites confiance à votre instinct';
+
+  @override
+  String get safety4 => 'Ne vous sentez pas pressé de prendre une décision rapide';
+
+  @override
+  String get safety5 => 'Signalez tout comportement suspect';
+
+  @override
+  String get adoptionPreparation => 'Préparation à l\'adoption';
+
+  @override
+  String get adoptionPreparationDescription => 'Préparez-vous pour votre nouvel animal :';
+
+  @override
+  String get preparation1 => 'Sécurisez votre maison pour l\'animal';
+
+  @override
+  String get preparation2 => 'Rassemblez les fournitures nécessaires';
+
+  @override
+  String get preparation3 => 'Recherchez les exigences de soins pour animaux';
+
+  @override
+  String get preparation4 => 'Planifiez les dépenses continues';
+
+  @override
+  String get preparation5 => 'Organisez les soins pour animaux quand vous êtes absent';
+
+  @override
+  String get adoptionTimeline => 'Calendrier d\'adoption';
+
+  @override
+  String get adoptionTimelineDescription => 'Calendrier typique du processus d\'adoption :';
+
+  @override
+  String get timeline1 => 'Contact initial (1-2 jours)';
+
+  @override
+  String get timeline2 => 'Rencontre et salutations (3-7 jours)';
+
+  @override
+  String get timeline3 => 'Visite à domicile (optionnel, 1-2 semaines)';
+
+  @override
+  String get timeline4 => 'Finalisation de l\'adoption (1-4 semaines)';
+
+  @override
+  String get timeline5 => 'Soins de suivi (continu)';
+
+  @override
+  String get adoptionCosts => 'Coûts d\'adoption';
+
+  @override
+  String get adoptionCostsDescription => 'Considérez ces coûts lors de l\'adoption :';
+
+  @override
+  String get cost1 => 'Frais d\'adoption (le cas échéant)';
+
+  @override
+  String get cost2 => 'Visite vétérinaire initiale et vaccinations';
+
+  @override
+  String get cost3 => 'Fournitures et équipements pour animaux';
+
+  @override
+  String get cost4 => 'Dépenses continues de nourriture et de soins';
+
+  @override
+  String get cost5 => 'Fonds de soins vétérinaires d\'urgence';
+
+  @override
+  String get adoptionBenefits => 'Avantages de l\'adoption';
+
+  @override
+  String get adoptionBenefitsDescription => 'Avantages de l\'adoption d\'un animal :';
+
+  @override
+  String get benefit1 => 'Sauvez une vie et donnez un foyer à un animal dans le besoin';
+
+  @override
+  String get benefit2 => 'Souvent plus abordable que d\'acheter chez un éleveur';
+
+  @override
+  String get benefit3 => 'De nombreux animaux adoptés sont déjà dressés';
+
+  @override
+  String get benefit4 => 'Soutenez les organisations de protection des animaux';
+
+  @override
+  String get benefit5 => 'Vivez la joie de la compagnie d\'un animal';
+
+  @override
+  String get adoptionChallenges => 'Défis de l\'adoption';
+
+  @override
+  String get adoptionChallengesDescription => 'Soyez préparé à ces défis :';
+
+  @override
+  String get challenge1 => 'Période d\'adaptation pour l\'animal';
+
+  @override
+  String get challenge2 => 'Historique de santé ou de comportement inconnu';
+
+  @override
+  String get challenge3 => 'Besoins de formation potentiels';
+
+  @override
+  String get challenge4 => 'Engagement continu de temps et d\'argent';
+
+  @override
+  String get challenge5 => 'Attachement émotionnel et responsabilité';
+
+  @override
+  String get adoptionSuccessStories => 'Histoires de succès d\'adoption';
+
+  @override
+  String get adoptionSuccessStoriesDescription => 'Lisez des histoires d\'adoption inspirantes :';
+
+  @override
+  String get story1 => 'Comment Max a trouvé sa maison pour toujours';
+
+  @override
+  String get story2 => 'Le voyage de guérison de Luna';
+
+  @override
+  String get story3 => 'La première expérience d\'adoption d\'une famille';
+
+  @override
+  String get story4 => 'Succès de l\'adoption d\'un animal âgé';
+
+  @override
+  String get story5 => 'Adoption d\'un animal avec des besoins spéciaux';
+
+  @override
+  String get adoptionCommunity => 'Communauté d\'adoption';
+
+  @override
+  String get adoptionCommunityDescription => 'Connectez-vous avec d\'autres parents d\'animaux :';
+
+  @override
+  String get community1 => 'Rejoignez des groupes d\'animaux locaux';
+
+  @override
+  String get community2 => 'Partagez votre histoire d\'adoption';
+
+  @override
+  String get community3 => 'Obtenez des conseils de propriétaires expérimentés';
+
+  @override
+  String get community4 => 'Participez à des événements pour animaux';
+
+  @override
+  String get community5 => 'Faites du bénévolat dans des refuges pour animaux';
+
+  @override
+  String get adoptionEducation => 'Éducation à l\'adoption';
+
+  @override
+  String get adoptionEducationDescription => 'En savoir plus sur l\'adoption d\'animaux :';
+
+  @override
+  String get education1 => 'Comprendre le comportement des animaux';
+
+  @override
+  String get education2 => 'Santé et nutrition des animaux';
+
+  @override
+  String get education3 => 'Formation et socialisation';
+
+  @override
+  String get education4 => 'Soins d\'urgence pour animaux';
+
+  @override
+  String get education5 => 'Loi et réglementations sur les animaux';
+
+  @override
+  String get adoptionAdvocacy => 'Plaidoyer pour l\'adoption';
+
+  @override
+  String get adoptionAdvocacyDescription => 'Aidez à promouvoir l\'adoption d\'animaux :';
+
+  @override
+  String get advocacy1 => 'Partagez des histoires d\'adoption sur les réseaux sociaux';
+
+  @override
+  String get advocacy2 => 'Faites du bénévolat dans des refuges locaux';
+
+  @override
+  String get advocacy3 => 'Donnez aux organisations de protection des animaux';
+
+  @override
+  String get advocacy4 => 'Éduquez les autres sur les avantages de l\'adoption';
+
+  @override
+  String get advocacy5 => 'Soutenez les programmes de stérilisation';
+
+  @override
+  String get adoptionMyths => 'Mythes sur l\'adoption';
+
+  @override
+  String get adoptionMythsDescription => 'Idées fausses courantes sur l\'adoption d\'animaux :';
+
+  @override
+  String get myth1 => 'Les animaux adoptés ont des problèmes de comportement';
+
+  @override
+  String get myth2 => 'Vous ne pouvez pas trouver d\'animaux de race pure à adopter';
+
+  @override
+  String get myth3 => 'Les animaux adoptés sont malsains';
+
+  @override
+  String get myth4 => 'L\'adoption est trop compliquée';
+
+  @override
+  String get myth5 => 'Les animaux adoptés ne s\'attachent pas aux nouveaux propriétaires';
+
+  @override
+  String get adoptionFacts => 'Faits sur l\'adoption';
+
+  @override
+  String get adoptionFactsDescription => 'Faits sur l\'adoption d\'animaux :';
+
+  @override
+  String get fact1 => 'Des millions d\'animaux attendent des foyers';
+
+  @override
+  String get fact2 => 'Les animaux adoptés sont souvent déjà dressés';
+
+  @override
+  String get fact3 => 'Les frais d\'adoption aident à soutenir les soins aux animaux';
+
+  @override
+  String get fact4 => 'De nombreux animaux adoptés sont en bonne santé et bien élevés';
+
+  @override
+  String get fact5 => 'L\'adoption sauve des vies et réduit la surpopulation';
+
+  @override
+  String get groomers => 'Groomers';
+
+  @override
+  String get trainers => 'Trainers';
+
+  @override
+  String get professionalGroomers => 'Professional Groomers';
+
+  @override
+  String get professionalTrainers => 'Professional Trainers';
+
+  @override
+  String get findBestGroomingServices => 'Find the best grooming services for your pet';
+
+  @override
+  String get findBestTrainingServices => 'Find the best training services for your pet';
+
+  @override
+  String get listingsNearMe => 'Listings Near Me';
+
+  @override
+  String get topListings => 'Top Listings';
+
+  @override
+  String get noGroomersNearby => 'No groomers nearby';
+
+  @override
+  String get noTopGroomers => 'No top groomers available';
+
+  @override
+  String get noTrainersNearby => 'No trainers nearby';
+
+  @override
+  String get noTopTrainers => 'No top trainers available';
 }

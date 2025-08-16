@@ -20,3 +20,13 @@ SELECT
 FROM pg_policies 
 WHERE tablename = 'chargily_payments';
 
+
+
+
+
+
+
+
+
+
+

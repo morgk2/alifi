@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../models/user.dart';
 import '../services/navigation_service.dart';
 import '../services/database_service.dart';
+import '../utils/app_fonts.dart';
 
 class SubscriptionManagementPage extends StatefulWidget {
   const SubscriptionManagementPage({super.key});
@@ -91,10 +92,9 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
       return Scaffold(
         backgroundColor: Colors.grey[50],
         appBar: AppBar(
-          title: const Text(
+          title: Text(
             'Subscription Management',
-            style: TextStyle(
-              fontFamily: 'Montserrat',
+            style: TextStyle(fontFamily: context.titleFont,
               fontWeight: FontWeight.w700,
               color: Colors.black,
             ),
@@ -125,10 +125,9 @@ class _SubscriptionManagementPageState extends State<SubscriptionManagementPage>
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Subscription Management',
-          style: TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),

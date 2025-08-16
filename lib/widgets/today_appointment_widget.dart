@@ -7,6 +7,7 @@ import '../services/navigation_service.dart';
 import '../pages/detailed_vet_dashboard_page.dart';
 import '../pages/vet_chat_page.dart';
 import '../pages/appointment_details_page.dart';
+import '../utils/app_fonts.dart';
 
 class TodayAppointmentWidget extends StatelessWidget {
   final List<Appointment> appointments;
@@ -45,8 +46,7 @@ class TodayAppointmentWidget extends StatelessWidget {
       children: [
         Text(
           AppLocalizations.of(context)!.todaysVetAppointment,
-          style: const TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontSize: 24,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.5,

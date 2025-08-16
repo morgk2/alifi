@@ -19,11 +19,15 @@ import 'notification_service.dart';
 import '../models/notification.dart';
 import '../models/appointment.dart';
 import '../models/time_slot.dart';
+import '../models/adoption_listing.dart';
 import '../services/device_performance.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'storage_service.dart';
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final LocalStorageService _localStorage = LocalStorageService();
+  final SupabaseClient _supabase = Supabase.instance.client;
   final _uuid = const Uuid();
   late final DevicePerformance _devicePerformance;
   late bool _isLowEndDevice;
@@ -76,6 +80,7 @@ class DatabaseService {
   CollectionReference get _appointmentsCollection => _db.collection('appointments');
   CollectionReference get _vetSchedulesCollection => _db.collection('vetSchedules');
   CollectionReference get _subscriptionsCollection => _db.collection('subscriptions');
+  CollectionReference get _adoptionListingsCollection => _db.collection('adoption_listings');
 
   // Wishlist operations
   Future<void> toggleWishlistItem({
@@ -276,6 +281,11 @@ class DatabaseService {
     // Add search tokens to user data
     userData['searchTokens'] = tokens.toList();
     
+    // Add lowercase fields for fallback search queries
+    userData['displayName_lower'] = user.displayName?.toLowerCase();
+    userData['username_lower'] = user.username?.toLowerCase();
+    userData['email_lower'] = user.email.toLowerCase();
+    
     await _usersCollection.doc(user.id).set(userData);
   }
 
@@ -294,6 +304,11 @@ class DatabaseService {
     
     // Add search tokens to user data
     userData['searchTokens'] = tokens.toList();
+    
+    // Add lowercase fields for fallback search queries
+    userData['displayName_lower'] = user.displayName?.toLowerCase();
+    userData['username_lower'] = user.username?.toLowerCase();
+    userData['email_lower'] = user.email.toLowerCase();
     
     await _usersCollection.doc(user.id).set(userData, SetOptions(merge: true));
   }
@@ -588,6 +603,212 @@ class DatabaseService {
     }
   }
 
+  // Get vets near a specific location
+  Future<List<User>> getVetsNearLocation(
+    latlong.LatLng location, {
+    double radiusKm = 50.0,
+  }) async {
+    try {
+      final distance = const Distance();
+      final allVets = await getAllVets();
+      
+      return allVets.where((vet) {
+        if (vet.location == null) return false;
+        
+        final distanceInKm = distance.as(
+          LengthUnit.Kilometer,
+          location,
+          vet.location!,
+        );
+        return distanceInKm <= radiusKm;
+      }).toList();
+    } catch (e) {
+      print('Error getting vets near location: $e');
+      return [];
+    }
+  }
+
+  // Get vets by subscription plan
+  Future<List<User>> getVetsBySubscription(List<String> subscriptionPlans) async {
+    try {
+      // First, get all users and filter for vets
+      final querySnapshot = await _usersCollection.get();
+      final allUsers = querySnapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
+      
+      // Filter for vets with specific subscription plans
+      final vets = allUsers.where((user) {
+        final accountType = user.accountType.toLowerCase();
+        final subscriptionPlan = user.subscriptionPlan?.toLowerCase() ?? '';
+        
+        // Check if user is a vet (exclude stores)
+        final businessName = user.businessName?.toLowerCase() ?? '';
+        final clinicName = user.clinicName?.toLowerCase() ?? '';
+        final storeName = user.storeName?.toLowerCase() ?? '';
+        
+        // Explicitly exclude stores
+        if (accountType == 'store' || storeName.isNotEmpty) {
+          return false;
+        }
+        
+        final isVet = accountType == 'vet' || 
+                     accountType == 'veterinary' || 
+                     accountType == 'veterinarian' ||
+                     businessName.contains('vet') ||
+                     businessName.contains('veterinary') ||
+                     businessName.contains('clinic') ||
+                     clinicName.contains('vet') ||
+                     clinicName.contains('veterinary') ||
+                     clinicName.contains('clinic');
+        
+        // Check if user has one of the required subscription plans
+        final hasRequiredSubscription = subscriptionPlans.any((plan) => 
+          subscriptionPlan.contains(plan.toLowerCase())
+        );
+        
+        return isVet && hasRequiredSubscription;
+      }).toList();
+      
+      return vets;
+    } catch (e) {
+      print('Error getting vets by subscription: $e');
+      return [];
+    }
+  }
+
+  // Get top vets by rating
+  Future<List<User>> getTopVetsByRating({int limit = 10}) async {
+    try {
+      // First, get all users and filter for vets
+      final querySnapshot = await _usersCollection.get();
+      final allUsers = querySnapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
+      
+      // Filter for vets only (exclude stores)
+      final vets = allUsers.where((user) {
+        final accountType = user.accountType.toLowerCase();
+        final businessName = user.businessName?.toLowerCase() ?? '';
+        final clinicName = user.clinicName?.toLowerCase() ?? '';
+        final storeName = user.storeName?.toLowerCase() ?? '';
+        
+        // Explicitly exclude stores
+        if (accountType == 'store' || storeName.isNotEmpty) {
+          return false;
+        }
+        
+        // Include only vet-related accounts
+        return accountType == 'vet' || 
+               accountType == 'veterinary' || 
+               accountType == 'veterinarian' ||
+               businessName.contains('vet') ||
+               businessName.contains('veterinary') ||
+               businessName.contains('clinic') ||
+               clinicName.contains('vet') ||
+               clinicName.contains('veterinary') ||
+               clinicName.contains('clinic');
+      }).toList();
+      
+      // Sort by rating
+      vets.sort((a, b) => b.rating.compareTo(a.rating));
+      
+      // Take top limit
+      final topVets = vets.take(limit).toList();
+      
+      return topVets;
+    } catch (e) {
+      print('Error getting top vets by rating: $e');
+      return [];
+    }
+  }
+
+  // Get top vets by follower count
+  Future<List<User>> getTopVetsByFollowers({int limit = 10}) async {
+    try {
+      // First, get all users and filter for vets
+      final querySnapshot = await _usersCollection.get();
+      final allUsers = querySnapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
+      
+      // Filter for vets only (exclude stores)
+      final vets = allUsers.where((user) {
+        final accountType = user.accountType.toLowerCase();
+        final businessName = user.businessName?.toLowerCase() ?? '';
+        final clinicName = user.clinicName?.toLowerCase() ?? '';
+        final storeName = user.storeName?.toLowerCase() ?? '';
+        
+        // Explicitly exclude stores
+        if (accountType == 'store' || storeName.isNotEmpty) {
+          return false;
+        }
+        
+        // Include only vet-related accounts
+        return accountType == 'vet' || 
+               accountType == 'veterinary' || 
+               accountType == 'veterinarian' ||
+               businessName.contains('vet') ||
+               businessName.contains('veterinary') ||
+               businessName.contains('clinic') ||
+               clinicName.contains('vet') ||
+               clinicName.contains('veterinary') ||
+               clinicName.contains('clinic');
+      }).toList();
+      
+      print('🔍 [DatabaseService] Total users found: ${allUsers.length}');
+      print('🔍 [DatabaseService] Vets found: ${vets.length}');
+      
+      // Sort by follower count
+      vets.sort((a, b) => (b.followersCount).compareTo(a.followersCount));
+      
+      // Take top limit
+      final topVets = vets.take(limit).toList();
+      
+      print('🔍 [DatabaseService] Top vets by followers: ${topVets.length}');
+      for (var vet in topVets) {
+        print('🔍 [DatabaseService] Vet: ${vet.displayName}, Followers: ${vet.followersCount}');
+      }
+      
+      return topVets;
+    } catch (e) {
+      print('Error getting top vets by followers: $e');
+      return [];
+    }
+  }
+
+  // Get all vets
+  Future<List<User>> getAllVets() async {
+    try {
+      // First, get all users and filter for vets
+      final querySnapshot = await _usersCollection.get();
+      final allUsers = querySnapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
+      
+      // Filter for vets only (exclude stores)
+      final vets = allUsers.where((user) {
+        final accountType = user.accountType.toLowerCase();
+        final businessName = user.businessName?.toLowerCase() ?? '';
+        final clinicName = user.clinicName?.toLowerCase() ?? '';
+        final storeName = user.storeName?.toLowerCase() ?? '';
+        
+        // Explicitly exclude stores
+        if (accountType == 'store' || storeName.isNotEmpty) {
+          return false;
+        }
+        
+        // Include only vet-related accounts
+        return accountType == 'vet' || 
+               accountType == 'veterinary' || 
+               accountType == 'veterinarian' ||
+               businessName.contains('vet') ||
+               businessName.contains('veterinary') ||
+               businessName.contains('clinic') ||
+               clinicName.contains('vet') ||
+               clinicName.contains('veterinary') ||
+               clinicName.contains('clinic');
+      }).toList();
+      
+      return vets;
+    } catch (e) {
+      print('Error getting all vets: $e');
+      return [];
+    }
+  }
+
   // User Search Operations
   Future<List<User>> searchUsers({
     String? displayName,
@@ -762,10 +983,72 @@ class DatabaseService {
     // Add tokens for email
     tokens.addAll(_generateSearchTokens(user.email));
 
-    // Update user document with search tokens
+    // Update user document with search tokens and lowercase fields
     await _usersCollection.doc(userId).update({
       'searchTokens': tokens.toList(),
+      'displayName_lower': user.displayName?.toLowerCase(),
+      'username_lower': user.username?.toLowerCase(),
+      'email_lower': user.email.toLowerCase(),
     });
+  }
+
+  // Migration function to add missing search fields to existing users
+  Future<void> migrateUserSearchFields() async {
+    try {
+      print('🔄 [DatabaseService] Starting user search fields migration...');
+      
+      // Get all users in batches
+      QuerySnapshot snapshot = await _usersCollection.get();
+      int updated = 0;
+      int total = snapshot.docs.length;
+      
+      for (DocumentSnapshot doc in snapshot.docs) {
+        try {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data == null) continue;
+          
+          // Check if user is missing search fields
+          final needsUpdate = data['displayName_lower'] == null || 
+                             data['username_lower'] == null || 
+                             data['email_lower'] == null ||
+                             data['searchTokens'] == null;
+          
+          if (needsUpdate) {
+            final user = User.fromFirestore(doc);
+            
+            // Generate search tokens
+            final tokens = <String>{};
+            if (user.displayName != null) {
+              tokens.addAll(_generateSearchTokens(user.displayName!));
+            }
+            if (user.username != null) {
+              tokens.addAll(_generateSearchTokens(user.username!));
+            }
+            tokens.addAll(_generateSearchTokens(user.email));
+            
+            // Update with missing fields
+            await _usersCollection.doc(doc.id).update({
+              'searchTokens': tokens.toList(),
+              'displayName_lower': user.displayName?.toLowerCase(),
+              'username_lower': user.username?.toLowerCase(),
+              'email_lower': user.email.toLowerCase(),
+            });
+            
+            updated++;
+            if (updated % 10 == 0) {
+              print('🔄 [DatabaseService] Updated $updated/$total users...');
+            }
+          }
+        } catch (e) {
+          print('❌ [DatabaseService] Error updating user ${doc.id}: $e');
+        }
+      }
+      
+      print('✅ [DatabaseService] Migration completed: $updated/$total users updated');
+    } catch (e) {
+      print('❌ [DatabaseService] Migration failed: $e');
+      rethrow;
+    }
   }
 
   // User Follow/Unfollow Operations
@@ -940,21 +1223,89 @@ class DatabaseService {
     if (isGuest) {
       await _localStorage.deleteGuestPet(petId);
     } else {
-      await _petsCollection.doc(petId).delete();
+      try {
+        // First, get the pet's image URLs before deleting
+        final petDoc = await _petsCollection.doc(petId).get();
+        if (petDoc.exists) {
+          final pet = Pet.fromFirestore(petDoc);
+          
+                  // Delete pet photos from Supabase storage
+        if (pet.imageUrls.isNotEmpty) {
+          print('Found ${pet.imageUrls.length} photos to delete for pet: ${pet.name}');
+          print('Supabase client: $_supabase');
+          final storageService = StorageService(_supabase);
+            
+            for (final imageUrl in pet.imageUrls) {
+              try {
+                print('Processing image URL: $imageUrl');
+                
+                // Extract file path from the URL
+                // URL format: https://xxx.supabase.co/storage/v1/object/public/pet-photos/filename.jpg
+                final uri = Uri.parse(imageUrl);
+                final pathSegments = uri.pathSegments;
+                print('Path segments: $pathSegments');
+                
+                if (pathSegments.length >= 5 && pathSegments[3] == 'public' && pathSegments[4] == 'pet-photos') {
+                  final fileName = pathSegments.sublist(5).join('/');
+                  print('Extracted filename: $fileName');
+                  await storageService.deleteFile(fileName);
+                  print('Successfully deleted pet photo: $fileName');
+                } else {
+                  print('Invalid URL format for Supabase storage. Expected format: /storage/v1/object/public/pet-photos/filename');
+                  print('Actual path segments: $pathSegments');
+                }
+              } catch (e) {
+                print('Error deleting pet photo $imageUrl: $e');
+                print('Stack trace: ${StackTrace.current}');
+                // Continue with other photos even if one fails
+              }
+            }
+          } else {
+            print('No photos found for pet: ${pet.name}');
+          }
+        }
+        
+        // Now delete the pet document
+        await _petsCollection.doc(petId).delete();
+        print('Deleted pet document: $petId');
+      } catch (e) {
+        print('Error deleting pet: $e');
+        rethrow;
+      }
     }
   }
 
   Stream<List<Pet>> getUserPets(String userId, {bool isGuest = false}) {
+    print('🔍 [DatabaseService] getUserPets called for userId: $userId, isGuest: $isGuest');
+    
     if (isGuest) {
       return Stream.fromFuture(_localStorage.getGuestPets());
     } else {
-      return _petsCollection
-          .where('ownerId', isEqualTo: userId)
-          .where('isActive', isEqualTo: true)
-          .orderBy('createdAt', descending: true)
-          .snapshots()
-          .map((snapshot) =>
-              snapshot.docs.map((doc) => Pet.fromFirestore(doc)).toList());
+      try {
+        return _petsCollection
+            .where('ownerId', isEqualTo: userId)
+            .where('isActive', isEqualTo: true)
+            .orderBy('createdAt', descending: true)
+            .snapshots()
+            .handleError((error) {
+              print('🔍 [DatabaseService] Error in getUserPets stream: $error');
+              return [];
+            })
+            .map((snapshot) {
+              print('🔍 [DatabaseService] getUserPets received ${snapshot.docs.length} documents');
+              return snapshot.docs.map((doc) {
+                try {
+                  return Pet.fromFirestore(doc);
+                } catch (e) {
+                  print('🔍 [DatabaseService] Error parsing pet document ${doc.id}: $e');
+                  return null;
+                }
+              }).where((pet) => pet != null).cast<Pet>().toList();
+            });
+      } catch (e) {
+        print('🔍 [DatabaseService] Exception in getUserPets: $e');
+        return Stream.value([]);
+      }
     }
   }
 
@@ -982,30 +1333,44 @@ class DatabaseService {
     required List<String> contactNumbers,
     required double reward,
     required DateTime lastSeenDate,
+    String? existingPetId, // Add parameter for existing pet ID
   }) async {
     try {
-      // First create a new pet
-      final pet = Pet(
-        id: '', // Will be set by Firestore
-        name: name,
-        species: species,
-        breed: '', // Default empty for lost pet reports
-        color: '', // Default empty for lost pet reports
-        age: 0, // Default for lost pet reports
-        gender: '', // Default empty for lost pet reports
-        imageUrls: [], // No images for lost pet reports
-        ownerId: userId,
-        createdAt: DateTime.now(),
-        lastUpdatedAt: DateTime.now(),
-        medicalInfo: {}, // Empty for lost pet reports
-        dietaryInfo: {}, // Empty for lost pet reports
-        tags: ['lost'], // Tag as lost
-        isActive: true,
-      );
+      String petId;
+      
+      if (existingPetId != null) {
+        // Use existing pet
+        petId = existingPetId;
+        
+        // Update the existing pet to mark it as lost
+        await _petsCollection.doc(existingPetId).update({
+          'tags': FieldValue.arrayUnion(['lost']),
+          'lastUpdatedAt': Timestamp.fromDate(DateTime.now()),
+        });
+      } else {
+        // Create a new pet for lost pet report
+        final pet = Pet(
+          id: '', // Will be set by Firestore
+          name: name,
+          species: species,
+          breed: '', // Default empty for lost pet reports
+          color: '', // Default empty for lost pet reports
+          age: 0, // Default for lost pet reports
+          gender: '', // Default empty for lost pet reports
+          imageUrls: [], // No images for lost pet reports
+          ownerId: userId,
+          createdAt: DateTime.now(),
+          lastUpdatedAt: DateTime.now(),
+          medicalInfo: {}, // Empty for lost pet reports
+          dietaryInfo: {}, // Empty for lost pet reports
+          tags: ['lost'], // Tag as lost
+          isActive: true,
+        );
 
-      // Create the pet in Firestore
-      final petDocRef = await _petsCollection.add(pet.toFirestore());
-      final petId = petDocRef.id;
+        // Create the pet in Firestore
+        final petDocRef = await _petsCollection.add(pet.toFirestore());
+        petId = petDocRef.id;
+      }
 
       // Now create the lost pet record
       final lostPetData = {
@@ -1053,43 +1418,113 @@ class DatabaseService {
         });
   }
 
-  // Get nearby lost pets
+  // Get nearby lost pets with improved map-based distance filtering
   Stream<List<LostPet>> getNearbyLostPets({
     required latlong.LatLng userLocation,
     double radiusInKm = 10,
   }) {
-    print('Getting nearby lost pets for user location: ${userLocation.latitude}, ${userLocation.longitude}');
+    print('🗺️ [DatabaseService] Getting nearby lost pets for user location: ${userLocation.latitude}, ${userLocation.longitude} within ${radiusInKm}km radius');
     return _lostPetsCollection
         .where('isFound', isEqualTo: false)
         .snapshots()
         .asyncMap((snapshot) async {
           final pets = <LostPet>[];
-          print('Processing ${snapshot.docs.length} lost pet documents');
+          print('🔍 [DatabaseService] Processing ${snapshot.docs.length} lost pet documents');
+          
           for (var doc in snapshot.docs) {
             try {
-            final lostPet = await LostPet.fromFirestore(doc, _db);
-            if (lostPet != null) {
-                // Calculate distance
-                final distance = const Distance().as(
-                  LengthUnit.Kilometer,
-                  userLocation,
-                  lostPet.location,
-                );
-                print('Pet ${lostPet.pet.name} at ${lostPet.location.latitude}, ${lostPet.location.longitude} - distance: ${distance.toStringAsFixed(2)}km');
-                if (distance <= radiusInKm) {
+              final lostPet = await LostPet.fromFirestore(doc, _db);
+              if (lostPet != null) {
+                // Use multiple distance calculation methods for accuracy
+                final distance = _calculatePreciseDistance(userLocation, lostPet.location);
+                
+                print('📍 [DatabaseService] Pet "${lostPet.pet.name}" at (${lostPet.location.latitude.toStringAsFixed(6)}, ${lostPet.location.longitude.toStringAsFixed(6)}) - distance: ${distance.toStringAsFixed(3)}km');
+                
+                // Map-based filtering: Check if pet is within the specified radius
+                if (_isWithinMapRadius(userLocation, lostPet.location, radiusInKm)) {
                   pets.add(lostPet);
-                  print('Added pet ${lostPet.pet.name} to nearby list');
+                  print('✅ [DatabaseService] Added pet "${lostPet.pet.name}" to nearby list (${distance.toStringAsFixed(3)}km away)');
                 } else {
-                  print('Pet ${lostPet.pet.name} is too far (${distance.toStringAsFixed(2)}km > ${radiusInKm}km)');
+                  print('❌ [DatabaseService] Pet "${lostPet.pet.name}" is outside radius (${distance.toStringAsFixed(3)}km > ${radiusInKm}km)');
                 }
               }
             } catch (e) {
-              print('Error converting lost pet doc ${doc.id}: $e'); // Debug log
+              print('❌ [DatabaseService] Error converting lost pet doc ${doc.id}: $e');
             }
           }
-          print('Returning ${pets.length} nearby pets');
+          
+          // Sort pets by distance (closest first)
+          pets.sort((a, b) {
+            final distanceA = _calculatePreciseDistance(userLocation, a.location);
+            final distanceB = _calculatePreciseDistance(userLocation, b.location);
+            return distanceA.compareTo(distanceB);
+          });
+          
+          print('🎯 [DatabaseService] Returning ${pets.length} nearby pets (sorted by distance)');
           return pets;
         });
+  }
+
+  // Calculate precise distance using haversine formula with error checking
+  double _calculatePreciseDistance(latlong.LatLng point1, latlong.LatLng point2) {
+    try {
+      // Validate coordinates
+      if (!_isValidCoordinate(point1) || !_isValidCoordinate(point2)) {
+        print('⚠️ [DatabaseService] Invalid coordinates detected');
+        return double.infinity; // Return infinite distance for invalid coordinates
+      }
+      
+      // Use Distance package with haversine formula for accuracy
+      final distance = const Distance().as(
+        LengthUnit.Kilometer,
+        point1,
+        point2,
+      );
+      
+      // Additional validation - distance should be reasonable (not negative or extremely large)
+      if (distance < 0 || distance > 20000) { // Max distance on Earth is ~20,000km
+        print('⚠️ [DatabaseService] Unrealistic distance calculated: ${distance}km');
+        return double.infinity;
+      }
+      
+      return distance;
+    } catch (e) {
+      print('❌ [DatabaseService] Error calculating distance: $e');
+      return double.infinity;
+    }
+  }
+
+  // Check if coordinates are valid
+  bool _isValidCoordinate(latlong.LatLng coord) {
+    return coord.latitude.abs() <= 90.0 && 
+           coord.longitude.abs() <= 180.0 &&
+           !coord.latitude.isNaN && 
+           !coord.longitude.isNaN &&
+           !coord.latitude.isInfinite && 
+           !coord.longitude.isInfinite;
+  }
+
+  // Map-based radius checking with boundary validation
+  bool _isWithinMapRadius(latlong.LatLng userLocation, latlong.LatLng petLocation, double radiusInKm) {
+    // Calculate precise distance
+    final distance = _calculatePreciseDistance(userLocation, petLocation);
+    
+    // Check if distance is valid and within radius
+    if (distance == double.infinity) {
+      return false;
+    }
+    
+    // Additional boundary checks for map accuracy
+    final isWithinRadius = distance <= radiusInKm;
+    
+    // Log detailed information for debugging
+    if (isWithinRadius) {
+      print('🟢 [DatabaseService] Pet is within ${radiusInKm}km radius: ${distance.toStringAsFixed(3)}km');
+    } else {
+      print('🔴 [DatabaseService] Pet is outside ${radiusInKm}km radius: ${distance.toStringAsFixed(3)}km');
+    }
+    
+    return isWithinRadius;
   }
 
   // Get recent lost pets
@@ -1407,6 +1842,76 @@ class DatabaseService {
         .limit(30)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => Pet.fromFirestore(doc)).toList());
+  }
+
+  // Adoption Listing Operations
+  Future<String> createAdoptionListing(AdoptionListing listing) async {
+    try {
+      final docRef = await _adoptionListingsCollection.add(listing.toFirestore());
+      return docRef.id;
+    } catch (e) {
+      print('Error creating adoption listing: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateAdoptionListing(AdoptionListing listing) async {
+    try {
+      await _adoptionListingsCollection.doc(listing.id).update(listing.toFirestore());
+    } catch (e) {
+      print('Error updating adoption listing: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteAdoptionListing(String listingId) async {
+    try {
+      await _adoptionListingsCollection.doc(listingId).delete();
+    } catch (e) {
+      print('Error deleting adoption listing: $e');
+      rethrow;
+    }
+  }
+
+  Stream<List<AdoptionListing>> getAdoptionListings() {
+    return _adoptionListingsCollection
+        .where('isActive', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .limit(_getOptimizedLimit(30))
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => AdoptionListing.fromFirestore(doc)).toList());
+  }
+
+  Stream<List<AdoptionListing>> getNearbyAdoptionListings(latlong.LatLng userLocation, {double radiusKm = 50}) {
+    // For now, return all listings. In the future, implement geospatial queries
+    return _adoptionListingsCollection
+        .where('isActive', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .limit(_getOptimizedLimit(10))
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => AdoptionListing.fromFirestore(doc)).toList());
+  }
+
+  Future<AdoptionListing?> getAdoptionListing(String listingId) async {
+    try {
+      final doc = await _adoptionListingsCollection.doc(listingId).get();
+      if (doc.exists) {
+        return AdoptionListing.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting adoption listing: $e');
+      return null;
+    }
+  }
+
+  Stream<List<AdoptionListing>> getUserAdoptionListings(String userId) {
+    return _adoptionListingsCollection
+        .where('ownerId', isEqualTo: userId)
+        .where('isActive', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => AdoptionListing.fromFirestore(doc)).toList());
   }
 
   Future<void> updatePet(Pet pet, {bool isGuest = false}) async {

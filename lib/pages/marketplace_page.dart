@@ -22,6 +22,7 @@ import 'dart:async';
 import '../services/device_performance.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/keyboard_dismissible_text_field.dart';
+import '../utils/app_fonts.dart';
 
 class MarketplacePage extends StatefulWidget {
   const MarketplacePage({super.key});
@@ -121,6 +122,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
       }
     });
   }
+
 
   Widget _buildSearchControls() {
     return Padding(
@@ -1392,10 +1394,9 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
               titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               title: Text(
                 l10n.marketplace,
-                style: const TextStyle(
-                  color: Colors.black,
+                style: TextStyle(color: Colors.black,
                   fontSize: 28,
-                  fontFamily: 'Montserrat',
+                  fontFamily: context.titleFont,
                   fontWeight: FontWeight.w900,
                 ),
               ),

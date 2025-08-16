@@ -237,10 +237,6 @@ class _LocationPickerDialogState extends State<LocationPickerDialog> {
                       children: [
                         TileLayer(
                           urlTemplate: MapboxConfig.mapboxStyleUrl,
-                          additionalOptions: const {
-                            'accessToken': MapboxConfig.mapboxAccessToken,
-                            'id': MapboxConfig.mapboxStyleId,
-                          },
                         ),
                         if (_selectedLocation != null)
                           MarkerLayer(

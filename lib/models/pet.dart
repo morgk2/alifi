@@ -6,7 +6,7 @@ class Pet {
   final String species;
   final String breed;
   final String color;
-  final int age;
+  final double age;
   final String gender;
   final List<String> imageUrls;
   final String ownerId;
@@ -145,7 +145,7 @@ class Pet {
         species: getString(data['species'], ''),
         breed: getString(data['breed'], ''),
         color: getString(data['color'], ''),
-        age: getInt(data['age'], 0),
+        age: getDouble(data['age']) ?? 0.0,
         gender: getString(data['gender'], ''),
         imageUrls: getStringList(data['imageUrls']),
         ownerId: getString(data['ownerId'], ''),
@@ -177,7 +177,7 @@ class Pet {
     String? species,
     String? breed,
     String? color,
-    int? age,
+    double? age,
     String? gender,
     List<String>? imageUrls,
     String? ownerId,

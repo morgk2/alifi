@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../utils/app_fonts.dart';
 
 class AddProductPage extends StatefulWidget {
   const AddProductPage({super.key});
@@ -99,10 +100,9 @@ class _AddProductPageState extends State<AddProductPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Add a New Product',
-          style: TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontWeight: FontWeight.w800,
           ),
         ),

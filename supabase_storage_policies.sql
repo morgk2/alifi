@@ -22,7 +22,7 @@ ON storage.objects FOR DELETE
 TO authenticated 
 USING (
   bucket_id = 'pet-photos' AND 
-  (auth.uid())::text = (storage.foldername(name))[1]
+  auth.role() = 'authenticated'
 );
 
 COMMIT; 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../models/aliexpress_product.dart';
 import '../models/store_product.dart';
@@ -88,6 +89,10 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(borderRadius),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 1.0,
+          ),
           boxShadow: [boxShadow],
         ),
         child: Column(
@@ -120,17 +125,10 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
                         ),
                       );
                     },
-                    child: Row(
-                      children: [
-                        Text(
-                          l10n.seeAll,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                        Icon(Icons.arrow_forward, color: Colors.grey[600]),
-                      ],
+                    child: const Icon(
+                      CupertinoIcons.chevron_right,
+                      color: Colors.black,
+                      size: 20,
                     ),
                   ),
                 ],

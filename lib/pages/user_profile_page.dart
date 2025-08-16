@@ -8,12 +8,15 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../widgets/spinning_loader.dart';
 import '../widgets/verification_badge.dart';
+import '../widgets/profile_skeleton_loader.dart';
 import '../widgets/reviews_section.dart';
 import 'vet_chat_page.dart';
 import 'product_details_page.dart';
 import 'discussion_chat_page.dart';
+import 'map_page.dart';
 import '../l10n/app_localizations.dart';
 import 'dart:ui';
+import 'dart:async';
 
 
 class UserProfilePage extends StatefulWidget {
@@ -53,6 +56,17 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
     _loadUserPets();
     _checkFollowStatus();
     _userStream = _databaseService.getUserStream(widget.user.id);
+    
+    // Safety timeout to prevent infinite loading
+    Timer(const Duration(seconds: 5), () {
+      if (mounted && _isLoading) {
+        print('🔍 [UserProfilePage] Safety timeout triggered, stopping loading');
+        setState(() {
+          _isLoading = false;
+          _userPets = [];
+        });
+      }
+    });
   }
 
   @override
@@ -66,28 +80,47 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
     try {
       if (!mounted) return;
       
-      // Subscribe to the pets stream
+      print('🔍 [UserProfilePage] Loading pets for user: ${widget.user.id}');
+      print('🔍 [UserProfilePage] User accountType: ${widget.user.accountType}');
+      
+      // Add timeout to prevent infinite loading
       _databaseService
           .getUserPets(widget.user.id)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: (sink) {
+              print('🔍 [UserProfilePage] getUserPets stream timed out');
+              sink.add([]); // Emit empty list on timeout
+            },
+          )
           .listen((pets) {
-      if (mounted) {
-        setState(() {
-          _userPets = pets;
-          _isLoading = false;
-        });
-      }
+            print('🔍 [UserProfilePage] Received ${pets.length} pets');
+            if (mounted) {
+              setState(() {
+                _userPets = pets;
+                _isLoading = false;
+              });
+            }
           },
           onError: (e) {
+            print('🔍 [UserProfilePage] Error loading pets: $e');
             if (mounted) {
-              setState(() => _isLoading = false);
+              setState(() {
+                _userPets = [];
+                _isLoading = false;
+              });
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(l10n.errorLoadingPets(e.toString()))),
               );
             }
           });
     } catch (e) {
+      print('🔍 [UserProfilePage] Exception in _loadUserPets: $e');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _userPets = [];
+          _isLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.errorLoadingPets(e.toString()))),
         );
@@ -96,7 +129,6 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
   }
 
   Future<void> _checkFollowStatus() async {
-    final l10n = AppLocalizations.of(context)!;
     final currentUser = context.read<AuthService>().currentUser;
     if (currentUser == null) return;
 
@@ -161,6 +193,30 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.errorOpeningChat(e.toString()))),
+      );
+    }
+  }
+
+  Future<void> _viewInMap() async {
+    
+    // Check if user has location data
+    if (widget.user.location == null && 
+        widget.user.businessLocation == null && 
+        widget.user.clinicLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No location data available for this ${widget.user.accountType}')),
+      );
+      return;
+    }
+
+    try {
+      NavigationService.push(
+        context,
+        MapPage(focusUser: widget.user),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error opening map: ${e.toString()}')),
       );
     }
   }
@@ -491,7 +547,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0), // Remove horizontal padding for precise alignment
         child: Text(
           text,
           style: TextStyle(
@@ -508,8 +564,8 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
     final textPainter = TextPainter(
       text: TextSpan(
         text: text,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
           fontSize: 16,
         ),
       ),
@@ -524,31 +580,35 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
     final isFirstTab = _tabController.index == 0;
     final indicatorWidth = isFirstTab ? firstTabWidth : secondTabWidth;
     
-    // Calculate positions with fine-tuning adjustments
+    // Calculate exact center positions for perfect alignment
     final totalSpacing = 40.0; // Space between tabs
-    final leftAdjustment = -2.0; // Move left tab indicator slightly left
-    final rightAdjustment = 2.0; // Move right tab indicator slightly right
+    final totalWidth = firstTabWidth + totalSpacing + secondTabWidth;
     
-    final firstTabPosition = 0.0 + leftAdjustment;
-    final secondTabPosition = firstTabWidth + totalSpacing + rightAdjustment;
+    // Calculate the center position for each tab
+    final firstTabCenter = firstTabWidth / 2;
+    final secondTabCenter = firstTabWidth + totalSpacing + (secondTabWidth / 2);
+    
+    // Position indicator to be perfectly centered under each tab's text
+    final firstTabPosition = 0.0; // First tab starts at position 0
+    final secondTabPosition = firstTabWidth + totalSpacing; // Second tab starts after first tab + spacing
     
     return SizedBox(
-      width: firstTabWidth + totalSpacing + secondTabWidth,
-      height: 2,
+      width: totalWidth,
+      height: 3, // Slightly thicker for better visibility
       child: Stack(
         children: [
           AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOutCubic,
             left: isFirstTab ? firstTabPosition : secondTabPosition,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOutCubic,
               width: indicatorWidth,
-              height: 2,
+              height: 3,
               decoration: BoxDecoration(
                 color: Colors.black,
-                borderRadius: BorderRadius.circular(1),
+                borderRadius: BorderRadius.circular(1.5),
               ),
             ),
           ),
@@ -1005,7 +1065,11 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
         ],
       ),
       body: _isLoading
-          ? const Center(child: SpinningLoader())
+          ? ProfileSkeletonLoader(
+              isVet: user.accountType == 'vet',
+              isStore: user.accountType == 'store',
+              showTabs: false, // Simple layout for regular user profile
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -1070,9 +1134,8 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                         'Followers',
                       ),
                       _buildCompactDivider(),
-                      _buildCompactStat(
-                        (user.rating).toStringAsFixed(1),
-                        'Rating',
+                      _buildPetsRescuedStat(
+                        (user.petsRescued).toString(),
                         ),
                     ],
                   ),
@@ -1102,6 +1165,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                       isPrimary: !_isFollowing,
                       isFollowing: _isFollowing,
                       accountType: user.accountType,
+                      width: 120, // Explicit width for regular users
                     ),
                   ),
                   
@@ -1224,6 +1288,14 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
         }
 
         // Vets and stores get the banner layout
+        if (_isLoading) {
+          return ProfileSkeletonLoader(
+            isVet: isVet,
+            isStore: isStore,
+            showTabs: true, // Show tabs for vet/store layout
+          );
+        }
+        
         return Scaffold(
           backgroundColor: Colors.grey[50],
           body: Stack(
@@ -1368,9 +1440,8 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                 l10n.followers,
                           ),
                           _buildCompactDivider(),
-                          _buildCompactStat(
-                            (user.rating).toStringAsFixed(1),
-                                      'Rating',
+                          _buildPetsRescuedStat(
+                            (user.petsRescued).toString(),
                           ),
                               ],
                         ],
@@ -1391,31 +1462,107 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                     
                               const SizedBox(height: 16),
                     
-                              // Action buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildActionButton(
-                          text: _isFollowing ? l10n.following : l10n.follow,
-                          onPressed: _isLoadingFollow ? null : _toggleFollow,
-                          isLoading: _isLoadingFollow,
-                          isPrimary: !_isFollowing,
-                          isFollowing: _isFollowing,
-                          accountType: user.accountType,
-                        ),
-                        // Only show Contact button for vets, no second button for stores
-                        if (isVet) ...[
-                          const SizedBox(width: 12),
-                        _buildActionButton(
-                            text: l10n.contact,
-                            onPressed: _contactVet,
-                          isLoading: false,
-                          isPrimary: false,
-                          isFollowing: false,
-                          accountType: user.accountType,
-                        ),
-                        ],
-                      ],
+                              // Action buttons - Responsive layout
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final screenWidth = MediaQuery.of(context).size.width;
+                        final availableWidth = constraints.maxWidth > 0 ? constraints.maxWidth : screenWidth - 32;
+                        
+                        // Calculate button count
+                        final buttonCount = isVet ? 3 : 2;
+                        final spacing = 8.0; // Reduced spacing for better fit
+                        final totalSpacing = (buttonCount - 1) * spacing;
+                        final buttonWidth = (availableWidth - totalSpacing) / buttonCount;
+                        
+                        // Use flexible layout if buttons would be too narrow
+                        if (buttonWidth < 100) {
+                          return Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildActionButton(
+                                      text: _isFollowing ? l10n.following : l10n.follow,
+                                      onPressed: _isLoadingFollow ? null : _toggleFollow,
+                                      isLoading: _isLoadingFollow,
+                                      isPrimary: !_isFollowing,
+                                      isFollowing: _isFollowing,
+                                      accountType: user.accountType,
+                                      width: null, // Flexible width
+                                    ),
+                                  ),
+                                  if (isVet) ...[
+                                    SizedBox(width: spacing),
+                                    Expanded(
+                                      child: _buildActionButton(
+                                        text: l10n.contact,
+                                        onPressed: _contactVet,
+                                        isLoading: false,
+                                        isPrimary: false,
+                                        isFollowing: false,
+                                        accountType: user.accountType,
+                                        width: null, // Flexible width
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              SizedBox(height: spacing),
+                              SizedBox(
+                                width: double.infinity,
+                                child: _buildActionButton(
+                                  text: l10n.viewInMap,
+                                  onPressed: _viewInMap,
+                                  isLoading: false,
+                                  isPrimary: false,
+                                  isFollowing: false,
+                                  accountType: user.accountType,
+                                  width: null, // Flexible width
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        
+                        // Use single row layout if buttons fit comfortably
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildActionButton(
+                              text: _isFollowing ? l10n.following : l10n.follow,
+                              onPressed: _isLoadingFollow ? null : _toggleFollow,
+                              isLoading: _isLoadingFollow,
+                              isPrimary: !_isFollowing,
+                              isFollowing: _isFollowing,
+                              accountType: user.accountType,
+                              width: buttonWidth,
+                            ),
+                            SizedBox(width: spacing),
+                            // Show Contact button for vets, View in Map for both vets and stores
+                            if (isVet) ...[
+                              _buildActionButton(
+                                text: l10n.contact,
+                                onPressed: _contactVet,
+                                isLoading: false,
+                                isPrimary: false,
+                                isFollowing: false,
+                                accountType: user.accountType,
+                                width: buttonWidth,
+                              ),
+                              SizedBox(width: spacing),
+                            ],
+                            _buildActionButton(
+                              text: l10n.viewInMap,
+                              onPressed: _viewInMap,
+                              isLoading: false,
+                              isPrimary: false,
+                              isFollowing: false,
+                              accountType: user.accountType,
+                              width: buttonWidth,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                               
                               // Alifi Favorite badge
@@ -1645,7 +1792,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
     );
   }
 
-  Widget _buildCompactStat(String value, String label) {
+    Widget _buildCompactStat(String value, String label) {
     return Column(
       children: [
         Text(
@@ -1665,7 +1812,40 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
         ),
       ],
     );
-}
+  }
+
+  Widget _buildPetsRescuedStat(String value) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 14.0), // Move entire column down
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          const Text(
+            'Pets',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 1),
+          const Text(
+            'Rescued',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildCompactDivider() {
     return Container(
@@ -1683,6 +1863,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
     required bool isPrimary,
     required bool isFollowing,
     required String accountType,
+    double? width, // Optional width parameter
   }) {
     // Define colors based on account type
     Color getAccountColor() {
@@ -1699,7 +1880,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
     final accountColor = getAccountColor();
 
     return Container(
-      width: 120, // Fixed width
+      width: width ?? 120, // Use provided width or default to 120
       height: 40, // Fixed height
       child: ElevatedButton(
         onPressed: onPressed,

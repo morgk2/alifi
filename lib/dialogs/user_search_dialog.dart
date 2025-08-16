@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/keyboard_dismissible_text_field.dart';
 
@@ -150,7 +151,12 @@ class _UserSearchDialogState extends State<UserSearchDialog> {
                         ),
                       )
                     : _isSearching
-                        ? const Center(child: CircularProgressIndicator())
+                        ? const Center(
+                            child: CupertinoActivityIndicator(
+                              radius: 16,
+                              color: Color(0xFFF59E0B),
+                            ),
+                          )
                         : _searchResults.isEmpty
                             ? Center(
                                 child: Text(

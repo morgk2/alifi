@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
 class IOSToggle extends StatefulWidget {
   final bool value;
@@ -36,10 +35,11 @@ class _IOSToggleState extends State<IOSToggle>
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
+      value: widget.value ? 1.0 : 0.0,
     );
     _animation = Tween<double>(
-      begin: widget.value ? 1.0 : 0.0,
-      end: widget.value ? 1.0 : 0.0,
+      begin: 0.0,
+      end: 1.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOut,
@@ -50,13 +50,7 @@ class _IOSToggleState extends State<IOSToggle>
   void didUpdateWidget(IOSToggle oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
-      _animation = Tween<double>(
-        begin: oldWidget.value ? 1.0 : 0.0,
-        end: widget.value ? 1.0 : 0.0,
-      ).animate(CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ));
+      // Animate to the new state immediately
       if (widget.value) {
         _animationController.forward();
       } else {
@@ -79,7 +73,10 @@ class _IOSToggleState extends State<IOSToggle>
 
     return GestureDetector(
       onTap: () {
-        widget.onChanged(!widget.value);
+        // Prevent rapid tapping by checking if animation is in progress
+        if (!_animationController.isAnimating) {
+          widget.onChanged(!widget.value);
+        }
       },
       child: AnimatedBuilder(
         animation: _animation,

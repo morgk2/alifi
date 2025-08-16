@@ -9,6 +9,7 @@ import '../models/pet.dart';
 import '../models/store_product.dart';
 import '../widgets/verification_badge.dart';
 import '../widgets/reviews_section.dart';
+import '../widgets/profile_skeleton_loader.dart';
 import 'product_details_page.dart';
 
 // Models for database-driven content
@@ -391,9 +392,8 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                               'Followers',
                             ),
                             _buildCompactDivider(),
-                            _buildCompactStat(
-                              (user.rating ?? 0.0).toStringAsFixed(1),
-                              'Rating',
+                            _buildPetsRescuedStat(
+                              (user.petsRescued ?? 0).toString(),
                             ),
                     ],
                           ],
@@ -517,7 +517,7 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildCompactStat(String value, String label) {
+    Widget _buildCompactStat(String value, String label) {
     return Column(
         children: [
           Text(
@@ -536,6 +536,39 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
             ),
           ),
         ],
+      );
+  }
+
+  Widget _buildPetsRescuedStat(String value) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 14.0), // Move entire column down
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          const Text(
+            'Pets',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 1),
+          const Text(
+            'Rescued',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

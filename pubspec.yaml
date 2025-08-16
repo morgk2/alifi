@@ -29,6 +29,7 @@ dependencies:
   device_info_plus: ^11.5.0
   flutter_map: ^8.1.1
   latlong2: ^0.9.0
+  # mapbox_gl: ^0.16.0  # Removed to avoid dependency conflicts
   geolocator: ^10.0.0
   permission_handler: ^12.0.1
   uuid: ^4.3.3  # Added for generating unique IDs
@@ -152,6 +153,7 @@ flutter:
     - assets/images/store_normal.png
     - assets/images/store_fav.png
     - assets/images/header_title.png
+    - assets/images/alifiarabic.png
     - assets/images/store_3d.png
     - assets/images/store_3d2.png
     - assets/images/overview.png
@@ -162,12 +164,25 @@ flutter:
     - assets/images/notification_icon.png
     - assets/images/back_icon.png
     - assets/images/menu.svg
+    - assets/images/vetservice.png
+    - assets/images/adoptionservice.png
+    - assets/images/trainerservice.png
+    - assets/images/storeservice.png
+    - assets/images/groomerservice.png
+    - assets/images/storeservice.png
     - assets/images/photo_loader.png
     - assets/fonts/Inter-Italic-VariableFont_opsz,wght.ttf
     - assets/fonts/Inter-VariableFont_opsz,wght.ttf
     - assets/fonts/InterDisplay-Regular.ttf
     - assets/fonts/Montserrat-Black.ttf
     - assets/fonts/Montserrat-ExtraBold.ttf
+    - assets/fonts/IBMPlexSansArabic-Regular.ttf
+    - assets/fonts/IBMPlexSansArabic-Light.ttf
+    - assets/fonts/IBMPlexSansArabic-ExtraLight.ttf
+    - assets/fonts/IBMPlexSansArabic-Medium.ttf
+    - assets/fonts/IBMPlexSansArabic-SemiBold.ttf
+    - assets/fonts/IBMPlexSansArabic-Bold.ttf
+    - assets/images/alifiarabic.png
     - assets/data/locations.json
   fonts:
     - family: Inter
@@ -188,3 +203,17 @@ flutter:
           weight: 900
         - asset: assets/fonts/Montserrat-ExtraBold.ttf
           weight: 800
+    - family: IBMPlexSansArabic
+      fonts:
+        - asset: assets/fonts/IBMPlexSansArabic-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/IBMPlexSansArabic-Light.ttf
+          weight: 300
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexSansArabic-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexSansArabic-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexSansArabic-Bold.ttf
+          weight: 700

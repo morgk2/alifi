@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
-import '../services/display_settings_service.dart';
 import '../services/user_preferences_service.dart';
 import '../widgets/ios_toggle.dart';
+import '../utils/app_fonts.dart';
 
 class DisplaySettingsPage extends StatelessWidget {
   const DisplaySettingsPage({super.key});
@@ -18,8 +18,7 @@ class DisplaySettingsPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           l10n.display,
-          style: const TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),
@@ -50,6 +49,7 @@ class DisplaySettingsPage extends StatelessWidget {
               
               // Interface Section
               _buildSettingsSection(
+                context: context,
                 title: l10n.interface,
                 children: [
                   Consumer<UserPreferencesService>(
@@ -60,9 +60,10 @@ class DisplaySettingsPage extends StatelessWidget {
                         title: l10n.useBlurEffectForTabBar,
                         subtitle: l10n.enableGlassLikeBlurEffectOnNavigationBar,
                         trailing: IOSToggle(
+                          key: ValueKey(userPreferences.tabBarBlurEnabled),
                           value: userPreferences.tabBarBlurEnabled,
-                          onChanged: (value) {
-                            userPreferences.setTabBarBlurEnabled(value);
+                          onChanged: (value) async {
+                            await userPreferences.setTabBarBlurEnabled(value);
                           },
                         ),
                       );
@@ -114,6 +115,7 @@ class DisplaySettingsPage extends StatelessWidget {
   }
 
   Widget _buildSettingsSection({
+    required BuildContext context,
     required String title,
     required List<Widget> children,
   }) {
@@ -125,11 +127,10 @@ class DisplaySettingsPage extends StatelessWidget {
             padding: const EdgeInsets.only(left: 16, bottom: 8),
             child: Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
+              style: TextStyle(fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey,
-                fontFamily: 'Montserrat',
+                fontFamily: context.titleFont,
               ),
             ),
           ),
@@ -197,11 +198,11 @@ class _DisplaySettingsTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                       color: Colors.black,
-                      fontFamily: 'Inter',
+                      fontFamily: context.localizedFont,
                     ),
                   ),
                   if (subtitle != null) ...[
@@ -211,7 +212,7 @@ class _DisplaySettingsTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],
-                        fontFamily: 'Inter',
+                        fontFamily: context.localizedFont,
                       ),
                     ),
                   ],

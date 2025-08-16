@@ -24,6 +24,7 @@ import '../l10n/app_localizations.dart';
 import '../widgets/pinch_zoom_image.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:photo_view/photo_view.dart';
+import '../utils/app_fonts.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   final dynamic product;  // Can be either AliexpressProduct or StoreProduct
@@ -368,6 +369,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         ],
       ),
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -535,37 +537,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             ? '${(widget.product as StoreProduct).totalOrders} orders'
                             : '${widget.product.totalOrders} orders',
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Delivery Info
-                  Row(
-                    children: [
-                      const Icon(Icons.local_shipping, color: Colors.green, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Free Shipping',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time, color: Colors.grey, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Delivery in no time! days',
-                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                           color: Colors.grey,
@@ -783,10 +754,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         children: [
                           Text(
                             l10n.customerReviews,
-                            style: TextStyle(
-                              fontSize: 20,
+                            style: TextStyle(fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Montserrat',
+                              fontFamily: context.titleFont,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -875,6 +845,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           }
 
                           return ListView.builder(
+                            physics: const BouncingScrollPhysics(),
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemCount: reviews.length,
                             itemBuilder: (context, index) {
@@ -933,6 +904,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         }
 
                         return ListView.builder(
+                          physics: const BouncingScrollPhysics(),
                           scrollDirection: Axis.horizontal,
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: products.length,
@@ -952,7 +924,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
@@ -967,14 +939,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             children: [
               Expanded(
                 child: Container(
-                  height: 64,
+                  height: 56,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFFFF8C00), Color(0xFFFFD700)],
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                     ),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(28),
                   ),
                   child: ElevatedButton(
                     onPressed: () async {
@@ -997,13 +969,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       shadowColor: Colors.transparent,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(28),
                       ),
                     ),
                     child: const Text(
                       'Order Now',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -1013,11 +985,11 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ),
               const SizedBox(width: 12),
               Container(
-                width: 64,
-                height: 64,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
                   color: Colors.green,
-                  borderRadius: BorderRadius.circular(16),
+                  shape: BoxShape.circle,
                 ),
                 child: IconButton(
                   onPressed: () async {
@@ -1047,7 +1019,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   icon: const Icon(
                     CupertinoIcons.chat_bubble_2,
                     color: Colors.white,
-                    size: 28,
+                    size: 24,
                   ),
                 ),
               ),

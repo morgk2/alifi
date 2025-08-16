@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/app_fonts.dart';
 
 class HelpCenterPage extends StatefulWidget {
   const HelpCenterPage({super.key});
@@ -95,8 +96,7 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
         surfaceTintColor: Colors.white,
         title: Text(
           AppLocalizations.of(context)!.helpCenter,
-          style: const TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),
@@ -235,8 +235,7 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
         children: [
           Text(
             AppLocalizations.of(context)!.stillNeedHelp,
-            style: const TextStyle(
-              fontFamily: 'Montserrat',
+            style: TextStyle(fontFamily: context.titleFont,
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.black,

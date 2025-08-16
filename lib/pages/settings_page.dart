@@ -16,6 +16,8 @@ import 'subscription_management_page.dart';
 import 'notification_settings_page.dart';
 import 'display_settings_page.dart';
 import '../utils/locale_notifier.dart';
+import '../utils/arabic_text_style.dart';
+import '../utils/app_fonts.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/ios_toggle.dart';
 // import removed: not used
@@ -82,34 +84,47 @@ class _SettingsPageState extends State<SettingsPage> {
     
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Text(
-          AppLocalizations.of(context)!.settings,
-          style: const TextStyle(
-            fontFamily: 'Montserrat',
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        centerTitle: true,
-        leading: GestureDetector(
-          onTap: () => Navigator.of(context).pop(),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Image.asset(
-              'assets/images/back_icon.png',
-              width: 24,
-              height: 24,
-              color: Colors.black,
+      body: NestedScrollView(
+        physics: const ClampingScrollPhysics(), // Bounding scroll physics
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return <Widget>[
+            SliverAppBar(
+              title: Text(
+                AppLocalizations.of(context)!.settings,
+                style: TextStyle(
+                  fontFamily: context.titleFont,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              elevation: 0,
+              centerTitle: true,
+              pinned: true, // Keep app bar visible when scrolling
+              floating: false, // Don't show app bar when scrolling up
+              snap: false, // Don't snap app bar
+              forceElevated: false, // Never add elevation/shadow
+              surfaceTintColor: Colors.transparent, // Prevent color changes
+              shadowColor: Colors.transparent, // No shadow
+              leading: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Image.asset(
+                    'assets/images/back_icon.png',
+                    width: 24,
+                    height: 24,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
+          ];
+        },
+        body: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(), // Bounding scroll physics for body too
+          child: Column(
           children: [
             const SizedBox(height: 16),
             
@@ -131,25 +146,37 @@ class _SettingsPageState extends State<SettingsPage> {
                     final selected = await showDialog<Locale>(
                       context: context,
                       builder: (context) => SimpleDialog(
-                        title: Text(AppLocalizations.of(context)!.selectLanguage),
+                        title: ArabicText.auto(
+                          AppLocalizations.of(context)!.selectLanguage,
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                        ),
                         children: [
                           SimpleDialogOption(
                             onPressed: () {
                               Navigator.pop(context, const Locale('en'));
                             },
-                            child: Text(AppLocalizations.of(context)!.english),
+                            child: ArabicText.auto(
+                              AppLocalizations.of(context)!.english,
+                              style: const TextStyle(fontSize: 16),
+                            ),
                           ),
                           SimpleDialogOption(
                             onPressed: () {
                               Navigator.pop(context, const Locale('ar'));
                             },
-                            child: Text(AppLocalizations.of(context)!.arabic),
+                            child: ArabicText.auto(
+                              AppLocalizations.of(context)!.arabic,
+                              style: const TextStyle(fontSize: 16),
+                            ),
                           ),
                           SimpleDialogOption(
                             onPressed: () {
                               Navigator.pop(context, const Locale('fr'));
                             },
-                            child: Text(AppLocalizations.of(context)!.french),
+                            child: ArabicText.auto(
+                              AppLocalizations.of(context)!.french,
+                              style: const TextStyle(fontSize: 16),
+                            ),
                           ),
                         ],
                       ),
@@ -423,6 +450,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -485,10 +513,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   Text(
                     user.displayName ?? user.email,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
-                      fontFamily: 'InterDisplay',
+                      fontFamily: context.localizedFont,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -497,7 +525,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],
-                      fontFamily: 'InterDisplay',
+                      fontFamily: context.localizedFont,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -520,7 +548,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: _getAccountTypeColor(user.accountType),
-                          fontFamily: 'InterDisplay',
+                          fontFamily: context.localizedFont,
                         ),
                       ),
                     ),
@@ -563,7 +591,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                  fontSize: 12,
                                  fontWeight: FontWeight.w600,
                                  color: const Color(0xFFFF6B35),
-                                 fontFamily: 'InterDisplay',
+                                 fontFamily: context.localizedFont,
                                ),
                              ),
                             const SizedBox(width: 4),
@@ -618,7 +646,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 fontWeight: FontWeight.w500,
                 color: Colors.grey[600],
                 letterSpacing: 0.5,
-                fontFamily: 'InterDisplay',
+                fontFamily: context.localizedFont,
               ),
             ),
           ),
@@ -801,7 +829,7 @@ class _SettingsTile extends StatelessWidget {
                       fontSize: 16,
                       fontWeight: FontWeight.w400,
                       color: titleColor ?? Colors.black,
-                      fontFamily: 'InterDisplay',
+                      fontFamily: context.localizedFont,
                     ),
                   ),
                   if (subtitle != null) ...[
@@ -811,7 +839,7 @@ class _SettingsTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
-                        fontFamily: 'InterDisplay',
+                        fontFamily: context.localizedFont,
                       ),
                     ),
                   ],
@@ -858,10 +886,10 @@ void _showCurrencyDialog(BuildContext context) {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      title: const Text(
+      title: Text(
         'Select Currency',
         style: TextStyle(
-          fontFamily: 'Montserrat',
+          fontFamily: context.titleFont,
           fontWeight: FontWeight.w600,
           color: Colors.black,
         ),

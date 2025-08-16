@@ -32,6 +32,7 @@ class User {
   final double dailyRevenue;  // Daily revenue for sellers
   final double totalRevenue;  // Total lifetime revenue for sellers
   final DateTime? lastRevenueUpdate;  // Last time revenue was updated
+  final int petsRescued;  // Number of pets rescued by normal users
   
   // Subscription fields
   final String? subscriptionPlan;  // 'alifi verified', 'alifi affiliated', 'alifi favorite', or null for no subscription
@@ -92,6 +93,7 @@ class User {
     this.dailyRevenue = 0.0,  // Added daily revenue parameter
     this.totalRevenue = 0.0,  // Added total revenue parameter
     this.lastRevenueUpdate,  // Added last revenue update parameter
+    this.petsRescued = 0,  // Added pets rescued parameter
     this.subscriptionPlan,  // Added subscription plan parameter
     this.subscriptionStatus,  // Added subscription status parameter
     this.subscriptionStartDate,  // Added subscription start date parameter
@@ -150,6 +152,7 @@ class User {
       'dailyRevenue': dailyRevenue,  // Added daily revenue to Firestore data
       'totalRevenue': totalRevenue,  // Added total revenue to Firestore data
       'lastRevenueUpdate': lastRevenueUpdate != null ? Timestamp.fromDate(lastRevenueUpdate!) : null,  // Added last revenue update to Firestore data
+      'petsRescued': petsRescued,  // Added pets rescued to Firestore data
       'subscriptionPlan': subscriptionPlan,  // Added subscription plan to Firestore data
       'subscriptionStatus': subscriptionStatus,  // Added subscription status to Firestore data
       'subscriptionStartDate': subscriptionStartDate != null ? Timestamp.fromDate(subscriptionStartDate!) : null,  // Added subscription start date to Firestore data
@@ -224,6 +227,7 @@ class User {
       dailyRevenue: (data['dailyRevenue'] ?? 0.0).toDouble(),  // Added daily revenue to factory constructor
       totalRevenue: (data['totalRevenue'] ?? 0.0).toDouble(),  // Added total revenue to factory constructor
       lastRevenueUpdate: (data['lastRevenueUpdate'] as Timestamp?)?.toDate(),  // Added last revenue update to factory constructor
+      petsRescued: data['petsRescued'] ?? 0,  // Added pets rescued to factory constructor
       subscriptionPlan: data['subscriptionPlan'],  // Added subscription plan to factory constructor
       subscriptionStatus: data['subscriptionStatus'],  // Added subscription status to factory constructor
       subscriptionStartDate: (data['subscriptionStartDate'] as Timestamp?)?.toDate(),  // Added subscription start date to factory constructor
@@ -278,6 +282,7 @@ class User {
     double? dailyRevenue,  // Added daily revenue to copyWith
     double? totalRevenue,  // Added total revenue to copyWith
     DateTime? lastRevenueUpdate,  // Added last revenue update to copyWith
+    int? petsRescued,  // Added pets rescued to copyWith
     String? subscriptionPlan,  // Added subscription plan to copyWith
     String? subscriptionStatus,  // Added subscription status to copyWith
     DateTime? subscriptionStartDate,  // Added subscription start date to copyWith
@@ -329,6 +334,7 @@ class User {
       dailyRevenue: dailyRevenue ?? this.dailyRevenue,  // Added daily revenue to copyWith
       totalRevenue: totalRevenue ?? this.totalRevenue,  // Added total revenue to copyWith
       lastRevenueUpdate: lastRevenueUpdate ?? this.lastRevenueUpdate,  // Added last revenue update to copyWith
+      petsRescued: petsRescued ?? this.petsRescued,  // Added pets rescued to copyWith
       subscriptionPlan: subscriptionPlan ?? this.subscriptionPlan,  // Added subscription plan to copyWith
       subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,  // Added subscription status to copyWith
       subscriptionStartDate: subscriptionStartDate ?? this.subscriptionStartDate,  // Added subscription start date to copyWith

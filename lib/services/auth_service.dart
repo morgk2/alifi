@@ -9,10 +9,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'local_storage_service.dart';
 import 'database_service.dart';
-import 'dart:math';
+
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
-import 'push_notification_service.dart';
+
 
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -27,7 +27,7 @@ class AuthService extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final LocalStorageService _localStorage = LocalStorageService();
   final SupabaseClient _supabase = Supabase.instance.client;
-  final PushNotificationService _pushNotificationService = PushNotificationService();
+
   models.User? _currentUser;
   SharedPreferences? _prefs;
   bool _initialized = false;
@@ -90,7 +90,11 @@ class AuthService extends ChangeNotifier {
           _isLoadingUser = false;
           await _prefs?.remove('user_id');
           // Sign out from Supabase as well
-          await _supabase.auth.signOut();
+          try {
+            await _supabase.auth.signOut();
+          } catch (e) {
+            print('Error signing out from Supabase: $e');
+          }
           // Don't notify if in guest mode
           if (!_isGuestMode) {
             print('AuthService: Notifying listeners (user signed out)');
@@ -102,16 +106,59 @@ class AuthService extends ChangeNotifier {
           print('AuthService: Notifying listeners (loading user)');
           notifyListeners();
 
-          // Initialize Supabase auth
-          await _initializeSupabaseAuth();
-
-          // Try to load from Firestore, but always set _currentUser at minimum
           try {
-            print('AuthService: Loading user data from Firestore...');
-            await _loadUserData(firebaseUser.uid);
-            if (_currentUser == null) {
-              print('AuthService: Firestore load failed, creating fallback user');
-              // Fallback if Firestore fails
+            // Initialize Supabase auth
+            await _initializeSupabaseAuth();
+
+            // Try to load from Firestore, but always set _currentUser at minimum
+            try {
+              print('AuthService: Loading user data from Firestore...');
+              await _loadUserData(firebaseUser.uid);
+              if (_currentUser == null) {
+                print('AuthService: Firestore load failed, creating fallback user');
+                // Fallback if Firestore fails - create and save user to Firestore
+                _currentUser = models.User(
+                  id: firebaseUser.uid,
+                  email: firebaseUser.email ?? '',
+                  displayName: firebaseUser.displayName,
+                  photoURL: firebaseUser.photoURL,
+                  createdAt: DateTime.now(),
+                  lastLoginAt: DateTime.now(),
+                  linkedAccounts: {'google': true},
+                  accountType: 'normal', // Explicitly set accountType
+                  petsRescued: 0, // Initialize pets rescued counter
+                );
+                await _prefs?.setString('user_id', firebaseUser.uid);
+                
+                // CRITICAL: Save the fallback user to Firestore so it persists
+                try {
+                  final dbService = DatabaseService();
+                  await dbService.createUser(_currentUser!);
+                  print('AuthService: Fallback user saved to Firestore');
+                } catch (saveError) {
+                  print('AuthService: Failed to save fallback user to Firestore: $saveError');
+                  // Continue anyway - user will still work in memory
+                }
+              } else {
+                print('AuthService: User data loaded successfully from Firestore');
+              }
+              
+              // Update FCM token for the user (with timeout to prevent hanging)
+              try {
+                await _updateFCMTokenForUser(firebaseUser.uid).timeout(
+                  const Duration(seconds: 10),
+                  onTimeout: () {
+                    print('FCM token update timed out for user ${firebaseUser.uid}');
+                  },
+                );
+              } catch (fcmError) {
+                print('FCM token update failed for user ${firebaseUser.uid}: $fcmError');
+                // Continue without FCM token update
+              }
+              
+            } catch (e) {
+              print('AuthService: Error loading user data: $e');
+              // Fallback if anything fails - create and save user to Firestore
               _currentUser = models.User(
                 id: firebaseUser.uid,
                 email: firebaseUser.email ?? '',
@@ -120,18 +167,37 @@ class AuthService extends ChangeNotifier {
                 createdAt: DateTime.now(),
                 lastLoginAt: DateTime.now(),
                 linkedAccounts: {'google': true},
+                accountType: 'normal', // Explicitly set accountType
+                petsRescued: 0, // Initialize pets rescued counter
               );
               await _prefs?.setString('user_id', firebaseUser.uid);
-            } else {
-              print('AuthService: User data loaded successfully from Firestore');
+              
+              // CRITICAL: Save the fallback user to Firestore so it persists
+              try {
+                final dbService = DatabaseService();
+                await dbService.createUser(_currentUser!);
+                print('AuthService: Fallback user saved to Firestore after error');
+              } catch (saveError) {
+                print('AuthService: Failed to save fallback user to Firestore after error: $saveError');
+                // Continue anyway - user will still work in memory
+              }
+              
+              // Still try to update FCM token (with timeout)
+              try {
+                await _updateFCMTokenForUser(firebaseUser.uid).timeout(
+                  const Duration(seconds: 10),
+                  onTimeout: () {
+                    print('FCM token update timed out for user ${firebaseUser.uid}');
+                  },
+                );
+              } catch (fcmError) {
+                print('FCM token update failed for user ${firebaseUser.uid}: $fcmError');
+                // Continue without FCM token update
+              }
             }
-            
-            // Update FCM token for the user
-            await _updateFCMTokenForUser(firebaseUser.uid);
-            
           } catch (e) {
-            print('AuthService: Error loading user data: $e');
-            // Fallback if anything fails
+            print('AuthService: Critical error in auth state listener: $e');
+            // Even if everything fails, create a minimal fallback user and save it
             _currentUser = models.User(
               id: firebaseUser.uid,
               email: firebaseUser.email ?? '',
@@ -140,19 +206,31 @@ class AuthService extends ChangeNotifier {
               createdAt: DateTime.now(),
               lastLoginAt: DateTime.now(),
               linkedAccounts: {'google': true},
+              accountType: 'normal', // Explicitly set accountType
+              petsRescued: 0, // Initialize pets rescued counter
             );
-            await _prefs?.setString('user_id', firebaseUser.uid);
             
-            // Still try to update FCM token
-            await _updateFCMTokenForUser(firebaseUser.uid);
+            // CRITICAL: Save the critical fallback user to Firestore so it persists
+            try {
+              final dbService = DatabaseService();
+              await dbService.createUser(_currentUser!);
+              print('AuthService: Critical fallback user saved to Firestore');
+            } catch (saveError) {
+              print('AuthService: Failed to save critical fallback user to Firestore: $saveError');
+              // Continue anyway - user will still work in memory
+            }
+          } finally {
+            // CRITICAL: Always set loading to false in finally block to prevent infinite loading
+            _isLoadingUser = false;
+            print('AuthService: Notifying listeners (user loaded) - isLoadingUser: $_isLoadingUser');
+            notifyListeners();
           }
-          _isLoadingUser = false;
-          print('AuthService: Notifying listeners (user loaded)');
-          notifyListeners();
         }
       }, onError: (error) {
         print('AuthService: Error in auth state listener: $error');
-        // Continue without auth state listener
+        // CRITICAL: Ensure loading state is reset even on listener errors
+        _isLoadingUser = false;
+        notifyListeners();
       });
 
       // Check for cached user with timeout
@@ -187,14 +265,26 @@ class AuthService extends ChangeNotifier {
 
   Future<void> _loadUserData(String uid) async {
     try {
-      final doc = await _firestore.collection('users').doc(uid).get();
+      // Add timeout to prevent hanging on Firestore calls
+      final doc = await _firestore.collection('users').doc(uid).get().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('Firestore get user document timed out for uid: $uid');
+          throw TimeoutException('Firestore get user document timed out');
+        },
+      );
+      
       if (doc.exists) {
         _currentUser = models.User.fromFirestore(doc);
         await _prefs?.setString('user_id', uid);
         notifyListeners();
+        print('Successfully loaded user data from Firestore for uid: $uid');
+      } else {
+        print('User document does not exist in Firestore for uid: $uid');
       }
     } catch (e) {
-      print('Error loading user data: $e');
+      print('Error loading user data for uid $uid: $e');
+      // Don't rethrow - let the caller handle the null _currentUser
     }
   }
 

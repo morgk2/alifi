@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart' as latlong;
 import 'package:geocoding/geocoding.dart';
 import 'location_picker_dialog.dart';
 import '../l10n/app_localizations.dart';
+import '../services/geocoding_service.dart';
 
 class ReportMissingPetDialog extends StatefulWidget {
   final Pet? pet;
@@ -143,16 +144,19 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
         desiredAccuracy: LocationAccuracy.high
       );
       
-      // Get address from coordinates
-      final placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-
-      if (placemarks.isNotEmpty) {
-        final place = placemarks.first;
-        _currentAddress = '${place.street}, ${place.locality}, ${place.country}';
-        _locationController.text = _currentAddress!;
+      // Get address from coordinates using the geocoding service
+      try {
+        final address = await GeocodingService.getAddressFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        
+        if (address.isNotEmpty && address != 'Location found (address unavailable)') {
+          _currentAddress = address;
+          _locationController.text = address;
+        }
+      } catch (e) {
+        print('Error getting address from coordinates: $e');
       }
 
       setState(() {
@@ -402,6 +406,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
           contactNumbers: _contactNumbers,
           reward: reward,
           lastSeenDate: lastSeenDateTime,
+          existingPetId: widget.pet?.id, // Pass existing pet ID if available
         );
 
       // Close the report dialog with animation
@@ -1171,6 +1176,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
         contactNumbers: _contactNumbers,
         reward: reward,
         lastSeenDate: lastSeenDateTime,
+        existingPetId: widget.pet?.id, // Pass existing pet ID if available
       );
 
       if (!mounted) return;
@@ -1335,7 +1341,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                   ],
                   ),
                     ),
-                    const SizedBox(height: 16),
+                                         const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -1345,4 +1351,6 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
       },
     );
   }
+
+
 }

@@ -1,0 +1,580 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
+import '../models/pet.dart';
+import '../models/adoption_listing.dart';
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
+import '../services/geocoding_service.dart';
+import '../widgets/spinning_loader.dart';
+import '../l10n/app_localizations.dart';
+import 'dart:ui';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart' as latlong;
+
+class OfferPetForAdoptionPage extends StatefulWidget {
+  final Pet pet;
+  
+  const OfferPetForAdoptionPage({
+    super.key,
+    required this.pet,
+  });
+
+  @override
+  State<OfferPetForAdoptionPage> createState() => _OfferPetForAdoptionPageState();
+}
+
+class _OfferPetForAdoptionPageState extends State<OfferPetForAdoptionPage> {
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+  
+  bool _isLoading = false;
+  bool _isPosting = false;
+  String _userAddress = 'Getting your location...';
+  bool _isLoadingLocation = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
+
+  void _initializeData() async {
+    // Initialize form with pet data
+    _titleController.text = '${widget.pet.name} - ${widget.pet.breed}';
+    _descriptionController.text = _generateDescription();
+    
+    // Get user's current location
+    await _getUserLocation();
+  }
+
+  String _generateDescription() {
+    String description = '${widget.pet.name} is a lovely ${widget.pet.gender.toLowerCase()} ${widget.pet.breed}';
+    
+    if (widget.pet.age != null) {
+      if (widget.pet.age! < 0) {
+        final months = (-widget.pet.age!).toInt();
+        description += ' who is ${months} ${months == 1 ? 'month' : 'months'} old';
+      } else if (widget.pet.age! < 1) {
+        final months = (widget.pet.age! * 12).round();
+        description += ' who is ${months} ${months == 1 ? 'month' : 'months'} old';
+      } else {
+        final years = widget.pet.age!;
+        final displayYears = years == years.toInt() ? years.toInt() : years;
+        description += ' who is ${displayYears} ${years == 1 ? 'year' : 'years'} old';
+      }
+    }
+    
+    if (widget.pet.weight != null) {
+      description += ' and weighs ${widget.pet.weight!.toStringAsFixed(1)} kg';
+    }
+    
+    if (widget.pet.color.isNotEmpty) {
+      description += '. ${widget.pet.name} has a beautiful ${widget.pet.color.toLowerCase()} coat';
+    }
+    
+    description += '. This pet is looking for a loving home and would make a wonderful companion.';
+    
+    return description;
+  }
+
+  Future<void> _getUserLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      final address = await GeocodingService.getAddressFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      
+      setState(() {
+        _userAddress = address;
+        _locationController.text = address;
+        _isLoadingLocation = false;
+      });
+    } catch (e) {
+      setState(() {
+        _userAddress = 'Unable to get location';
+        _locationController.text = 'Unknown location';
+        _isLoadingLocation = false;
+      });
+    }
+  }
+
+  Future<void> _postAdoptionListing() async {
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a title for the listing'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_descriptionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a description for the listing'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_locationController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a location for the listing'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isPosting = true;
+    });
+
+    try {
+      final authService = context.read<AuthService>();
+      if (authService.currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final adoptionFee = 0.0; // Free adoption
+      
+      // Get current position for coordinates
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      
+      final adoptionListing = AdoptionListing(
+        id: '', // Will be generated by Firestore
+        petId: widget.pet.id,
+        ownerId: authService.currentUser!.id,
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        petType: widget.pet.species,
+        breed: widget.pet.breed,
+        gender: widget.pet.gender,
+        age: (widget.pet.age ?? 0).toInt(),
+        color: widget.pet.color,
+        location: _locationController.text.trim(),
+        adoptionFee: adoptionFee,
+        imageUrls: widget.pet.imageUrls,
+        contactNumber: authService.currentUser!.phone ?? '',
+        coordinates: latlong.LatLng(position.latitude, position.longitude),
+        createdAt: DateTime.now(),
+        lastUpdatedAt: DateTime.now(),
+        isActive: true,
+        requirements: [],
+      );
+
+      final databaseService = DatabaseService();
+      await databaseService.createAdoptionListing(adoptionListing);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${widget.pet.name} has been posted for adoption successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate back to pets page
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to post adoption listing: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPosting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _locationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text(
+          'Offer for Adoption',
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black87),
+      ),
+      body: _isLoading
+          ? const Center(child: SpinningLoader(color: Colors.orange))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Pet Image
+                  if (widget.pet.imageUrls.isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      height: 250,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.network(
+                          widget.pet.imageUrls.first,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[300],
+                              child: const Icon(
+                                CupertinoIcons.photo,
+                                size: 60,
+                                color: Colors.grey,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  
+                  const SizedBox(height: 30),
+                  
+                  // Pet Info Card
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              CupertinoIcons.heart_fill,
+                              color: Colors.orange,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Pet Information',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        _buildInfoRow('Name', widget.pet.name),
+                        _buildInfoRow('Breed', widget.pet.breed),
+                        _buildInfoRow('Gender', widget.pet.gender),
+                        _buildInfoRow('Age', _formatAge(widget.pet.age)),
+                        _buildInfoRow('Color', widget.pet.color),
+                        if (widget.pet.weight != null)
+                          _buildInfoRow('Weight', '${widget.pet.weight!.toStringAsFixed(1)} kg'),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 30),
+                  
+                  // Listing Details Form
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              CupertinoIcons.doc_text,
+                              color: Colors.orange,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Listing Details',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Title
+                        _buildPillTextField(
+                          controller: _titleController,
+                          label: 'Listing Title',
+                          hint: 'Enter a title for your listing',
+                          icon: CupertinoIcons.textformat,
+                        ),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Description
+                        _buildPillTextField(
+                          controller: _descriptionController,
+                          label: 'Description',
+                          hint: 'Describe your pet and what you\'re looking for in an adopter',
+                          icon: CupertinoIcons.text_bubble,
+                          maxLines: 4,
+                        ),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Location
+                        _buildPillTextField(
+                          controller: _locationController,
+                          label: 'Location',
+                          hint: 'Enter the location for adoption',
+                          icon: CupertinoIcons.location,
+                          suffixIcon: _isLoadingLocation
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: const Icon(CupertinoIcons.location_solid),
+                                  onPressed: _getUserLocation,
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 40),
+                  
+                  // Post Button
+                  Container(
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      gradient: const LinearGradient(
+                        colors: [Colors.orange, Color(0xFFFF8A65)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.orange.withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(28),
+                        onTap: _isPosting ? null : _postAdoptionListing,
+                        child: Center(
+                          child: _isPosting
+                              ? const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Posting...',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : const Text(
+                                  'Post for Adoption',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value.isNotEmpty ? value : 'Not specified',
+              style: TextStyle(
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatAge(double? age) {
+    if (age == null) return 'Unknown';
+    
+    if (age < 0) {
+      final months = (-age).toInt();
+      return '$months ${months == 1 ? 'month' : 'months'}';
+    } else if (age < 1) {
+      final months = (age * 12).round();
+      return '$months ${months == 1 ? 'month' : 'months'}';
+    } else {
+      final years = age;
+      final displayYears = years == years.toInt() ? years.toInt() : years;
+      return '$displayYears ${years == 1 ? 'year' : 'years'}';
+    }
+  }
+
+  Widget _buildPillTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    int maxLines = 1,
+    Widget? suffixIcon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: TextField(
+            controller: controller,
+            maxLines: maxLines,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 14,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 16,
+              ),
+              prefixIcon: Icon(
+                icon,
+                color: Colors.orange,
+                size: 20,
+              ),
+              suffixIcon: suffixIcon,
+            ),
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

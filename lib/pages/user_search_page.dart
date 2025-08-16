@@ -13,6 +13,7 @@ import '../widgets/skeleton_loader.dart';
 import '../l10n/app_localizations.dart';
 import 'dart:ui';
 import '../widgets/keyboard_dismissible_text_field.dart';
+import '../utils/app_fonts.dart';
 
 class UserSearchPage extends StatefulWidget {
   const UserSearchPage({super.key});
@@ -812,8 +813,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                   // Header with title only
                   Text(
                     l10n.search,
-                    style: const TextStyle(
-                      fontFamily: 'Montserrat',
+                    style: TextStyle(fontFamily: context.titleFont,
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -1.1,
@@ -899,7 +899,10 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SpinningLoader(color: Color(0xFFF59E0B)),
+                          const CupertinoActivityIndicator(
+                            radius: 16,
+                            color: Color(0xFFF59E0B),
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             l10n.searching,
@@ -949,8 +952,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                             const SizedBox(width: 12),
                                             Text(
                                               l10n.recommendedVetsAndStores,
-                                              style: const TextStyle(
-                                                fontFamily: 'Montserrat',
+                                              style: TextStyle(fontFamily: context.titleFont,
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.w700,
                                                 letterSpacing: -0.5,
@@ -1015,8 +1017,7 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                   const SizedBox(width: 12),
                                   Text(
                                     l10n.recentSearches,
-                                    style: const TextStyle(
-                                      fontFamily: 'Montserrat',
+                                    style: TextStyle(fontFamily: context.titleFont,
                                       fontSize: 20,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: -0.5,

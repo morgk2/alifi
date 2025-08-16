@@ -927,7 +927,7 @@ class _PaymentPageState extends State<PaymentPage> {
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
@@ -942,10 +942,10 @@ class _PaymentPageState extends State<PaymentPage> {
             children: [
               Expanded(
                 child: Container(
-                  height: 64,
+                  height: 56,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFF8C00), // Orange
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(28),
                   ),
                   child: ElevatedButton(
                     onPressed: _isProcessing ? null : _processPayment,
@@ -954,7 +954,7 @@ class _PaymentPageState extends State<PaymentPage> {
                       shadowColor: Colors.transparent,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(28),
                       ),
                     ),
                     child: _isProcessing
@@ -973,7 +973,7 @@ class _PaymentPageState extends State<PaymentPage> {
                               Text(
                                 'Processing...',
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
@@ -983,7 +983,7 @@ class _PaymentPageState extends State<PaymentPage> {
                         : const Text(
                             'Place order',
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
@@ -1000,7 +1000,7 @@ class _PaymentPageState extends State<PaymentPage> {
                   return Text(
                     currencyService.formatProductPrice(totalWithAppFee, 'DZD'),
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
                     ),

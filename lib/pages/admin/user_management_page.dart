@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../models/user.dart';
 import '../../services/database_service.dart';
 import '../../widgets/spinning_loader.dart';
@@ -321,7 +322,12 @@ class _UserManagementPageState extends State<UserManagementPage> {
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: SpinningLoader(color: Colors.orange))
+                ? const Center(
+                    child: CupertinoActivityIndicator(
+                      radius: 16,
+                      color: Colors.orange,
+                    ),
+                  )
                 : displayedUsers.isEmpty
                     ? Center(
                         child: Text(
@@ -340,7 +346,12 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           if (index == displayedUsers.length) {
                             return const Padding(
                               padding: EdgeInsets.all(8.0),
-                              child: Center(child: SpinningLoader(color: Colors.orange)),
+                              child: Center(
+                                child: CupertinoActivityIndicator(
+                                  radius: 16,
+                                  color: Colors.orange,
+                                ),
+                              ),
                             );
                           }
                           return _buildUserTile(displayedUsers[index]);

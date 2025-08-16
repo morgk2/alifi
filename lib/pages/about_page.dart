@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/app_fonts.dart';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -13,8 +14,7 @@ class AboutPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           l10n.about,
-          style: const TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontWeight: FontWeight.w700,
             color: Colors.black,
           ),
@@ -74,12 +74,11 @@ class AboutPage extends StatelessWidget {
                     const SizedBox(height: 16),
                     
                     // App Name
-                    const Text(
+                    Text(
                       'Alifi',
-                      style: TextStyle(
-                        fontSize: 28,
+                      style: TextStyle(fontSize: 28,
                         fontWeight: FontWeight.w700,
-                        fontFamily: 'Montserrat',
+                        fontFamily: context.titleFont,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -87,10 +86,9 @@ class AboutPage extends StatelessWidget {
                     // App Tagline
                     Text(
                       l10n.yourPetsFavouriteApp,
-                      style: TextStyle(
-                        fontSize: 16,
+                      style: TextStyle(fontSize: 16,
                         color: Colors.grey[600],
-                        fontFamily: 'Montserrat',
+                        fontFamily: context.titleFont,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -347,10 +345,10 @@ class _InfoTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w400,
-                      fontFamily: 'InterDisplay',
+                      fontFamily: context.localizedFont,
                     ),
                   ),
                   const SizedBox(height: 2),

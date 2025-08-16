@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/app_fonts.dart';
 
 class NotificationPage extends StatelessWidget {
   const NotificationPage({super.key});
@@ -7,10 +8,9 @@ class NotificationPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Notifications',
-          style: TextStyle(
-            fontFamily: 'Montserrat',
+          style: TextStyle(fontFamily: context.titleFont,
             fontWeight: FontWeight.w900, // Black weight
             fontSize: 20,
             color: Colors.black,

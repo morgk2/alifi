@@ -84,10 +84,68 @@ class StorageService {
   /// Deletes a file from Supabase storage
   Future<void> deleteFile(String filePath) async {
     try {
-      await _supabase.storage.from(petPhotosBucket).remove([filePath]);
+      print('Attempting to delete file: $filePath from bucket: $petPhotosBucket');
+      
+      // Check if user is authenticated
+      final user = _supabase.auth.currentUser;
+      print('Current user: ${user?.id ?? 'Not authenticated'}');
+      
+      // Try to delete the file
+      final response = await _supabase.storage.from(petPhotosBucket).remove([filePath]);
+      print('Delete response: $response');
+      
+      // Wait a moment for the deletion to propagate
+      await Future.delayed(Duration(milliseconds: 500));
+      
+      // Try to list files to see if our file is still there
+      try {
+        final files = await _supabase.storage.from(petPhotosBucket).list();
+        final fileExists = files.any((file) => file.name == filePath);
+        if (fileExists) {
+          print('File still exists in bucket listing: $filePath');
+          throw Exception('File was not actually deleted from bucket');
+        } else {
+          print('Successfully deleted file: $filePath (verified via listing)');
+        }
+      } catch (e) {
+        print('Error checking file listing: $e');
+        // If we can't check the listing, we'll assume deletion worked
+        print('Assuming file deletion was successful');
+      }
     } catch (e) {
       print('Error deleting file: $e');
+      print('File path: $filePath');
+      print('Bucket: $petPhotosBucket');
+      print('Supabase client: $_supabase');
       throw Exception('Failed to delete file: $e');
+    }
+  }
+
+  /// Deletes an adoption listing image from Supabase storage
+  Future<void> deleteAdoptionListingImage(String imageUrl) async {
+    try {
+      print('Attempting to delete adoption listing image: $imageUrl');
+      
+      // Extract file path from the URL
+      // URL format: https://xxx.supabase.co/storage/v1/object/public/pet-photos/filename.jpg
+      final uri = Uri.parse(imageUrl);
+      final pathSegments = uri.pathSegments;
+      print('Path segments: $pathSegments');
+      
+      if (pathSegments.length >= 5 && pathSegments[3] == 'public' && pathSegments[4] == 'pet-photos') {
+        final fileName = pathSegments.sublist(5).join('/');
+        print('Extracted filename: $fileName');
+        await deleteFile(fileName);
+        print('Successfully deleted adoption listing image: $fileName');
+      } else {
+        print('Invalid URL format for Supabase storage. Expected format: /storage/v1/object/public/pet-photos/filename');
+        print('Actual path segments: $pathSegments');
+        throw Exception('Invalid image URL format');
+      }
+    } catch (e) {
+      print('Error deleting adoption listing image: $e');
+      print('Image URL: $imageUrl');
+      rethrow;
     }
   }
 } 
