@@ -1,481 +1,124 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'typing_indicator.dart';
-import '../services/chat_service.dart';
-import '../services/auth_service.dart';
-import 'keyboard_dismissible_text_field.dart';
-import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter/cupertino.dart';
+import '../pages/ai_pet_assistant_page.dart';
 
-class AIPetAssistantCard extends StatefulWidget {
-  final VoidCallback onTap;
-  final bool isExpanded;
+class AIPetAssistantCard extends StatelessWidget {
+  final VoidCallback? onTap;
 
   const AIPetAssistantCard({
     super.key,
-    required this.onTap,
-    this.isExpanded = false,
+    this.onTap,
   });
 
   @override
-  State<AIPetAssistantCard> createState() => _AIPetAssistantCardState();
-}
-
-class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTickerProviderStateMixin {
-  final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  final ChatService _chatService = ChatService();
-  final _uuid = const Uuid();
-  List<ChatMessage> _messages = [];
-  bool _isLoading = false;
-  static const String _apiKey = 'AIzaSyB32jJtKaieqAx2OLUs0TkXnBJD2zhuilc';
-  late AnimationController _slideController;
-  late Animation<double> _slideAnimation;
-  ChatMessage? _animatingMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _slideController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-
-    _slideAnimation = CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    );
-
-    _slideController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        setState(() {
-          _animatingMessage = null;
-        });
-        _slideController.reset();
-      }
-    });
-
-    // Load existing messages
-    _loadMessages();
-  }
-
-  void _loadMessages() {
-    final userId = context.read<AuthService>().currentUser?.id;
-    if (userId != null) {
-      _chatService.getChatMessages(userId).listen((messages) {
-        if (mounted) {
-          setState(() {
-            _messages = messages;
-          });
-          // Scroll to bottom when new messages are loaded
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToBottom();
-          });
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    _slideController.dispose();
-    super.dispose();
-  }
-
-  Future<String> _fetchGeminiReply(String userMessage) async {
-    final url = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$_apiKey');
-    final headers = {
-      'Content-Type': 'application/json',
-    };
-    final body = jsonEncode({
-      "contents": [
-        {
-          "parts": [
-            {
-              "text": "You are a virtual pet dog named Lufi. You are a helpful pet assistant that detects and responds in the same language the user uses. For example, if they write in French, respond in French. If they write in English, respond in English, etc. Focus on giving clear, practical, short, focus on short and supportive pet care advice while maintaining a warm and approachable AND proffessional tone in the user's preferred language. but prioritize being informative and helpful over being playful."
-            },
-            {"text": userMessage}
-          ]
-        }
-      ]
-    });
-    final response = await http.post(url, headers: headers, body: body);
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['candidates'] != null && data['candidates'].isNotEmpty) {
-        final parts = data['candidates'][0]['content']['parts'];
-        if (parts != null && parts.isNotEmpty && parts[0]['text'] != null) {
-          return parts[0]['text'];
-        }
-      }
-      return 'No response from Gemini.';
-    } else {
-      return 'Error: ${response.statusCode}\n${response.body}';
-    }
-  }
-
-  Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty) return;
-    final userMessage = _messageController.text;
-    _messageController.clear();
-
-    final userId = context.read<AuthService>().currentUser?.id;
-    if (userId == null) return;
-
-    final newMessage = ChatMessage(
-      id: _uuid.v4(),
-      text: userMessage,
-      isUser: true,
-      timestamp: DateTime.now(),
-    );
-
-    await _chatService.addMessage(userId, newMessage);
-    setState(() {
-      _animatingMessage = newMessage;
-    });
-
-    // Start animation
-    _slideController.forward();
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final reply = await _fetchGeminiReply(userMessage);
-      if (mounted) {
-        final aiMessage = ChatMessage(
-          id: _uuid.v4(),
-          text: reply,
-          isUser: false,
-          timestamp: DateTime.now(),
-        );
-        await _chatService.addMessage(userId, aiMessage);
-        setState(() {
-          _isLoading = false;
-          _animatingMessage = aiMessage;
-        });
-        // Reset and start new animation for AI message
-        _slideController.reset();
-        _slideController.forward();
-      }
-    } catch (e) {
-      if (mounted) {
-        final errorMessage = ChatMessage(
-          id: _uuid.v4(),
-          text: AppLocalizations.of(context)!.sorryIEncounteredAnError,
-          isUser: false,
-          timestamp: DateTime.now(),
-        );
-        await _chatService.addMessage(userId, errorMessage);
-        setState(() {
-          _isLoading = false;
-          _animatingMessage = errorMessage;
-        });
-        // Reset and start new animation for error message
-        _slideController.reset();
-        _slideController.forward();
-      }
-    }
-  }
-
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
-  }
-
-  Widget _buildMessageItem(ChatMessage message) {
-    final isAnimating = _animatingMessage?.id == message.id;
-    final messageWidget = Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 12,
-      ),
-      decoration: BoxDecoration(
-        color: message.isUser ? Colors.orange : Colors.grey[100],
-        borderRadius: message.isUser
-            ? BorderRadius.circular(24)  // Pill shape for user messages
-            : const BorderRadius.only(  // Chat bubble for AI messages
-                topRight: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
-      ),
-      child: Text(
-        message.text,
-        style: TextStyle(
-          color: message.isUser ? Colors.white : Colors.black87,
-        ),
-      ),
-    );
-
-    final aiAvatar = Image.asset(
-      'assets/images/ai_lufi.png',
-      width: 40,
-      height: 40,
-    );
-
-    Widget finalWidget;
-    if (!message.isUser) {
-      finalWidget = Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          aiAvatar,
-          const SizedBox(width: 8),
-          Flexible(child: messageWidget),
-        ],
-      );
-    } else {
-      finalWidget = messageWidget;
-    }
-
-    if (isAnimating) {
-      return AnimatedBuilder(
-        animation: _slideAnimation,
-        builder: (context, child) {
-          final slideDistance = message.isUser ? 100.0 : -100.0;
-          return Transform.translate(
-            offset: Offset(
-              (1 - _slideAnimation.value) * slideDistance,
-              (1 - _slideAnimation.value) * 50,
-            ),
-            child: Opacity(
-              opacity: _slideAnimation.value,
-              child: child,
-            ),
-          );
-        },
-        child: finalWidget,
-      );
-    }
-
-    return finalWidget;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     
-    if (!widget.isExpanded) {
-      // Show the last message in the preview if available
-      final lastMessage = _messages.isNotEmpty ? _messages.last : null;
-      
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: widget.onTap,
-          child: Container(
-            height: 140, // Fixed height for the widget
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(
-                color: Colors.grey[300]!,
-                width: 1.0,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                  spreadRadius: 2,
-                ),
-              ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const AIPetAssistantPage(),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              offset: const Offset(0, 8),
+              blurRadius: 16,
+              spreadRadius: 2,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Image.asset(
-                          'assets/images/ai_lufi.png',
-                          width: 32,
-                          height: 32,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: const BorderRadius.only(
-                                topRight: Radius.circular(16),
-                                bottomLeft: Radius.circular(16),
-                                bottomRight: Radius.circular(16),
-                              ),
-                            ),
-                                                         child: Text(
-                               lastMessage?.text ?? l10n.hiAskMeAboutAnyPetAdvice,
-                               style: const TextStyle(
-                                 fontSize: 14,
-                                 color: Colors.black87,
-                               ),
-                               maxLines: 5, // Limit to 5 lines
-                               overflow: TextOverflow.fade, // Fade out at the end of complete lines
-                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 32),
-                      ],
+          ],
+        ),
+        child: Row(
+          children: [
+            // Lufi's profile picture
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: Colors.grey[200]!,
+                  width: 2,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(23),
+                child: Image.asset(
+                  'assets/images/ai_lufi.png',
+                  width: 46,
+                  height: 46,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF9800).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(23),
+                      ),
+                      child: const Icon(
+                        Icons.pets,
+                        color: Color(0xFFFF9800),
+                        size: 24,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            
+            const SizedBox(width: 16),
+            
+            // Text content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Lufi',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    l10n.tapToChat,
+                  const SizedBox(height: 4),
+                  Text(
+                    "Hi! I'm ready to help with your pet care questions 🐾",
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[400],
+                      color: Colors.grey[600],
+                      height: 1.3,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
-      );
-    }
-
-    return Material(
-      color: Colors.white,
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
+            
+            // Chat icon
             Container(
-              padding: const EdgeInsets.all(16),
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                color: const Color(0xFFFF9800).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(18),
               ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: widget.onTap,
-                  ),
-                  const SizedBox(width: 8),
-                  Image.asset(
-                    'assets/images/ai_lufi.png',
-                    width: 40,
-                    height: 40,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    l10n.aiPetAssistant,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () async {
-                      final userId = context.read<AuthService>().currentUser?.id;
-                      if (userId != null) {
-                        await _chatService.clearChat(userId);
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[index];
-                  return Align(
-                    key: ValueKey(message.id),
-                    alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        bottom: 16,
-                        right: message.isUser ? 4 : 0,
-                      ),
-                      child: _buildMessageItem(message),
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: TypingIndicator(),
-                ),
-              ),
-            Container(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 5,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: KeyboardDismissibleTextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: l10n.typeYourMessage,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.orange,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_upward, color: Colors.white),
-                      onPressed: _sendMessage,
-                    ),
-                  ),
-                ],
+              child: const Icon(
+                CupertinoIcons.chat_bubble,
+                color: Color(0xFFFF9800),
+                size: 18,
               ),
             ),
           ],
@@ -483,4 +126,4 @@ class _AIPetAssistantCardState extends State<AIPetAssistantCard> with SingleTick
       ),
     );
   }
-} 
+}

@@ -3542,4 +3542,48 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noTopTrainers => 'No top trainers available';
+
+  @override
+  String get socialMedia => 'Social Media';
+
+  @override
+  String get addSocialMedia => 'Add Social Media';
+
+  @override
+  String get tiktok => 'TikTok';
+
+  @override
+  String get facebook => 'Facebook';
+
+  @override
+  String get instagram => 'Instagram';
+
+  @override
+  String get enterTikTokUsername => 'Enter TikTok username';
+
+  @override
+  String get enterFacebookUsername => 'Enter Facebook username';
+
+  @override
+  String get enterInstagramUsername => 'Enter Instagram username';
+
+  @override
+  String get socialMediaAdded => 'Social media account added successfully!';
+
+  @override
+  String get socialMediaUpdated => 'Social media account updated successfully!';
+
+  @override
+  String get socialMediaRemoved => 'Social media account removed successfully!';
+
+  @override
+  String errorUpdatingSocialMedia(Object error) {
+    return 'Error updating social media: $error';
+  }
+
+  @override
+  String get removeSocialMedia => 'Remove Social Media';
+
+  @override
+  String get areYouSureRemoveSocialMedia => 'Are you sure you want to remove this social media account?';
 }

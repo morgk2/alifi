@@ -49,13 +49,11 @@ import '../utils/app_fonts.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback onNavigateToMap;
-  final Function(bool) onAIAssistantExpanded;  // Add this callback
   final ValueChanged<double>? onSideMenuProgressChanged;
 
   const HomePage({
     super.key,
     required this.onNavigateToMap,
-    required this.onAIAssistantExpanded,  // Add this parameter
     this.onSideMenuProgressChanged,
   });
 
@@ -64,7 +62,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
-  bool _isAIAssistantExpanded = false;
   // Add side menu state
   bool _isSideMenuOpen = false;
   // Add animation controller for side menu
@@ -507,32 +504,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
-  Future<void> _loadRecentLostPets() async {
-    
-    // Cancel any existing subscription first
-    _nearbyPetsSubscription?.cancel();
-    _recentPetsSubscription?.cancel();
-    
-    // Set loading state if not already loading
-    if (!_isLoadingPetsNotifier.value) {
-      _isLoadingPetsNotifier.value = true;
-    }
-    _hasAttemptedLoadNotifier.value = true;
-    
-    // Subscribe to recent lost pets stream as fallback with proper memory management
-    _recentPetsSubscription = _databaseService.getRecentLostPets().listen((pets) {
-      if (mounted) {
-        print('Loaded ${pets.length} recent lost pets (fallback)');
-        _isLoadingPetsNotifier.value = false;
-        _lostPetsNotifier.value = pets;
-      }
-    }, onError: (error) {
-      print('Error loading recent lost pets: $error');
-      _isLoadingPetsNotifier.value = false;
-      // Set empty list to show "no pets" message
-      _lostPetsNotifier.value = [];
-    });
-  }
+
 
   String _formatTimeAgo(DateTime dateTime) {
     final now = DateTime.now();
@@ -846,12 +818,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  void _toggleAIAssistant(bool expanded) {
-    setState(() {
-      _isAIAssistantExpanded = expanded;
-    });
-    widget.onAIAssistantExpanded(expanded);  // Notify parent about the state change
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -918,13 +885,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 );
               },
             ),
-            if (_isAIAssistantExpanded)
-              Positioned.fill(
-                child: AIPetAssistantCard(
-                  isExpanded: true,
-                  onTap: () => _toggleAIAssistant(false),
-                ),
-              ),
+
             // Overlay to close side menu when tapping outside
             if (_isSideMenuOpen || _isDragging)
               AnimatedBuilder(
@@ -1227,11 +1188,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        if (!_isAIAssistantExpanded)
-                          AIPetAssistantCard(
-                            isExpanded: _isAIAssistantExpanded,
-                            onTap: () => _toggleAIAssistant(true),
-                          ),
+                        const AIPetAssistantCard(),
                         const SizedBox(height: 120),
                       ],
                     ),
@@ -1429,13 +1386,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 children: [
                   GestureDetector(
                     onTap: _toggleSideMenu,
-                    child: SvgPicture.asset(
-                      'assets/images/menu.svg',
-                      width: 28,
-                      height: 28,
-                      colorFilter: const ColorFilter.mode(
-                        Colors.black,
-                        BlendMode.srcIn,
+                    child: Container(
+                      width: 44, // Increased hitbox width
+                      height: 44, // Increased hitbox height
+                      alignment: Alignment.center,
+                      child: SvgPicture.asset(
+                        'assets/images/menu.svg',
+                        width: 28,
+                        height: 28,
+                        colorFilter: const ColorFilter.mode(
+                          Colors.black,
+                          BlendMode.srcIn,
+                        ),
                       ),
                     ),
                   ),
@@ -1467,9 +1429,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           );
                         },
                         child: Container(
-                          width: 32,
-                          height: 32,
+                          width: 48, // Increased hitbox width
+                          height: 48, // Increased hitbox height
                           margin: const EdgeInsets.only(left: 8),
+                          alignment: Alignment.center,
                           child: Image.asset(
                             'assets/images/notification_icon.png',
                             width: 32,
@@ -1628,64 +1591,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildWhatsNewSlider() {
-    return Consumer<AuthService>(
-      builder: (context, authService, child) {
-        final user = authService.currentUser;
-        final isStoreAccount = user?.accountType == 'store';
-        final isVetAccount = user?.accountType == 'vet';
 
-        if (isStoreAccount) {
-          return const SellerDashboardCard();
-        }
-
-        if (isVetAccount) {
-          return const VetDashboardCard();
-        }
-
-        // Check for today's appointments first - ABSOLUTE PRIORITY
-        if (_todayAppointmentsStream != null) {
-          return StreamBuilder<List<Appointment>>(
-            stream: _todayAppointmentsStream!,
-            builder: (context, appointmentSnapshot) {
-              return ValueListenableBuilder<latlong.LatLng?>(
-                valueListenable: _userLocationNotifier,
-                builder: (context, userLocation, _) {
-                  return ValueListenableBuilder<bool>(
-                    valueListenable: _isLoadingLocationNotifier,
-                    builder: (context, isLoadingLocation, _) {
-                      if (appointmentSnapshot.connectionState == ConnectionState.waiting) {
-                        // Keep UI stable and continue showing lost pets while appointments load
-                        return _buildSmartLostPetsSection();
-                      }
-
-                      final todayAppointments = appointmentSnapshot.data ?? [];
-                      
-                      if (kDebugMode) {
-                        print('🔍 [HomePage] Today\'s appointments count: ${todayAppointments.length}');
-                        for (final appointment in todayAppointments) {
-                          print('🔍 [HomePage] Appointment found: ${appointment.petName} at ${appointment.formattedTime} (${appointment.status.name})');
-                        }
-                        
-                        // We'll show lost pets regardless of appointments
-                        print('🔍 [HomePage] Showing lost pets sections regardless of appointments');
-                      }
-
-                      // Show lost pets sections with smart loading
-                      return _buildSmartLostPetsSection();
-                    },
-                  );
-                },
-              );
-            },
-          );
-        }
-        
-        // Fallback to showing lost pets if stream isn't initialized yet
-        return _buildSmartLostPetsSection();
-      },
-    );
-  }
 
   // Optimized pet card with reduced nesting and simplified rendering
   Widget _buildLostPetCard(LostPet lostPet, BuildContext context) {
@@ -2034,8 +1940,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         // Read other notifiers directly to avoid nested rebuilds
         final isLoadingPets = _isLoadingPetsNotifier.value;
         final hasAttemptedLoad = _hasAttemptedLoadNotifier.value;
-        final isLoadingLocation = _isLoadingLocationNotifier.value;
-        final userLocation = _userLocationNotifier.value;
         
         // Show skeleton when loading pets (regardless of location loading status)
         if (isLoadingPets && lostPets.isEmpty) {

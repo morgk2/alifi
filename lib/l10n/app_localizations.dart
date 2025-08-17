@@ -6824,6 +6824,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No top trainers available'**
   String get noTopTrainers;
+
+  /// No description provided for @socialMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Social Media'**
+  String get socialMedia;
+
+  /// No description provided for @addSocialMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Social Media'**
+  String get addSocialMedia;
+
+  /// No description provided for @tiktok.
+  ///
+  /// In en, this message translates to:
+  /// **'TikTok'**
+  String get tiktok;
+
+  /// No description provided for @facebook.
+  ///
+  /// In en, this message translates to:
+  /// **'Facebook'**
+  String get facebook;
+
+  /// No description provided for @instagram.
+  ///
+  /// In en, this message translates to:
+  /// **'Instagram'**
+  String get instagram;
+
+  /// No description provided for @enterTikTokUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter TikTok username'**
+  String get enterTikTokUsername;
+
+  /// No description provided for @enterFacebookUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Facebook username'**
+  String get enterFacebookUsername;
+
+  /// No description provided for @enterInstagramUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Instagram username'**
+  String get enterInstagramUsername;
+
+  /// No description provided for @socialMediaAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Social media account added successfully!'**
+  String get socialMediaAdded;
+
+  /// No description provided for @socialMediaUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Social media account updated successfully!'**
+  String get socialMediaUpdated;
+
+  /// No description provided for @socialMediaRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Social media account removed successfully!'**
+  String get socialMediaRemoved;
+
+  /// No description provided for @errorUpdatingSocialMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Error updating social media: {error}'**
+  String errorUpdatingSocialMedia(Object error);
+
+  /// No description provided for @removeSocialMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Social Media'**
+  String get removeSocialMedia;
+
+  /// No description provided for @areYouSureRemoveSocialMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to remove this social media account?'**
+  String get areYouSureRemoveSocialMedia;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

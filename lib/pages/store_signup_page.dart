@@ -1,10 +1,15 @@
-import 'package:alifi/main.dart';
 import 'package:alifi/services/auth_service.dart';
 import 'package:alifi/services/database_service.dart';
-import 'package:alifi/widgets/spinning_loader.dart';
+import 'package:alifi/services/chargily_pay_service.dart';
+import 'package:alifi/services/payment_status_service.dart';
+import 'package:alifi/widgets/chargily_payment_webview.dart';
+import 'package:alifi/pages/subscription_success_page.dart';
+import 'package:alifi/pages/payment_failed_page.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:alifi/pages/page_container.dart';
@@ -408,6 +413,7 @@ class StoreSubscriptionPage extends StatefulWidget {
 
 class _StoreSubscriptionPageState extends State<StoreSubscriptionPage> {
   int selected = 0;
+  late PageController _pageController;
 
   final List<Map<String, dynamic>> offers = [
     {
@@ -446,245 +452,425 @@ class _StoreSubscriptionPageState extends State<StoreSubscriptionPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(
+      viewportFraction: 0.85,
+      initialPage: selected,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final logoWidth = size.width * 0.28;
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFF8FFF8),
+                Colors.white,
+              ],
+            ),
+          ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 24),
-              Center(
-                child: Image.asset(
+                const SizedBox(height: 40),
+                                // Compact hero section
+                Column(
+                  children: [
+                    Image.asset(
                   'assets/images/store_3d2.png',
-                  width: logoWidth,
+                      width: logoWidth * 0.6,
                   fit: BoxFit.contain,
                 ),
-              ),
-              const SizedBox(height: 16),
+                    const SizedBox(height: 12),
               const Text(
-                'Finishing things up!',
+                      'Almost there!',
                 style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF28a745),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1a1a1a),
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Choose your offer',
+                    Text(
+                      'Choose your plan',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF28a745),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[600],
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: List.generate(3, (i) {
-                    final isSelected = selected == i;
-                    final isFavorite = i == 2;
-                    final cardWidth = MediaQuery.of(context).size.width / 3.4;
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
+                  ],
+                ),
+                const SizedBox(height: 20),
+                            // Swipable cards with navigation
+              Expanded(
+                child: Stack(
                       children: [
-                        // The card itself
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                              margin: EdgeInsets.only(right: i < 2 ? 12 : 0),
-                              child: GestureDetector(
-                                onTap: () {
+                    PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: (index) {
                                   setState(() {
-                                    selected = i;
+                          selected = index;
                                   });
                                 },
-                                child: AnimatedScale(
-                                  scale: isSelected ? 1.08 : 1.0,
+                      itemCount: 3,
+                      itemBuilder: (context, i) {
+                        final isSelected = selected == i;
+                        final isFavorite = i == 2;
+                        final offer = offers[i];
+                        
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                          child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 300),
                                   curve: Curves.easeInOut,
-                                  child: AnimatedOpacity(
-                                    opacity: isSelected ? 1.0 : 0.7,
-                                    duration:
-                                        const Duration(milliseconds: 300),
-                                    child: Container(
-                                      width: cardWidth,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 22),
                                       decoration: BoxDecoration(
-                                        color: isFavorite
-                                            ? const Color(0xFFFFF7E0)
-                                            : Colors.white,
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
                                           color: isSelected
                                               ? const Color(0xFF28a745)
-                                              : Colors.grey.shade300,
-                                          width: 2.5,
+                                    : Colors.grey.shade200,
+                                width: isSelected ? 2.5 : 1.5,
                                         ),
-                                        borderRadius:
-                                            BorderRadius.circular(20),
-                                        boxShadow: isFavorite
-                                            ? [
+                              boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.amber
-                                                      .withOpacity(0.13),
-                                                  blurRadius: 16,
-                                                  offset: const Offset(0, 4),
-                                                ),
-                                              ]
-                                            : [],
+                                  color: isSelected 
+                                      ? const Color(0xFF28a745).withOpacity(0.15)
+                                      : Colors.black.withOpacity(0.04),
+                                  blurRadius: isSelected ? 20 : 8,
+                                  offset: Offset(0, isSelected ? 8 : 2),
+                                ),
+                              ],
+                            ),
+                            child: Stack(
+                              children: [
+                                // Popular badge for favorite plan
+                                if (isFavorite)
+                                  Positioned(
+                                    top: 0,
+                                    right: 20,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, 
+                                        vertical: 6,
                                       ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                offers[i]['title'],
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                  color: isFavorite
-                                                      ? const Color(
-                                                          0xFFFFB300)
-                                                      : Colors.black87,
-                                                ),
-                                              ),
-                                              if (isSelected)
-                                                const Padding(
-                                                  padding: EdgeInsets.only(
-                                                      left: 8.0),
-                                                  child: Icon(
-                                                      Icons.check_circle,
-                                                      color:
-                                                          Color(0xFF28a745),
-                                                      size: 22),
-                                                ),
-                                            ],
-                                          ),
-                                          // Add space for the stamp for all cards, so all cards have same height
-                                          const SizedBox(height: 54),
-                                        ],
+                                      decoration: const BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [Color(0xFFFFB300), Color(0xFFFF8F00)],
+                                        ),
+                                        borderRadius: BorderRadius.only(
+                                          bottomLeft: Radius.circular(12),
+                                          bottomRight: Radius.circular(12),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'MOST POPULAR',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.5,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ),
-                            // Stamp badge at the bottom center of the favorite card, animated with the card's scale
-                            if (isFavorite)
-                              Positioned(
-                                left: 0,
-                                right: 0,
-                                bottom:
-                                    12, // Move the stamp up, closer to the card
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      selected = 2;
-                                    });
-                                  },
-                                  child: TweenAnimationBuilder<double>(
-                                    tween: Tween<double>(
-                                        begin: 1.0,
-                                        end: isSelected ? 1.08 : 1.0),
-                                    duration:
-                                        const Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
-                                    builder: (context, scale, child) {
-                                      return Transform.scale(
-                                        scale: scale,
-                                        child: Image.asset(
-                                          'assets/images/stamp.png',
-                                          width: 72,
-                                          height: 72,
+                                
+                                Padding(
+                                  padding: const EdgeInsets.all(20),
+                                      child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                      // Header with title and price
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                  offer['title'],
+                                                style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w700,
+                                                  color: isFavorite
+                                                        ? const Color(0xFFFF8F00)
+                                                        : const Color(0xFF1a1a1a),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'Perfect for ${i == 0 ? 'small' : i == 1 ? 'growing' : 'established'} stores',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[600],
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              Text(
+                                                offer['price'],
+                                                style: const TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Color(0xFF28a745),
+                                                ),
+                                              ),
+                                              Text(
+                                                'per month',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Colors.grey[500],
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      
+                                      const SizedBox(height: 16),
+                                      
+                                      // Features list - made more compact
+                                      Expanded(
+                                        child: SingleChildScrollView(
+                                          child: Column(
+                                            children: offer['features'].map<Widget>((feature) => Padding(
+                                              padding: const EdgeInsets.only(bottom: 8),
+                                              child: Row(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Container(
+                                                    margin: const EdgeInsets.only(top: 2),
+                                                    width: 16,
+                                                    height: 16,
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFF28a745).withOpacity(0.1),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.check,
+                                                      size: 12,
+                                                      color: Color(0xFF28a745),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Expanded(
+                                                    child: Text(
+                                                      feature,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[700],
+                                                        height: 1.3,
+                                                        fontWeight: FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            )).toList(),
+                                          ),
                                         ),
-                                      );
-                                    },
+                                      ),
+                                      
+                                      if (isSelected) ...[
+                                        const SizedBox(height: 12),
+                                        Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF28a745).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: const Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.check_circle,
+                                                color: Color(0xFF28a745),
+                                                size: 18,
+                                              ),
+                                              SizedBox(width: 6),
+                                              Text(
+                                                'Selected',
+                                                style: TextStyle(
+                                                  color: Color(0xFF28a745),
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    );
-                  }),
-                ),
-              ),
-              const SizedBox(height: 28),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Monthly price',
-                        style: TextStyle(color: Colors.grey, fontSize: 17)),
-                    Text(offers[selected]['price'],
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 350),
-                    transitionBuilder: (child, animation) =>
-                        FadeTransition(opacity: animation, child: child),
-                    child: ListView.separated(
-                      key: ValueKey(selected),
-                      itemCount: offers[selected]['features'].length,
-                      separatorBuilder: (_, __) =>
-                          const Divider(height: 1, color: Color(0xFFE0E0E0)),
-                      itemBuilder: (context, idx) {
-                        final feature = offers[selected]['features'][idx];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  feature,
-                                  style: const TextStyle(
-                                      fontSize: 16, color: Colors.black87),
-                                ),
-                              ),
-                              if (feature.contains('info'))
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 4.0),
-                                  child: Icon(Icons.info_outline,
-                                      color: Colors.grey, size: 18),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         );
                       },
                     ),
-                  ),
+                    
+                    // Navigation arrows
+                              Positioned(
+                      left: 10,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                                child: GestureDetector(
+                          onTap: selected > 0 ? () {
+                            _pageController.animateToPage(
+                              selected - 1,
+                              duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                            );
+                          } : null,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(selected > 0 ? 0.9 : 0.5),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.chevron_left,
+                              color: selected > 0 ? const Color(0xFF28a745) : Colors.grey,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    Positioned(
+                      right: 10,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: GestureDetector(
+                          onTap: selected < 2 ? () {
+                            _pageController.animateToPage(
+                              selected + 1,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          } : null,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(selected < 2 ? 0.9 : 0.5),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.chevron_right,
+                              color: selected < 2 ? const Color(0xFF28a745) : Colors.grey,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                                ),
+                              ),
+                          ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24.0),
-                child: SizedBox(
-                  width: 200,
+              
+              const SizedBox(height: 16),
+                            // Compact bottom section
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      // Compact price summary
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF28a745).withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                            Text(
+                              offers[selected]['title'],
+                        style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1a1a1a),
+                              ),
+                            ),
+                            Text(
+                              offers[selected]['price'],
+                                  style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF28a745),
+                              ),
+                                ),
+                            ],
+                          ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Continue button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.of(context).push(
@@ -717,23 +903,28 @@ class _StoreSubscriptionPageState extends State<StoreSubscriptionPage> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF28a745),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
+                              borderRadius: BorderRadius.circular(16),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: const Text(
-                      'Continue',
+                            'Continue to Payment',
                       style: TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                       ),
                     ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),
@@ -765,20 +956,24 @@ class StoreCheckoutPage extends StatefulWidget {
 
 class _StoreCheckoutPageState extends State<StoreCheckoutPage> {
   int _selectedPaymentIndex = -1;
+  bool _isProcessing = false;
+  late ChargilyPayService _chargilyService;
+  late PaymentStatusService _paymentStatusService;
 
   final List<Map<String, dynamic>> _paymentMethods = [
-    {'name': 'PayPal', 'icon': 'assets/images/paypal_logo.png'},
-    {
-      'name': 'CIB_SB',
-      'icon': 'assets/images/cib_logo.png',
-      'icon2': 'assets/images/sb_logo.png'
-    },
-    {'name': 'Visa/Mastercard', 'icon': 'assets/images/visa_mastercard.png'},
-    {'name': 'Stripe', 'icon': 'assets/images/stripe_logo.png'},
-    {'name': 'CCP', 'icon': null},
+    {'name': 'CIB e-payment', 'icon': 'assets/images/cib_logo.png'},
+    {'name': 'EDAHABIA', 'icon': 'assets/images/sb_logo.png'},
   ];
 
-  void _checkout() {
+  @override
+  void initState() {
+    super.initState();
+    _chargilyService = ChargilyPayService();
+    _chargilyService.initialize();
+    _paymentStatusService = PaymentStatusService();
+  }
+
+  void _checkout() async {
     print('🔍 [Store Checkout] Button pressed! _selectedPaymentIndex: $_selectedPaymentIndex');
     
     if (_selectedPaymentIndex == -1) {
@@ -795,195 +990,1054 @@ class _StoreCheckoutPageState extends State<StoreCheckoutPage> {
     final method = _paymentMethods[_selectedPaymentIndex];
     print('🔍 [Store Checkout] Selected method: ${method['name']}');
     
-    if (method['name'] == 'CCP') {
-      final authService = context.read<AuthService>();
-      final currentUser = authService.currentUser;
+    if (method['name'] == 'CIB e-payment' || method['name'] == 'EDAHABIA') {
+      // Map display names to API method names
+      String apiMethod = method['name'] == 'CIB e-payment' ? 'CIB' : 'EDAHABIA';
+      await _processChargilyPayment(apiMethod);
+    }
+  }
+
+  double _getSubscriptionPriceInDZD() {
+    // Extract numeric value from price string (e.g., "900 DZD" -> 900.0)
+    final priceString = widget.selectedOffer['price'] as String;
+    final numericString = priceString.replaceAll(RegExp(r'[^0-9.]'), '');
+    return double.tryParse(numericString) ?? 0.0;
+  }
+
+  Future<void> _processChargilyPayment(String paymentMethod) async {
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final user = authService.currentUser;
       
-      if (currentUser == null) {
+      if (user == null) {
+        throw Exception('User not found');
+      }
+
+      // Generate invoice number
+      final invoiceNumber = _chargilyService.generateInvoiceNumber();
+      
+      // Get subscription price in DZD
+      final subscriptionPrice = _getSubscriptionPriceInDZD();
+      
+      // Create payment
+      final payment = await _chargilyService.createPayment(
+        client: user.displayName ?? 'Anonymous',
+        clientEmail: user.email,
+        invoiceNumber: invoiceNumber,
+        amount: subscriptionPrice,
+        currency: 'DZD',
+        paymentMethod: paymentMethod,
+        backUrl: 'https://alifi.app/payment/return',
+        webhookUrl: 'https://slkygguxwqzwpnahnici.supabase.co/functions/v1/chargily-webhook',
+        description: 'Store Subscription - ${widget.selectedOffer['title']}',
+        metadata: {
+          'userId': user.id,
+          'subscriptionType': 'store',
+          'planName': widget.selectedOffer['title'],
+          'planPrice': subscriptionPrice,
+          'orderType': 'store_subscription',
+          'firstName': widget.firstName,
+          'lastName': widget.lastName,
+          'storeName': widget.storeName,
+          'storeLocation': widget.storeLocation,
+          'city': widget.city,
+          'phone': widget.phone,
+        },
+      );
+
+      // Navigate to payment webview
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ChargilyPaymentWebView(
+              checkoutUrl: payment['checkout_url'],
+              backUrl: 'https://alifi.app/payment/return',
+              onPaymentComplete: (status) {
+                _handlePaymentResult(status, payment['id'], subscriptionPrice);
+              },
+              onPaymentError: (error) {
+                _handlePaymentError(error, subscriptionPrice);
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please log in first!'),
+          SnackBar(
+            content: Text('Error creating payment: $e'),
             backgroundColor: Colors.red,
           ),
         );
-        return;
       }
-      
-      final userId = currentUser.id;
-      FirebaseFirestore.instance.collection('store_requests').add({
-        'userId': userId,
-        'firstName': widget.firstName,
-        'lastName': widget.lastName,
-        'storeName': widget.storeName,
-        'storeLocation': widget.storeLocation,
-        'city': widget.city,
-        'phone': widget.phone,
-        'subscription': widget.selectedOffer['title'],
-        'price': widget.selectedOffer['price'],
-        'status': 'pending',
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      Navigator.of(context).push(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              StoreCCPConfirmationPage(
-            firstName: widget.firstName,
-            lastName: widget.lastName,
-            storeName: widget.storeName,
-            storeLocation: widget.storeLocation,
-            city: widget.city,
-            phone: widget.phone,
-            selectedOffer: widget.selectedOffer,
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
+  }
+
+  void _handlePaymentResult(String status, String paymentId, double amount) {
+    Navigator.of(context).pop(); // Close webview
+    
+    if (status == 'success') {
+      // Start listening for payment status changes
+      _listenForPaymentStatus(paymentId, amount);
+    } else if (status == 'cancelled') {
+      // Navigate to failed page
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => PaymentFailedPage(
+            amount: amount,
+            paymentMethod: _paymentMethods[_selectedPaymentIndex]['name'],
+            errorMessage: 'Payment was cancelled',
+            onRetry: () {
+              Navigator.of(context).pop();
+              _processChargilyPayment(_paymentMethods[_selectedPaymentIndex]['name']);
+            },
           ),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.ease;
-            final tween =
-                Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
         ),
       );
     }
+  }
+
+  void _listenForPaymentStatus(String paymentId, double amount) {
+    print('Starting payment status monitoring for: $paymentId');
+    
+    // Show loading dialog while checking payment status
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Payment icon
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF28a745).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: const Icon(
+                  Icons.store,
+                  color: Color(0xFF28a745),
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Title
+              const Text(
+                'Processing Subscription',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // Subtitle
+              Text(
+                'Please wait while we verify your payment',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              
+              // Loading indicator
+              const CupertinoActivityIndicator(
+                radius: 16,
+                color: Color(0xFF28a745),
+              ),
+              const SizedBox(height: 16),
+              
+              // Status text
+              Text(
+                'Verifying payment status...',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // First check if payment record exists
+    _paymentStatusService.paymentExists(paymentId).then((exists) {
+      if (!exists) {
+        print('Payment record not found, starting polling...');
+        Navigator.of(context).pop(); // Close loading dialog
+        _pollStorePaymentStatus(paymentId, amount);
+        return;
+      }
+    });
+
+    // Listen for payment status changes
+    _paymentStatusService.watchPaymentStatus(paymentId).listen(
+      (paymentData) async {
+        print('Received payment data in stream: ${paymentData?['status']}');
+        
+        if (paymentData != null && paymentData['status'] == 'paid') {
+          // Payment is successful
+          print('Store subscription payment confirmed as paid!');
+          Navigator.of(context).pop(); // Close loading dialog
+          
+          // Create store request in Firestore
+          await _createStoreSubscriptionRequest(paymentData);
+          
+          // Navigate to success page
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => SubscriptionSuccessPage(
+                amount: amount,
+                paymentMethod: _paymentMethods[_selectedPaymentIndex]['name'],
+                orderId: paymentId,
+                subscriptionType: 'store',
+                planName: widget.selectedOffer['title'],
+                subscriptionDetails: {
+                  'storeName': widget.storeName,
+                  'storeLocation': widget.storeLocation,
+                  'city': widget.city,
+                  'phone': widget.phone,
+                },
+              ),
+            ),
+          );
+        } else if (paymentData != null && paymentData['status'] == 'failed') {
+          // Payment failed
+          print('Store subscription payment failed');
+          Navigator.of(context).pop(); // Close loading dialog
+          
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => PaymentFailedPage(
+                amount: amount,
+                paymentMethod: _paymentMethods[_selectedPaymentIndex]['name'],
+                errorMessage: 'Payment failed',
+                onRetry: () {
+                  Navigator.of(context).pop();
+                  String apiMethod = _paymentMethods[_selectedPaymentIndex]['name'] == 'CIB e-payment' ? 'CIB' : 'EDAHABIA';
+                  _processChargilyPayment(apiMethod);
+                },
+              ),
+            ),
+          );
+        }
+      },
+      onError: (error) {
+        print('Error in payment status stream: $error');
+        // Fallback to polling if streaming fails
+        Navigator.of(context).pop(); // Close loading dialog
+        _pollStorePaymentStatus(paymentId, amount);
+      },
+    );
+
+    // Set a shorter timeout and start polling immediately as backup
+    Future.delayed(const Duration(seconds: 15), () {
+      if (mounted) {
+        print('Stream timeout, starting polling as backup...');
+        Navigator.of(context).pop(); // Close loading dialog
+        _pollStorePaymentStatus(paymentId, amount);
+      }
+    });
+  }
+
+  void _pollStorePaymentStatus(String paymentId, double amount) async {
+    print('Starting polling for payment: $paymentId');
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Payment icon
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Icon(
+                  Icons.sync,
+                  color: Colors.orange.shade600,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Title
+              Text(
+                'Verifying Subscription',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // Subtitle
+              Text(
+                'Checking payment status manually',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              
+              // Loading indicator
+              CupertinoActivityIndicator(
+                radius: 16,
+                color: Colors.orange.shade600,
+              ),
+              const SizedBox(height: 16),
+              
+              // Status text
+              Text(
+                'Please wait while we verify your payment',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Poll for payment status
+    final paymentData = await _paymentStatusService.pollPaymentStatus(paymentId, maxAttempts: 15);
+    
+    if (mounted) {
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      if (paymentData != null && paymentData['status'] == 'paid') {
+        // Payment is successful
+        print('Store subscription payment confirmed as paid via polling!');
+        
+        // Create store request in Firestore
+        await _createStoreSubscriptionRequest(paymentData);
+        
+        // Navigate to success page
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => SubscriptionSuccessPage(
+              amount: amount,
+              paymentMethod: _paymentMethods[_selectedPaymentIndex]['name'],
+              orderId: paymentId,
+              subscriptionType: 'store',
+              planName: widget.selectedOffer['title'],
+              subscriptionDetails: {
+                'storeName': widget.storeName,
+                'storeLocation': widget.storeLocation,
+                'city': widget.city,
+                'phone': widget.phone,
+              },
+            ),
+          ),
+        );
+      } else {
+        // Payment verification failed
+        _handlePaymentError('Payment verification failed', amount);
+      }
+    }
+  }
+
+    Future<void> _createStoreSubscriptionRequest(Map<String, dynamic> paymentData) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final user = authService.currentUser;
+      
+      if (user != null) {
+        // Create the store request record for tracking
+        await FirebaseFirestore.instance.collection('store_requests').add({
+          'userId': user.id,
+          'firstName': widget.firstName,
+          'lastName': widget.lastName,
+          'storeName': widget.storeName,
+          'storeLocation': widget.storeLocation,
+          'city': widget.city,
+          'phone': widget.phone,
+          'subscription': widget.selectedOffer['title'],
+          'price': widget.selectedOffer['price'],
+          'status': 'paid',
+          'paymentId': paymentData['id'],
+          'paymentMethod': _paymentMethods[_selectedPaymentIndex]['name'],
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+        print('Store subscription request created successfully');
+
+        // Activate the store account with subscription
+        final subscriptionPrice = _getSubscriptionPriceInDZD();
+        await databaseService.convertUserToVetOrStore(
+          userId: user.id,
+          accountType: 'store',
+          firstName: widget.firstName,
+          lastName: widget.lastName,
+          businessName: widget.storeName,
+          businessLocation: widget.storeLocation,
+          city: widget.city,
+          phone: widget.phone,
+          subscriptionPlan: widget.selectedOffer['title'],
+          amount: subscriptionPrice,
+          currency: 'DZD',
+          paymentMethod: _paymentMethods[_selectedPaymentIndex]['name'],
+        );
+        print('Store account activated successfully with subscription: ${widget.selectedOffer['title']}');
+
+        // Refresh user data to reflect the account type change
+        await authService.refreshUserData();
+        print('User data refreshed after store account activation');
+      }
+    } catch (e) {
+      print('Error creating store subscription request or activating account: $e');
+      // Don't rethrow - we still want to show success to user even if activation fails
+      // The payment was successful, activation can be done manually if needed
+    }
+  }
+
+  void _handlePaymentError(String error, double amount) {
+    Navigator.of(context).pop(); // Close webview
+    
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => PaymentFailedPage(
+          amount: amount,
+          paymentMethod: _paymentMethods[_selectedPaymentIndex]['name'],
+          errorMessage: error,
+          onRetry: () {
+            Navigator.of(context).pop();
+            _processChargilyPayment(_paymentMethods[_selectedPaymentIndex]['name']);
+          },
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Checkout',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SafeArea(
         child: Column(
           children: [
-            // Summary card
-            Card(
-              elevation: 4,
-              shadowColor: Colors.black12,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
+            // Header with back button and title
+            Container(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.black,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Text(
+                    'Complete Subscription',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Main content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+                    // Subscription Summary Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(widget.selectedOffer['title'],
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF28a745).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.store,
+                                  color: Color(0xFF28a745),
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Store Subscription',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      widget.selectedOffer['title'],
                             style: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
-                        Text(widget.selectedOffer['price'],
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF28a745),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  widget.selectedOffer['price'],
                             style: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Divider(),
-                    const SizedBox(height: 8),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'What\'s included:',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                     ...List<Widget>.from(
                         (widget.selectedOffer['features'] as List<dynamic>)
                             .map((feature) => Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 4),
+                                      padding: const EdgeInsets.symmetric(vertical: 6),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.check,
-                                          color: Colors.green, size: 20),
-                                      const SizedBox(width: 8),
+                                          Container(
+                                            width: 20,
+                                            height: 20,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFF28a745),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.check,
+                                              color: Colors.white,
+                                              size: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
                                       Expanded(
-                                          child: Text(feature,
+                                            child: Text(
+                                              feature,
                                               style: const TextStyle(
-                                                  fontSize: 16))),
-                                    ],
-                                  ),
-                                ))),
+                                                fontSize: 14,
+                                                color: Colors.grey,
+                                                height: 1.4,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )),
+                          ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            // Payment methods
-            const Text('Select Payment Method',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _paymentMethods.length,
-                itemBuilder: (context, index) {
-                  final method = _paymentMethods[index];
-                  final isSelected = _selectedPaymentIndex == index;
 
-                  return GestureDetector(
+                    const SizedBox(height: 30),
+
+                    // Payment Methods Section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Choose Payment Method',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // CIB Payment Card
+                          GestureDetector(
                     onTap: () {
                       setState(() {
-                        _selectedPaymentIndex = index;
+                                _selectedPaymentIndex = 0;
                       });
                     },
-                    child: Card(
-                      elevation: isSelected ? 8 : 2,
-                      shadowColor:
-                          isSelected ? Colors.green[100] : Colors.black12,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color:
-                              isSelected ? Colors.green : Colors.transparent,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: _selectedPaymentIndex == 0 
+                                    ? const Color(0xFF28a745).withOpacity(0.1)
+                                    : Colors.grey[50],
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: _selectedPaymentIndex == 0 
+                                      ? const Color(0xFF28a745)
+                                      : Colors.grey[300]!,
                           width: 2,
                         ),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
                         child: Row(
                           children: [
-                            if (method['icon'] != null && method['name'] != 'CIB_SB')
-                              Image.asset(method['icon'], width: 40)
-                            else if (method['name'] == 'CIB_SB')
-                              Row(
-                                children: [
-                                  Image.asset(method['icon'], width: 40),
-                                  const SizedBox(width: 8),
-                                  Image.asset(method['icon2'], width: 40),
-                                ],
-                              )
-                            else
-                              const SizedBox(width: 40),
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.asset(
+                                        'assets/images/cib_logo.png',
+                                        width: 50,
+                                        height: 50,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            width: 50,
+                                            height: 50,
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[200],
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: const Icon(Icons.payment, color: Colors.grey),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
                             const SizedBox(width: 16),
-                            Expanded(child: Text(method['name'].replaceAll('_', ' & '), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500))),
-                            if (isSelected)
-                              const Icon(Icons.check_circle, color: Colors.green),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'CIB e-payment',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: _selectedPaymentIndex == 0 
+                                                ? const Color(0xFF28a745)
+                                                : Colors.black,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Pay securely with your CIB card',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
                           ],
                         ),
                       ),
-                    ),
-                  );
-                },
+                                  AnimatedScale(
+                                    scale: _selectedPaymentIndex == 0 ? 1.0 : 0.0,
+                                    duration: const Duration(milliseconds: 200),
+                                    child: Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF28a745),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // EDAHABIA Payment Card
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedPaymentIndex = 1;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: _selectedPaymentIndex == 1 
+                                    ? const Color(0xFF28a745).withOpacity(0.1)
+                                    : Colors.grey[50],
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: _selectedPaymentIndex == 1 
+                                      ? const Color(0xFF28a745)
+                                      : Colors.grey[300]!,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.asset(
+                                        'assets/images/sb_logo.png',
+                                        width: 50,
+                                        height: 50,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return Container(
+                                            width: 50,
+                                            height: 50,
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[200],
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: const Icon(Icons.payment, color: Colors.grey),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'EDAHABIA',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: _selectedPaymentIndex == 1 
+                                                ? const Color(0xFF28a745)
+                                                : Colors.black,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Pay with your EDAHABIA card',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[600],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ElevatedButton(
-          onPressed: _checkout,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  AnimatedScale(
+                                    scale: _selectedPaymentIndex == 1 ? 1.0 : 0.0,
+                                    duration: const Duration(milliseconds: 200),
+                                    child: Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF28a745),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 30),
+
+                          // Powered by Chargily Pay
+                          Center(
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Powered by',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SvgPicture.asset(
+                                  'assets/images/chargilypaylogo.svg',
+                                  height: 32,
+                                  colorFilter: const ColorFilter.mode(
+                                    Color(0xFF6B46C1),
+                                    BlendMode.srcIn,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 100), // Space for bottom button
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
           ),
-          child: const Text('Proceed to Checkout',
-              style: TextStyle(fontSize: 18, color: Colors.white)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Total amount display
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF28a745).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF28a745).withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Subscription Price',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    Text(
+                      widget.selectedOffer['price'],
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF28a745),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+                            // Payment button
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+        child: ElevatedButton(
+                  onPressed: _isProcessing ? null : _checkout,
+          style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF28a745),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: _isProcessing
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CupertinoActivityIndicator(
+                                radius: 10,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Processing Payment...',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.lock,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _selectedPaymentIndex == -1 
+                                  ? 'Select Payment Method'
+                                  : 'Complete Subscription',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

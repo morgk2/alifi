@@ -11,7 +11,6 @@ import 'user_search_page.dart';
 import 'package:provider/provider.dart';
 import '../services/map_focus_service.dart';
 import '../services/auth_service.dart';
-import '../services/display_settings_service.dart';
 import '../services/user_preferences_service.dart';
 import 'location_setup_page.dart';
 
@@ -25,12 +24,8 @@ class PageContainer extends StatefulWidget {
 // Global key to access PageContainer from anywhere
 final GlobalKey<_PageContainerState> pageContainerKey = GlobalKey<_PageContainerState>();
 
-class _PageContainerState extends State<PageContainer> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _PageContainerState extends State<PageContainer> with WidgetsBindingObserver {
   int _currentIndex = 0;
-  // AIAssistant expansion state no longer stored locally to avoid unused field
-  late AnimationController _hideController;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _fadeAnimation;
   late List<Widget> _pages;
   // Track side menu progress (0.0 closed → 1.0 open) to move nav bar with HomePage
   double _sideMenuProgress = 0.0;
@@ -49,13 +44,6 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
             _currentIndex = 1;
           });
         },
-        onAIAssistantExpanded: (expanded) {
-          if (expanded) {
-            _hideController.forward();
-          } else {
-            _hideController.reverse();
-          }
-        },
         onSideMenuProgressChanged: (progress) {
           if (_currentIndex == 0) {
             setState(() {
@@ -70,26 +58,7 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
       const _PersistentUserSearchPage(),
     ];
 
-    _hideController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0, 2), // Move further down for smoother animation
-    ).animate(CurvedAnimation(
-      parent: _hideController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    _fadeAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _hideController,
-      curve: Curves.easeOut,
-    ));
 
     // Check if user needs location setup
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -99,7 +68,6 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
 
   @override
   void dispose() {
-    _hideController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -193,13 +161,7 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
                 bottom: 0,
                 child: Transform.translate(
                   offset: Offset(MediaQuery.of(context).size.width * 0.65 * (_currentIndex == 0 ? _sideMenuProgress : 0.0), 0),
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: _buildBottomNavBar(),
-                    ),
-                  ),
+                  child: _buildBottomNavBar(),
                 ),
               ),
             ],
@@ -462,12 +424,10 @@ class _PageContainerState extends State<PageContainer> with SingleTickerProvider
 // Persistent wrapper classes to keep tabs alive
 class _PersistentHomePage extends StatefulWidget {
   final VoidCallback onNavigateToMap;
-  final Function(bool) onAIAssistantExpanded;
   final ValueChanged<double>? onSideMenuProgressChanged;
 
   const _PersistentHomePage({
     required this.onNavigateToMap,
-    required this.onAIAssistantExpanded,
     this.onSideMenuProgressChanged,
   });
 
@@ -485,7 +445,6 @@ class _PersistentHomePageState extends State<_PersistentHomePage>
     super.build(context);
     return HomePage(
       onNavigateToMap: widget.onNavigateToMap,
-      onAIAssistantExpanded: widget.onAIAssistantExpanded,
       onSideMenuProgressChanged: widget.onSideMenuProgressChanged,
     );
   }

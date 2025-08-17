@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../models/user.dart';
@@ -56,246 +57,228 @@ class LeaderboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildTopPosition(BuildContext context, User user, int position, double height) {
+  Widget _buildTopPosition(BuildContext context, User user, int position) {
     final colors = {
       1: const Color(0xFFFFD700), // Gold
       2: const Color(0xFFC0C0C0), // Silver
       3: const Color(0xFFCD7F32), // Bronze
     };
 
-    return GestureDetector(
-      onTap: () => _navigateToUserProfile(context, user),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildProfilePicture(
-            context,
-            user,
-            size: position == 1 ? 100 : 80,
-            borderColor: colors[position],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '#$position',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: colors[position],
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                user.displayName ?? 'User',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (user.isVerified) ...[
-                const SizedBox(width: 4),
-                const VerificationBadge(size: 16),
-              ],
-              // Subscription plan badges
-              if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi favorite') ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'FAVORITE',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'InterDisplay',
-                    ),
-                  ),
-                ),
-              ],
-              if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated') ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'AFFILIATED',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'InterDisplay',
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          Text(
-            'Rating ${user.rating.toStringAsFixed(1)}',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.orange,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Text(
-            '${user.totalOrders} orders',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    final sizes = {
+      1: 100.0, // Reduced size to prevent cropping
+      2: 80.0,
+      3: 80.0,
+    };
 
-  Widget _buildUserListItem(BuildContext context, User user, int position, bool isCurrentUser) {
     return GestureDetector(
       onTap: () => _navigateToUserProfile(context, user),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isCurrentUser ? Colors.orange.withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isCurrentUser ? Colors.orange.withOpacity(0.3) : Colors.grey.withOpacity(0.2),
-          ),
-        ),
-        child: Row(
+        width: 120, // Fixed width to prevent overflow
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Position Number
+            // Position crown/medal using Cupertino icons
             Container(
-              width: 40,
-              height: 40,
+              height: 35,
+              child: position == 1 
+                ? Icon(CupertinoIcons.star_circle_fill, color: colors[position], size: 32)
+                : Icon(CupertinoIcons.star_circle, color: colors[position], size: 28),
+            ),
+            const SizedBox(height: 12),
+            
+            // Profile picture with proper spacing
+            _buildProfilePicture(
+              context,
+              user,
+              size: sizes[position]!,
+              borderColor: colors[position],
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Podium base below profile
+            Container(
+              width: 70,
+              height: position == 1 ? 50 : 35,
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                shape: BoxShape.circle,
+                color: colors[position]?.withOpacity(0.2),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                border: Border.all(color: colors[position]!, width: 2),
               ),
-              alignment: Alignment.center,
-              child: Text(
-                position.toString(),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange,
+              child: Center(
+                child: Text(
+                  '#$position',
+                  style: TextStyle(
+                    fontSize: position == 1 ? 18 : 14,
+                    fontWeight: FontWeight.bold,
+                    color: colors[position],
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 16),
             
-            // User Avatar
-            _buildProfilePicture(context, user, size: 48),
-            const SizedBox(width: 16),
+            const SizedBox(height: 12),
             
-            // User Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            // User name with verification
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
                     user.displayName ?? 'User',
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: position == 1 ? 15 : 13,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
                   ),
-                  Row(
-                    children: [
-                      Text(
-                        'Orders: ${user.totalOrders}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Rating ${user.rating.toStringAsFixed(1)}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.orange,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      if (user.isVerified) ...[
-                        const SizedBox(width: 8),
-                        const VerificationBadge(size: 16),
-                      ],
-                      // Subscription plan badges
-                      if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi favorite') ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFF6B35), Color(0xFFFF8E53)],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'FAVORITE',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                              fontWeight: FontWeight.w700,
-                              fontFamily: 'InterDisplay',
-                            ),
-                          ),
-                        ),
-                      ],
-                      if ((user.subscriptionPlan ?? '').toLowerCase() == 'alifi affiliated') ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'AFFILIATED',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                              fontWeight: FontWeight.w700,
-                              fontFamily: 'InterDisplay',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                ),
+                if (user.isVerified) ...[
+                  const SizedBox(width: 4),
+                  VerificationBadge(size: position == 1 ? 16 : 14),
+                ],
+              ],
+            ),
+            
+            const SizedBox(height: 8),
+            
+            // Pets rescued count
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(CupertinoIcons.paw, color: Colors.green, size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${user.petsRescued}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
             ),
+            
+            const SizedBox(height: 4),
+            
+            Text(
+              'Rescued',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+
+
+  Widget _buildUserListItem(BuildContext context, User user, int position, bool isCurrentUser) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isCurrentUser ? Colors.green.withOpacity(0.1) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isCurrentUser ? Colors.green.withOpacity(0.3) : Colors.grey.withOpacity(0.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Position Number
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.green.withOpacity(0.2), Colors.green.withOpacity(0.1)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              position.toString(),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          
+          // User Avatar
+          _buildProfilePicture(context, user, size: 44),
+          const SizedBox(width: 12),
+          
+          // User Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        user.displayName ?? 'User',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (user.isVerified) ...[
+                      const SizedBox(width: 6),
+                      const VerificationBadge(size: 14),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(CupertinoIcons.paw, color: Colors.green, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${user.petsRescued} pets rescued',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -307,7 +290,7 @@ class LeaderboardPage extends StatelessWidget {
     final currentUser = authService.currentUser;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -329,68 +312,172 @@ class LeaderboardPage extends StatelessWidget {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          // Header Section with Trophy Icon
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-            child: Column(
-              children: [
-                Image.asset(
-                  'assets/images/leaderboard_3d.png',
-                  height: 80,
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Leaderboard',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+      body: StreamBuilder<List<User>>(
+        stream: databaseService.getLeaderboardUsers(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Error: ${snapshot.error}',
+                style: const TextStyle(color: Colors.black),
+              ),
+            );
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(
+              child: SpinningLoader(
+                size: 40,
+                color: Colors.green,
+              ),
+            );
+          }
+
+          final users = snapshot.data!;
+          final topThree = users.take(3).toList();
+          final remainingUsers = users.skip(3).toList();
+
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            slivers: [
+              // Header Section with Trophy Icon
+              SliverToBoxAdapter(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+                  ),
+                  child: Column(
+                    children: [
+                      Image.asset(
+                        'assets/images/leaderboard_3d.png',
+                        height: 80,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Pet Heroes Leaderboard',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Top rescuers making a difference',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          
-          // Leaderboard List
-          Expanded(
-            child: StreamBuilder<List<User>>(
-              stream: databaseService.getLeaderboardUsers(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(
+              ),
+              
+              // Spacing
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 24),
+              ),
+              
+              // Top 3 Podium Section
+              if (topThree.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        // Second place (left)
+                        if (topThree.length > 1)
+                          _buildTopPosition(context, topThree[1], 2),
+                        
+                        // First place (center, higher)
+                        if (topThree.isNotEmpty)
+                          _buildTopPosition(context, topThree[0], 1),
+                        
+                        // Third place (right)
+                        if (topThree.length > 2)
+                          _buildTopPosition(context, topThree[2], 3),
+                      ],
+                    ),
+                  ),
+                ),
+              
+              // Spacing after podium
+              if (topThree.isNotEmpty)
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 32),
+                ),
+              
+              // Other Heroes Header
+              if (remainingUsers.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Icon(CupertinoIcons.list_bullet, color: Colors.grey[600], size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Other Heroes',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              
+              // Spacing before list
+              if (remainingUsers.isNotEmpty)
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 12),
+                ),
+              
+              // Rest of users in sliver list
+              if (remainingUsers.isNotEmpty)
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final user = remainingUsers[index];
+                      final position = index + 4; // Starting from 4th position
+                      final isCurrentUser = currentUser?.id == user.id;
+                      
+                      return _buildUserListItem(context, user, position, isCurrentUser);
+                    },
+                    childCount: remainingUsers.length,
+                  ),
+                ),
+              
+              // Bottom padding
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 20),
+              ),
+              
+              // Empty state if no remaining users
+              if (remainingUsers.isEmpty)
+                const SliverFillRemaining(
+                  child: Center(
                     child: Text(
-                      'Error: ${snapshot.error}',
-                      style: const TextStyle(color: Colors.black),
+                      'No other users to display',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
                     ),
-                  );
-                }
-
-                if (!snapshot.hasData) {
-                  return const Center(
-                    child: SpinningLoader(
-                      size: 40,
-                      color: Colors.orange,
-                    ),
-                  );
-                }
-
-                final users = snapshot.data!;
-                final topThree = users.take(3).toList();
-
-                return ListView.builder(
-                  itemCount: users.length,
-                  itemBuilder: (context, index) {
-                    return RepaintBoundary(
-                      child: _buildUserListItem(context, users[index], index + 1, currentUser?.id == users[index].id),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -56,6 +56,9 @@ class User {
   final String? clinicLocation;  // Specific to vet accounts
   final String? storeName;  // Specific to store accounts
   final String? storeLocation;  // Specific to store accounts
+  
+  // Social media fields
+  final Map<String, String>? socialMedia;  // Social media usernames/links
 
   String? get firstName => businessFirstName ?? displayName?.split(' ').first;
   String? get lastName => businessLastName ?? (displayName != null && displayName!.split(' ').length > 1 
@@ -113,6 +116,7 @@ class User {
     this.clinicLocation,  // Added clinic location parameter
     this.storeName,  // Added store name parameter
     this.storeLocation,  // Added store location parameter
+    this.socialMedia,  // Added social media parameter
   }) : 
     this.followers = followers ?? [],
     this.following = following ?? [],
@@ -172,6 +176,7 @@ class User {
       'clinicLocation': clinicLocation,  // Added clinic location to Firestore data
       'storeName': storeName,  // Added store name to Firestore data
       'storeLocation': storeLocation,  // Added store location to Firestore data
+      'socialMedia': socialMedia,  // Added social media to Firestore data
     };
   }
 
@@ -247,6 +252,7 @@ class User {
       clinicLocation: data['clinicLocation'],  // Added clinic location to factory constructor
       storeName: data['storeName'],  // Added store name to factory constructor
       storeLocation: data['storeLocation'],  // Added store location to factory constructor
+      socialMedia: data['socialMedia'] != null ? Map<String, String>.from(data['socialMedia']) : null,  // Added social media to factory constructor
       coverPhotoURL: data['coverPhotoURL'],
     );
   }
@@ -302,6 +308,7 @@ class User {
     String? clinicLocation,  // Added clinic location to copyWith
     String? storeName,  // Added store name to copyWith
     String? storeLocation,  // Added store location to copyWith
+    Map<String, String>? socialMedia,  // Added social media to copyWith
   }) {
     return User(
       id: id ?? this.id,
@@ -354,6 +361,7 @@ class User {
       clinicLocation: clinicLocation ?? this.clinicLocation,  // Added clinic location to copyWith
       storeName: storeName ?? this.storeName,  // Added store name to copyWith
       storeLocation: storeLocation ?? this.storeLocation,  // Added store location to copyWith
+      socialMedia: socialMedia ?? this.socialMedia,  // Added social media to copyWith
     );
   }
 } 

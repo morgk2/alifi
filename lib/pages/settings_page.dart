@@ -85,7 +85,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: NestedScrollView(
-        physics: const ClampingScrollPhysics(), // Bounding scroll physics
+        physics: const BouncingScrollPhysics(), // Bouncy scroll physics
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return <Widget>[
             SliverAppBar(
@@ -123,7 +123,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ];
         },
         body: SingleChildScrollView(
-          physics: const ClampingScrollPhysics(), // Bounding scroll physics for body too
+          physics: const BouncingScrollPhysics(), // Bouncy scroll physics for body too
           child: Column(
           children: [
             const SizedBox(height: 16),

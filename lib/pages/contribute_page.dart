@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'package:flutter/cupertino.dart';
 import '../models/fundraising.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/app_fonts.dart';
 
 class ContributePage extends StatefulWidget {
   final Fundraising fundraising;
@@ -15,199 +16,271 @@ class ContributePage extends StatefulWidget {
   State<ContributePage> createState() => _ContributePageState();
 }
 
-class _ContributePageState extends State<ContributePage> {
-  double? _customAmount;
-  double _selectedAmount = 200; // Default selected amount
+class _ContributePageState extends State<ContributePage> with TickerProviderStateMixin {
+  double _selectedAmount = 5000; // Default selected amount in DZD
+  String _selectedPaymentMethod = 'CIB'; // Default to CIB
+  final TextEditingController _customAmountController = TextEditingController();
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
-  Widget _buildAmountButton(double amount) {
-    final bool isSelected = _selectedAmount == amount && _customAmount == null;
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _customAmountController.dispose();
+    super.dispose();
+  }
+
+  String _formatAmountDZD(double amount) {
+    if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(1)}M';
+    } else if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(0)}K';
+    } else {
+      return amount.toStringAsFixed(0);
+    }
+  }
+
+  Widget _buildAmountCard(double amount) {
+    final bool isSelected = _selectedAmount == amount;
     
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedAmount = amount;
-          _customAmount = null;
         });
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(50),
+          color: isSelected ? const Color(0xFF4CAF50) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[300]!,
-            width: 1,
+            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[200]!,
+            width: 2,
           ),
-        ),
-        child: Text(
-          amount.toStringAsFixed(0),
-          style: TextStyle(
-            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[800],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCustomAmountButton() {
-    final l10n = AppLocalizations.of(context)!;
-    final bool isSelected = _customAmount != null;
-    
-    return GestureDetector(
-      onTap: () {
-        // Show custom amount input dialog
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(l10n.enterCustomAmount),
-            content: TextField(
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: l10n.enterAmountInDZD,
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _customAmount = double.tryParse(value);
-                });
-              },
-            ),
-                          actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(l10n.cancel),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    setState(() {
-                      _selectedAmount = _customAmount ?? _selectedAmount;
-                    });
-                  },
-                  child: Text(l10n.confirm),
-                ),
-              ],
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[300]!,
-            width: 1,
-          ),
-        ),
-        child: Text(
-          l10n.custom,
-          style: TextStyle(
-            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[800],
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethodButton(String method) {
-    if (method == 'PayPal') {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(
-            color: Colors.grey[300]!,
-            width: 1,
-          ),
-        ),
-        child: Image.asset(
-          'assets/images/paypal_logo.png',
-          height: 36,
-        ),
-      );
-    } else if (method == 'CIB_SB') {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(
-            color: Colors.grey[300]!,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/images/cib_logo.png',
-              height: 24,
-            ),
-            Container(
-              height: 24,
-              width: 1,
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-              color: Colors.grey[300],
-            ),
-            Image.asset(
-              'assets/images/sb_logo.png',
-              height: 24,
+          boxShadow: [
+            BoxShadow(
+              color: isSelected 
+                ? const Color(0xFF4CAF50).withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+              blurRadius: isSelected ? 12 : 6,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-      );
-    } else if (method == 'visa_mastercard') {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        child: Column(
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _formatAmountDZD(amount),
+                  style: TextStyle(
+                    fontFamily: AppFonts.getLocalizedFontFamily(context),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : const Color(0xFF2E7D32),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Image.asset(
+                  'assets/images/dzd_symbol.png',
+                  width: 18,
+                  height: 18,
+                  color: isSelected ? Colors.white : const Color(0xFF4CAF50),
+                ),
+              ],
+            ),
+            if (isSelected) ...[
+              const SizedBox(height: 4),
+              Icon(
+                CupertinoIcons.checkmark_circle_fill,
+                color: Colors.white,
+                size: 16,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodCard(String method, String displayName, String logoAsset) {
+    final bool isSelected = _selectedPaymentMethod == method;
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedPaymentMethod = method;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(50),
+          color: isSelected ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Colors.grey[300]!,
-            width: 1,
+            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[200]!,
+            width: 2,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected 
+                ? const Color(0xFF4CAF50).withOpacity(0.2)
+                : Colors.black.withOpacity(0.05),
+              blurRadius: isSelected ? 12 : 6,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: Image.asset(
-          'assets/images/visa_mastercard.png',
-          height: 20,
+        child: Column(
+          children: [
+            Image.asset(
+              logoAsset,
+              height: 40,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              displayName,
+              style: TextStyle(
+                fontFamily: AppFonts.getLocalizedFontFamily(context),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[800],
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4CAF50),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Selected',
+                  style: TextStyle(
+                    fontFamily: AppFonts.getLocalizedFontFamily(context),
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
-      );
-    } else if (method == 'stripe') {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
+      ),
+    );
+  }
+
+  void _showCustomAmountSheet() {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: 300,
+        decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(
-            color: Colors.grey[300]!,
-            width: 1,
-          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: Image.asset(
-          'assets/images/stripe_logo.png',
-          height: 24,
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'Enter Custom Amount',
+                style: TextStyle(
+                  fontFamily: AppFonts.getTitleFontFamily(context),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: CupertinoTextField(
+                controller: _customAmountController,
+                keyboardType: TextInputType.number,
+                placeholder: 'Amount in DZD',
+                style: const TextStyle(fontSize: 18),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: CupertinoButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontFamily: AppFonts.getLocalizedFontFamily(context),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: CupertinoButton.filled(
+                      onPressed: () {
+                        final amount = double.tryParse(_customAmountController.text);
+                        if (amount != null && amount > 0) {
+                          setState(() {
+                            _selectedAmount = amount;
+                          });
+                          Navigator.pop(context);
+                        }
+                      },
+                      child: Text(
+                        'Confirm',
+                        style: TextStyle(
+                          fontFamily: AppFonts.getLocalizedFontFamily(context),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      );
-    } else {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(
-            color: Colors.grey[300]!,
-            width: 1,
-          ),
-        ),
-        child: Image.asset(
-          'assets/images/${method.toLowerCase()}_logo.png',
-          height: 24,
-        ),
-      );
-    }
+      ),
+    );
   }
 
   @override
@@ -216,161 +289,371 @@ class _ContributePageState extends State<ContributePage> {
     final double progress = widget.fundraising.currentAmount / widget.fundraising.goalAmount;
     final int percentage = (progress * 100).round();
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Image.asset(
-          'assets/images/back_icon.png',
-          width: 24,
-          height: 24,
-          color: Colors.black,
-        ),
+    return CupertinoPageScaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      navigationBar: CupertinoNavigationBar(
+        backgroundColor: const Color(0xFFF8F9FA),
+        border: null,
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
           onPressed: () => Navigator.of(context).pop(),
+          child: const Icon(
+            CupertinoIcons.back,
+            color: Color(0xFF4CAF50),
+            size: 28,
+          ),
+        ),
+        middle: Text(
+          'Contribute',
+          style: TextStyle(
+            fontFamily: AppFonts.getTitleFontFamily(context),
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '+ ${l10n.contribute}',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF4CAF50),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                l10n.weveRaised(widget.fundraising.currentAmount.toStringAsFixed(2)),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Progress bar
-              Stack(
-                children: [
-                  Container(
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  FractionallySizedBox(
-                    widthFactor: progress,
-                    child: Container(
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50),
-                        borderRadius: BorderRadius.circular(4),
+      child: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Fundraising info card
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.fundraising.title,
+                        style: TextStyle(
+                          fontFamily: AppFonts.getTitleFontFamily(context),
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF2E7D32),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        widget.fundraising.description,
+                        style: TextStyle(
+                          fontFamily: AppFonts.getLocalizedFontFamily(context),
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // Progress section
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      '${_formatAmountDZD(widget.fundraising.currentAmount * 134)}',
+                                      style: TextStyle(
+                                        fontFamily: AppFonts.getLocalizedFontFamily(context),
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF4CAF50),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Image.asset(
+                                      'assets/images/dzd_symbol.png',
+                                      width: 24,
+                                      height: 24,
+                                      color: const Color(0xFF4CAF50),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'raised of ${_formatAmountDZD(widget.fundraising.goalAmount * 134)} DZD goal',
+                                  style: TextStyle(
+                                    fontFamily: AppFonts.getLocalizedFontFamily(context),
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: FractionallySizedBox(
+                                    alignment: Alignment.centerLeft,
+                                    widthFactor: progress.clamp(0.0, 1.0),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xFF4CAF50), Color(0xFF45A049)],
+                                        ),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          
+                          // iOS-style circular progress
+                          SizedBox(
+                            width: 80,
+                            height: 80,
+                            child: Stack(
+                              children: [
+                                Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.grey[100],
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 80,
+                                  height: 80,
+                                  child: CircularProgressIndicator(
+                                    value: progress.clamp(0.0, 1.0),
+                                    strokeWidth: 6,
+                                    backgroundColor: Colors.transparent,
+                                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
+                                    strokeCap: StrokeCap.round,
+                                  ),
+                                ),
+                                Center(
+                                  child: Text(
+                                    '$percentage%',
+                                    style: TextStyle(
+                                      fontFamily: AppFonts.getLocalizedFontFamily(context),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF4CAF50),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Amount selection
+                Text(
+                  'Choose Amount',
+                  style: TextStyle(
+                    fontFamily: AppFonts.getTitleFontFamily(context),
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 2.2,
                   children: [
-                    Text(
-                      widget.fundraising.currentAmount.toStringAsFixed(2),
-                      style: const TextStyle(
-                        color: Color(0xFF4CAF50),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      '${widget.fundraising.goalAmount.toStringAsFixed(2)} ${l10n.goal}',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
+                    _buildAmountCard(2000),
+                    _buildAmountCard(5000),
+                    _buildAmountCard(10000),
+                    _buildAmountCard(20000),
+                    _buildAmountCard(50000),
+                    GestureDetector(
+                      onTap: _showCustomAmountSheet,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey[200]!, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              CupertinoIcons.add_circled,
+                              color: Color(0xFF4CAF50),
+                              size: 24,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Custom',
+                              style: TextStyle(
+                                fontFamily: AppFonts.getLocalizedFontFamily(context),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF4CAF50),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              // Circular progress indicator
-              Center(
-                child: CircularPercentIndicator(
-                  radius: 60.0,
-                  lineWidth: 8.0,
-                  percent: progress,
-                  center: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '$percentage%',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF4CAF50),
-                        ),
+
+                const SizedBox(height: 32),
+
+                // Payment methods
+                Text(
+                  'Payment Method',
+                  style: TextStyle(
+                    fontFamily: AppFonts.getTitleFontFamily(context),
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildPaymentMethodCard(
+                        'CIB',
+                        'CIB Bank',
+                        'assets/images/cib_logo.png',
                       ),
-                      const Text(
-                        '5',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF4CAF50),
-                        ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildPaymentMethodCard(
+                        'EDAHABIA',
+                        'EDAHABIA',
+                        'assets/images/sb_logo.png', // Using SB logo as placeholder for EDAHABIA
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 40),
+
+                // Contribute button
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF4CAF50), Color(0xFF45A049)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF4CAF50).withOpacity(0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
-                  progressColor: const Color(0xFF4CAF50),
-                  backgroundColor: const Color(0xFFE8F5E9),
+                  child: CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () {
+                      // Handle contribution
+                      showCupertinoDialog(
+                        context: context,
+                        builder: (context) => CupertinoAlertDialog(
+                          title: Text(
+                            'Contribute',
+                            style: TextStyle(
+                              fontFamily: AppFonts.getTitleFontFamily(context),
+                            ),
+                          ),
+                          content: Text(
+                            'Contributing ${_formatAmountDZD(_selectedAmount)} DZD via $_selectedPaymentMethod',
+                            style: TextStyle(
+                              fontFamily: AppFonts.getLocalizedFontFamily(context),
+                            ),
+                          ),
+                          actions: [
+                            CupertinoDialogAction(
+                              child: Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontFamily: AppFonts.getLocalizedFontFamily(context),
+                                ),
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                            CupertinoDialogAction(
+                              isDefaultAction: true,
+                              child: Text(
+                                'Confirm',
+                                style: TextStyle(
+                                  fontFamily: AppFonts.getLocalizedFontFamily(context),
+                                ),
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          CupertinoIcons.heart_fill,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Contribute ${_formatAmountDZD(_selectedAmount)} DZD',
+                          style: TextStyle(
+                            fontFamily: AppFonts.getLocalizedFontFamily(context),
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 40),
-              Text(
-                '${l10n.contribute} with :',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Amount buttons
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _buildAmountButton(200),
-                  _buildAmountButton(500),
-                  _buildAmountButton(1000),
-                  _buildAmountButton(10000),
-                  _buildCustomAmountButton(),
-                ],
-              ),
-              const SizedBox(height: 32),
-              Text(
-                '${l10n.payVia} :',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Payment method buttons
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _buildPaymentMethodButton('PayPal'),
-                  _buildPaymentMethodButton('CIB_SB'),
-                  _buildPaymentMethodButton('visa_mastercard'),
-                  _buildPaymentMethodButton('stripe'),
-                ],
-              ),
-            ],
+
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),

@@ -15,6 +15,7 @@ import '../widgets/spinning_loader.dart';
 import 'package:flutter/services.dart';
 import '../services/storage_service.dart';
 import '../l10n/app_localizations.dart';
+import '../dialogs/social_media_dialog.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -30,6 +31,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _basicInfoController;
   File? _selectedCoverFile;
   String? _coverPreviewUrl;
+  File? _selectedProfileFile;
+  
+  // Social media controllers
+  Map<String, String> _socialMedia = {};
   
   // Replace setState variable with ValueNotifier for better performance
   final ValueNotifier<bool> _isSavingNotifier = ValueNotifier<bool>(false);
@@ -42,6 +47,35 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _displayNameController = TextEditingController(text: user?.displayName ?? 'Display Name');
     _basicInfoController = TextEditingController(text: user?.basicInfo ?? '');
     _coverPreviewUrl = user?.coverPhotoURL;
+    _socialMedia = Map<String, String>.from(user?.socialMedia ?? {});
+  }
+
+  Future<void> _pickProfilePicture() async {
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      final File originalFile = File(image.path);
+      final String dir = path.dirname(image.path);
+      final String newPath = path.join(dir, 'compressed_profile_${path.basename(image.path)}');
+      final compressed = await FlutterImageCompress.compressAndGetFile(
+        originalFile.path,
+        newPath,
+        quality: 80,
+        minWidth: 400,
+        minHeight: 400,
+      );
+
+      final String chosenPath = compressed != null ? compressed.path : originalFile.path;
+      setState(() {
+        _selectedProfileFile = File(chosenPath);
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error selecting profile picture: ${e.toString()}')),
+      );
+    }
   }
 
   Future<void> _pickCover() async {
@@ -138,11 +172,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     _isSavingNotifier.value = true;
     try {
+      // Handle profile picture upload for store/vet accounts only
+      if (_selectedProfileFile != null && ['store', 'vet'].contains(user.accountType)) {
+        final storageService = Provider.of<StorageService>(context, listen: false);
+        final profileUrl = await storageService.uploadPetPhoto(_selectedProfileFile!);
+        updatedUser = updatedUser.copyWith(photoURL: profileUrl);
+      }
+      
       if (_selectedCoverFile != null) {
         final storageService = Provider.of<StorageService>(context, listen: false);
         final coverUrl = await storageService.uploadPetPhoto(_selectedCoverFile!);
         updatedUser = updatedUser.copyWith(coverPhotoURL: coverUrl);
       }
+      
+      // Update social media
+      updatedUser = updatedUser.copyWith(socialMedia: _socialMedia);
       await DatabaseService().updateUser(updatedUser);
       authService.updateCurrentUser(updatedUser);
 
@@ -257,68 +301,76 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           children: [
                             Stack(
                               children: [
-                                if (user.photoURL != null && user.photoURL!.isNotEmpty)
-                                  CircleAvatar(
-                                    radius: 60,
-                                    backgroundImage: NetworkImage(user.photoURL!),
-                                  )
-                                else
-                                  Container(
-                                    width: 120,
-                                    height: 120,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.person,
-                                      size: 60,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                Positioned(
-                                  right: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFF9E42),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 3,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
+                                // Profile picture display
+                                _selectedProfileFile != null
+                                    ? CircleAvatar(
+                                        radius: 60,
+                                        backgroundImage: FileImage(_selectedProfileFile!),
+                                      )
+                                    : (user.photoURL != null && user.photoURL!.isNotEmpty)
+                                        ? CircleAvatar(
+                                            radius: 60,
+                                            backgroundImage: NetworkImage(user.photoURL!),
+                                          )
+                                        : Container(
+                                            width: 120,
+                                            height: 120,
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[200],
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.person,
+                                              size: 60,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                // Camera button - only show for store/vet accounts
+                                if (['store', 'vet'].contains(user.accountType))
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFF9E42),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 3,
                                         ),
-                                      ],
-                                    ),
-                                    child: IconButton(
-                                      padding: EdgeInsets.zero,
-                                      icon: const Icon(
-                                        Icons.camera_alt,
-                                        color: Colors.white,
-                                        size: 18,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.1),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
-                                      onPressed: () {
-                                        // TODO: Implement image picker
-                                      },
+                                      child: IconButton(
+                                        padding: EdgeInsets.zero,
+                                        icon: const Icon(
+                                          Icons.camera_alt,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                        onPressed: _pickProfilePicture,
+                                      ),
                                     ),
                                   ),
-                                ),
                               ],
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              l10n.tapToChangePhoto,
+                              ['store', 'vet'].contains(user.accountType) 
+                                  ? l10n.tapToChangePhoto
+                                  : 'Profile picture changes available for store and vet accounts only',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[600],
                               ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
@@ -477,6 +529,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       
                       const SizedBox(height: 16),
                       
+                      // Social Media Section
+                      Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Social Media',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildSocialMediaTile('TikTok', AppIcons.tiktokIcon, null),
+                            const SizedBox(height: 12),
+                            _buildSocialMediaTile('Facebook', AppIcons.facebookIcon, null),
+                            const SizedBox(height: 12),
+                            _buildSocialMediaTile('Instagram', AppIcons.instagramIcon, null),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
                       // Linked Accounts Section
                       Container(
                         color: Colors.white,
@@ -523,7 +602,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         ),
                       ),
                       
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       
                       // Delete Account Section
                       Container(
@@ -804,6 +883,112 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSocialMediaTile(String platform, String? svgIcon, String? emoji) {
+    final l10n = AppLocalizations.of(context)!;
+    final hasAccount = _socialMedia.containsKey(platform.toLowerCase()) && 
+                      _socialMedia[platform.toLowerCase()]!.isNotEmpty;
+    final username = _socialMedia[platform.toLowerCase()];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: svgIcon != null
+                ? SvgPicture.string(
+                    svgIcon,
+                    width: 20,
+                    height: 20,
+                  )
+                : Text(
+                    emoji ?? '🔗',
+                    style: const TextStyle(fontSize: 20),
+                  ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  platform,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+                if (hasAccount && username != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '@$username',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => _showSocialMediaDialog(platform),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              backgroundColor: hasAccount 
+                  ? Colors.orange[50]
+                  : const Color(0xFFFF9E42).withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: Text(
+              hasAccount ? l10n.edit : 'Add',
+              style: TextStyle(
+                color: hasAccount ? Colors.orange[700] : const Color(0xFFFF9E42),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showSocialMediaDialog(String platform) async {
+    final currentUsername = _socialMedia[platform.toLowerCase()];
+    
+    await showDialog(
+      context: context,
+      builder: (context) => SocialMediaDialog(
+        platform: platform,
+        currentUsername: currentUsername,
+        onSave: (username) {
+          setState(() {
+            _socialMedia[platform.toLowerCase()] = username;
+          });
+        },
+        onRemove: currentUsername != null && currentUsername.isNotEmpty ? () {
+          setState(() {
+            _socialMedia.remove(platform.toLowerCase());
+          });
+        } : null,
       ),
     );
   }

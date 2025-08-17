@@ -17,6 +17,9 @@ import 'map_page.dart';
 import '../l10n/app_localizations.dart';
 import 'dart:ui';
 import 'dart:async';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import '../icons.dart';
 
 
 class UserProfilePage extends StatefulWidget {
@@ -617,6 +620,92 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
     );
   }
 
+  Future<void> _launchSocialMedia(String platform, String username) async {
+    String url;
+    switch (platform.toLowerCase()) {
+      case 'tiktok':
+        url = 'https://www.tiktok.com/@$username';
+        break;
+      case 'facebook':
+        url = 'https://www.facebook.com/$username';
+        break;
+      case 'instagram':
+        url = 'https://www.instagram.com/$username';
+        break;
+      default:
+        return;
+    }
+    
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open $platform profile')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening $platform profile')),
+        );
+      }
+    }
+  }
+
+  Widget _buildSocialMediaIcons(User user, {bool isOverlay = false}) {
+    final socialMedia = user.socialMedia ?? {};
+    final List<Widget> icons = [];
+    
+    // Add icons for linked accounts only
+    if (socialMedia.containsKey('tiktok') && socialMedia['tiktok']!.isNotEmpty) {
+      icons.add(_buildSocialIcon(AppIcons.tiktokIcon, 'tiktok', socialMedia['tiktok']!, isOverlay: isOverlay));
+    }
+    
+    if (socialMedia.containsKey('facebook') && socialMedia['facebook']!.isNotEmpty) {
+      icons.add(_buildSocialIcon(AppIcons.facebookIcon, 'facebook', socialMedia['facebook']!, isOverlay: isOverlay));
+    }
+    
+    if (socialMedia.containsKey('instagram') && socialMedia['instagram']!.isNotEmpty) {
+      icons.add(_buildSocialIcon(AppIcons.instagramIcon, 'instagram', socialMedia['instagram']!, isOverlay: isOverlay));
+    }
+    
+    if (icons.isEmpty) return const SizedBox.shrink();
+    
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ...icons.expand((icon) => [icon, const SizedBox(width: 8)]).take(icons.length * 2 - 1),
+        if (isOverlay) const SizedBox(width: 8), // Space before three-dot menu only for overlay
+      ],
+    );
+  }
+  
+  Widget _buildSocialIcon(String svgIcon, String platform, String username, {bool isOverlay = false}) {
+    return GestureDetector(
+      onTap: () => _launchSocialMedia(platform, username),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isOverlay ? Colors.black.withOpacity(0.3) : Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: SvgPicture.string(
+          svgIcon,
+          width: 20,
+          height: 20,
+          colorFilter: ColorFilter.mode(
+            isOverlay ? Colors.white : Colors.black, 
+            BlendMode.srcIn
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showDropdownMenu(BuildContext context, User user) {
     final RenderBox button = context.findRenderObject() as RenderBox;
     final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
@@ -1058,6 +1147,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          _buildSocialMediaIcons(user),
           IconButton(
             icon: const Icon(Icons.more_vert, color: Colors.black),
             onPressed: () => _showDropdownMenu(context, user),
@@ -1701,22 +1791,28 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
               Positioned(
                 top: MediaQuery.of(context).padding.top + 10,
                 right: 16,
-                child: GestureDetector(
-                  onTap: () => _showDropdownMenu(context, user),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(20),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildSocialMediaIcons(user, isOverlay: true),
+                    GestureDetector(
+                      onTap: () => _showDropdownMenu(context, user),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(
+                          Icons.more_vert,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.more_vert,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                    ),
-                  ),
+                  ],
+                ),
+              ),
             ],
           ),
         );
