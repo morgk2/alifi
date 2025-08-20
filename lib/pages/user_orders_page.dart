@@ -13,6 +13,7 @@ import '../widgets/product_review_dialog.dart';
 import '../widgets/badge_widget.dart';
 import 'package:provider/provider.dart';
 import '../utils/app_fonts.dart';
+import '../l10n/app_localizations.dart';
 
 class UserOrdersPage extends StatefulWidget {
   const UserOrdersPage({super.key});
@@ -68,7 +69,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Orders & Messages',
+          AppLocalizations.of(context)!.ordersAndMessages,
           style: TextStyle(color: Colors.black,
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -117,7 +118,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Orders',
+                            AppLocalizations.of(context)!.orders,
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.w600,
@@ -169,7 +170,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Messages',
+                                AppLocalizations.of(context)!.messages,
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
@@ -212,7 +213,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
 
     if (user == null) {
       print('🔍 [UserOrdersPage] No user found, showing login message');
-      return const Center(child: Text('Please log in to view orders'));
+      return Center(child: Text(AppLocalizations.of(context)!.pleaseLogInToViewOrders));
     }
 
     print('🔍 [UserOrdersPage] Setting up getUserOrders stream for user: ${user.id}');
@@ -254,7 +255,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Error loading orders: ${snapshot.error}',
+                  AppLocalizations.of(context)!.errorLoadingOrders(snapshot.error.toString()),
                   style: TextStyle(fontFamily: 'Inter'),
                   textAlign: TextAlign.center,
                 ),
@@ -289,7 +290,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No orders yet',
+                  AppLocalizations.of(context)!.noOrdersYet,
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.grey[600],
@@ -298,7 +299,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Your orders will appear here',
+                  AppLocalizations.of(context)!.yourOrdersWillAppearHere,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -415,7 +416,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Store: ${order.storeName}',
+                        AppLocalizations.of(context)!.storeWithName(order.storeName),
                         style: TextStyle(
                           fontSize: 15,
                           color: Colors.grey[600],
@@ -425,7 +426,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Qty: ${order.quantity}',
+                        AppLocalizations.of(context)!.quantity(order.quantity),
                         style: TextStyle(
                           fontSize: 15,
                           color: Colors.grey[600],
@@ -531,9 +532,9 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)!.cancel,
+                        style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           fontFamily: 'Inter',
@@ -563,9 +564,9 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          child: const Text(
-                            'Report',
-                            style: TextStyle(
+                          child: Text(
+                            AppLocalizations.of(context)!.report,
+                            style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                               fontFamily: 'Inter',
@@ -595,9 +596,9 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          child: const Text(
-                            'Confirm Delivery',
-                            style: TextStyle(
+                          child: Text(
+                            AppLocalizations.of(context)!.confirmDelivery,
+                            style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               fontFamily: 'Inter',
@@ -672,7 +673,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Order Progress',
+                AppLocalizations.of(context)!.orderProgress,
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -687,7 +688,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  'Step $currentStep of $totalSteps',
+                  AppLocalizations.of(context)!.stepOf(currentStep, totalSteps),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[700],
@@ -720,10 +721,10 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildStepIndicator('Ordered', currentStep >= 1, status == 'cancelled'),
-              _buildStepIndicator('Confirmed', currentStep >= 2, status == 'cancelled'),
-              _buildStepIndicator('Shipped', currentStep >= 3, status == 'cancelled'),
-              _buildStepIndicator('Delivered', currentStep >= 4, status == 'cancelled'),
+              _buildStepIndicator(AppLocalizations.of(context)!.ordered, currentStep >= 1, status == 'cancelled'),
+              _buildStepIndicator(AppLocalizations.of(context)!.confirmed, currentStep >= 2, status == 'cancelled'),
+              _buildStepIndicator(AppLocalizations.of(context)!.shipped, currentStep >= 3, status == 'cancelled'),
+              _buildStepIndicator(AppLocalizations.of(context)!.delivered, currentStep >= 4, status == 'cancelled'),
             ],
           ),
         ],
@@ -790,7 +791,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
 
     if (user == null) {
       print('🔍 [UserOrdersPage] No user found for discussions, showing login message');
-      return const Center(child: Text('Please log in to view discussions'));
+      return Center(child: Text(AppLocalizations.of(context)!.pleaseLogInToViewDiscussions));
     }
 
     print('🔍 [UserOrdersPage] Setting up getUserConversations stream for user: ${user.id}');
@@ -832,13 +833,13 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Error loading discussions: ${snapshot.error}',
+                  AppLocalizations.of(context)!.errorLoadingDiscussions(snapshot.error.toString()),
                   style: TextStyle(fontFamily: 'Inter'),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Check console for detailed error information',
+                  AppLocalizations.of(context)!.checkConsoleForErrorDetails,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[500],
@@ -867,7 +868,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No discussions yet',
+                  AppLocalizations.of(context)!.noDiscussionsYet,
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.grey[600],
@@ -876,7 +877,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Your conversations with sellers will appear here',
+                  AppLocalizations.of(context)!.conversationsWithSellersWillAppearHere,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -920,7 +921,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
     // Validate conversation data
     if (conversation['receiverId'] == null) {
       print('🔍 [UserOrdersPage] ERROR: receiverId is null!');
-      return _buildErrorTile('Invalid conversation data');
+      return _buildErrorTile(AppLocalizations.of(context)!.invalidConversationData);
     }
     
     return FutureBuilder<User?>(
@@ -959,7 +960,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                 ),
               ],
             ),
-            child: const Row(
+            child: Row(
               children: [
                 CircleAvatar(
                   radius: 24,
@@ -975,7 +976,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Loading...',
+                        AppLocalizations.of(context)!.loading,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -1024,7 +1025,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Unknown Store',
+                        AppLocalizations.of(context)!.unknownStore,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -1034,7 +1035,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Error loading store information',
+                        AppLocalizations.of(context)!.errorLoadingStoreInfo,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -1148,7 +1149,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            conversation['lastMessage'] ?? 'No messages yet',
+                            conversation['lastMessage'] ?? AppLocalizations.of(context)!.noMessagesYet,
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -1209,10 +1210,24 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
 
   String _formatStatusText(String status) {
     switch (status) {
+      case 'pending':
+        return AppLocalizations.of(context)!.orderStatusPending;
+      case 'ordered':
+        return AppLocalizations.of(context)!.orderStatusOrdered;
+      case 'confirmed':
+        return AppLocalizations.of(context)!.orderStatusConfirmed;
+      case 'shipped':
+        return AppLocalizations.of(context)!.orderStatusShipped;
+      case 'delivered':
+        return AppLocalizations.of(context)!.orderStatusDelivered;
       case 'confirmed_delivered':
-        return 'CONFIRMED DELIVERED';
+        return AppLocalizations.of(context)!.orderStatusConfirmedDelivered;
       case 'disputed_delivery':
-        return 'DISPUTED DELIVERY';
+        return AppLocalizations.of(context)!.orderStatusDisputedDelivery;
+      case 'cancelled':
+        return AppLocalizations.of(context)!.orderStatusCancelled;
+      case 'refunded':
+        return AppLocalizations.of(context)!.orderStatusRefunded;
       default:
         return status.toUpperCase();
     }
@@ -1223,13 +1238,13 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
     final difference = now.difference(date);
 
     if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
+      return AppLocalizations.of(context)!.daysAgo(difference.inDays);
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return AppLocalizations.of(context)!.hoursAgo(difference.inHours);
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+      return AppLocalizations.of(context)!.minutesAgo(difference.inMinutes);
     } else {
-      return 'Just now';
+      return AppLocalizations.of(context)!.justNow;
     }
   }
 

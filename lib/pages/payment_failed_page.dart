@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/currency_service.dart';
+import '../l10n/app_localizations.dart';
 
 class PaymentFailedPage extends StatelessWidget {
   final double amount;
@@ -45,9 +46,9 @@ class PaymentFailedPage extends StatelessWidget {
               const SizedBox(height: 32),
               
               // Failed Title
-              const Text(
-                'Payment Failed',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)!.paymentFailedTitle,
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -60,7 +61,7 @@ class PaymentFailedPage extends StatelessWidget {
               Consumer<CurrencyService>(
                 builder: (context, currencyService, child) {
                   return Text(
-                    'Amount: ${currencyService.formatPrice(amount)}',
+                    AppLocalizations.of(context)!.amount(currencyService.formatPrice(amount)),
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.grey[600],
@@ -74,7 +75,7 @@ class PaymentFailedPage extends StatelessWidget {
               
               // Payment Method
               Text(
-                'Payment Method: $paymentMethod',
+                AppLocalizations.of(context)!.paymentMethod(paymentMethod),
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -86,7 +87,7 @@ class PaymentFailedPage extends StatelessWidget {
               // Error Message
               if (errorMessage != null) ...[
                 Text(
-                  'Error: $errorMessage',
+                  AppLocalizations.of(context)!.error("", errorMessage!),
                   style: const TextStyle(
                     fontSize: 16,
                     color: Colors.red,
@@ -98,7 +99,7 @@ class PaymentFailedPage extends StatelessWidget {
               
               // Failure Message
               Text(
-                'Your payment could not be processed. Please check your payment details and try again.',
+                AppLocalizations.of(context)!.paymentCouldNotBeProcessed,
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -121,9 +122,9 @@ class PaymentFailedPage extends StatelessWidget {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Try Again',
-                      style: TextStyle(
+                    child: Text(
+                      AppLocalizations.of(context)!.tryAgain,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -149,7 +150,7 @@ class PaymentFailedPage extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    'Go Back',
+                    AppLocalizations.of(context)!.goBack,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

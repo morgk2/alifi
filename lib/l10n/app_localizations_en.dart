@@ -274,12 +274,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String error(Object error, Object errorMessage) {
-    return 'Error: $errorMessage';
+  String error(Object error, Object message) {
+    return 'Error: $message';
   }
 
   @override
-  String get lastSeen => 'Last seen';
+  String lastSeen(Object location, Object time) {
+    return 'Last seen $time';
+  }
 
   @override
   String physicalPetIdFor(Object petName) {
@@ -530,7 +532,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get past => 'Past';
 
   @override
-  String get today => 'Today';
+  String get today => 'today';
 
   @override
   String get pet => 'Pet';
@@ -1098,7 +1100,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapNotWorking => 'Map not working';
 
   @override
-  String get inappropriateContent => 'Inappropriate content';
+  String get inappropriateContent => 'Inappropriate Content';
 
   @override
   String get technicalProblems => 'Technical problems';
@@ -1501,7 +1503,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inStock => 'In Stock';
 
   @override
-  String get quantity => 'Quantity';
+  String quantity(Object qty) {
+    return 'Qty: $qty';
+  }
 
   @override
   String get selectQuantity => 'Select Quantity';
@@ -1525,7 +1529,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messages => 'Messages';
 
   @override
-  String get orders => 'orders';
+  String get orders => 'Orders';
 
   @override
   String get pleaseLogIn => 'Please log in.';
@@ -1537,10 +1541,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todaysSales => 'Today\'s Sales';
 
   @override
-  String get thisWeek => 'This Week';
+  String get thisWeek => 'this week';
 
   @override
-  String get thisMonth => 'This Month';
+  String get thisMonth => 'this month';
 
   @override
   String get keyMetrics => 'Key Metrics';
@@ -1645,7 +1649,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orderHistory => 'Order History';
 
   @override
-  String get orderDetails => 'Order Details';
+  String get orderDetails => 'Order details';
 
   @override
   String get orderStatus => 'Order Status';
@@ -1745,13 +1749,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newMessage => 'New message';
 
   @override
-  String get unreadMessages => 'Unread messages';
+  String unreadMessages(Object count) {
+    return '$count unread messages';
+  }
 
   @override
   String get markAsRead => 'Mark as read';
 
   @override
-  String get deleteMessage => 'Delete message';
+  String get deleteMessage => 'Delete Message';
 
   @override
   String get blockUser => 'Block User';
@@ -1760,13 +1766,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportUser => 'Report User';
 
   @override
-  String get clearChat => 'Clear chat';
+  String get clearChat => 'Clear Chat';
 
   @override
-  String get chatCleared => 'Chat cleared';
+  String get chatCleared => 'Chat cleared successfully';
 
   @override
-  String get userBlocked => 'User blocked';
+  String get userBlocked => 'User blocked successfully';
 
   @override
   String get userReported => 'User reported';
@@ -3805,7 +3811,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectAProductToOrder => 'Select a product to order';
 
   @override
-  String get order => 'Order';
+  String get order => 'ORDER';
 
   @override
   String storeProducts(Object storeName) {
@@ -3818,7 +3824,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get product => 'Product';
+  String get product => 'PRODUCT';
 
   @override
   String get trySearchingWithDifferentNameOrEmail => 'Try searching with a different name or email';
@@ -4065,7 +4071,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get found => 'FOUND';
 
   @override
-  String get markAsFound => 'Mark as Found?';
+  String get markAsFound => 'Mark as Found';
 
   @override
   String get markAsFoundConfirmation => 'Are you sure you want to mark this pet as found?';
@@ -4164,9 +4170,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String petMarkedAsFound(Object petName) {
-    return '$petName has been marked as found!';
-  }
+  String get petMarkedAsFound => 'Pet marked as found successfully';
 
   @override
   String failedToMarkAsFound(Object error) {
@@ -4224,7 +4228,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appFee => 'App Fee';
 
   @override
-  String get total => 'Total';
+  String get total => 'Total: ';
 
   @override
   String get addAddressToContinue => 'Add Address to Continue';
@@ -4324,34 +4328,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get paymentSuccessful => 'Payment Successful!';
-
-  @override
-  String amount(Object amount) {
-    return 'Amount: $amount';
-  }
-
-  @override
-  String orderId(Object orderId) {
-    return 'Order ID: $orderId';
-  }
-
-  @override
-  String get paymentProcessedSuccessfully => 'Your payment has been processed successfully. You will receive a confirmation email shortly.';
-
-  @override
-  String get continue => 'Continue';
-
-  @override
-  String get paymentFailedTitle => 'Payment Failed';
-
-  @override
-  String get paymentCouldNotBeProcessed => 'Your payment could not be processed. Please check your payment details and try again.';
-
-  @override
-  String get goBack => 'Go Back';
-
-  @override
   String get orderConfirmed => 'Order Confirmed!';
 
   @override
@@ -4364,4 +4340,541 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backToHome => 'Back to Home';
+
+  @override
+  String get paymentSuccessful => 'Payment Successful!';
+
+  @override
+  String amount(Object amount) {
+    return 'Amount: $amount';
+  }
+
+  @override
+  String orderId(Object id) {
+    return 'Order ID: $id';
+  }
+
+  @override
+  String get paymentProcessedSuccessfully => 'Your payment has been processed successfully. You will receive a confirmation email shortly.';
+
+  @override
+  String get continueButton => 'Continue';
+
+  @override
+  String get paymentFailedTitle => 'Payment Failed';
+
+  @override
+  String get paymentCouldNotBeProcessed => 'Your payment could not be processed. Please check your payment details and try again.';
+
+  @override
+  String get goBack => 'Go Back';
+
+  @override
+  String get noOrdersYet => 'No orders yet';
+
+  @override
+  String get noMessagesYet => 'No messages yet';
+
+  @override
+  String get viewOrder => 'View Order';
+
+  @override
+  String get orderCancelled => 'Order cancelled successfully';
+
+  @override
+  String errorCancellingOrder(Object error) {
+    return 'Error cancelling order: $error';
+  }
+
+  @override
+  String get noUnreadMessages => 'No unread messages';
+
+  @override
+  String get pleaseLogInToViewOrders => 'Please log in to view orders';
+
+  @override
+  String errorLoadingOrders(Object error) {
+    return 'Error loading orders: $error';
+  }
+
+  @override
+  String get checkConsoleForErrorDetails => 'Check console for detailed error information';
+
+  @override
+  String get yourOrdersWillAppearHere => 'Your orders will appear here';
+
+  @override
+  String get lastSeenLabel => 'Last seen';
+
+  @override
+  String errorMessage(Object error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String petMarkedAsFoundWithName(Object petName) {
+    return '$petName has been marked as found!';
+  }
+
+  @override
+  String storeWithName(Object storeName) {
+    return 'Store: $storeName';
+  }
+
+  @override
+  String get confirmDelivery => 'Confirm Delivery';
+
+  @override
+  String get orderStatusPending => 'PENDING';
+
+  @override
+  String get orderStatusOrdered => 'ORDERED';
+
+  @override
+  String get orderStatusConfirmed => 'CONFIRMED';
+
+  @override
+  String get orderStatusShipped => 'SHIPPED';
+
+  @override
+  String get orderStatusDelivered => 'DELIVERED';
+
+  @override
+  String get orderStatusConfirmedDelivered => 'CONFIRMED DELIVERED';
+
+  @override
+  String get orderStatusDisputedDelivery => 'DISPUTED DELIVERY';
+
+  @override
+  String get orderStatusCancelled => 'CANCELLED';
+
+  @override
+  String get orderStatusRefunded => 'REFUNDED';
+
+  @override
+  String daysAgo(Object days) {
+    return '${days}d ago';
+  }
+
+  @override
+  String hoursAgo(Object hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String minutesAgo(Object minutes) {
+    return '${minutes}m ago';
+  }
+
+  @override
+  String get unknownStore => 'Unknown Store';
+
+  @override
+  String get errorLoadingStoreInfo => 'Error loading store information';
+
+  @override
+  String get noDiscussionsYet => 'No discussions yet';
+
+  @override
+  String get conversationsWithSellersWillAppearHere => 'Your conversations with sellers will appear here';
+
+  @override
+  String errorLoadingDiscussions(Object error) {
+    return 'Error loading discussions: $error';
+  }
+
+  @override
+  String get pleaseLogInToViewDiscussions => 'Please log in to view discussions';
+
+  @override
+  String get invalidConversationData => 'Invalid conversation data';
+
+  @override
+  String get orderProgress => 'Order Progress';
+
+  @override
+  String stepOf(Object current, Object total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get typeAMessage => 'Type a message...';
+
+  @override
+  String get shareMedia => 'Share Media';
+
+  @override
+  String get camera => 'Camera';
+
+  @override
+  String get takeAPhoto => 'Take a photo';
+
+  @override
+  String get photoLibrary => 'Photo Library';
+
+  @override
+  String get chooseFromLibrary => 'Choose from library';
+
+  @override
+  String get video => 'VIDEO';
+
+  @override
+  String get recordOrChooseVideo => 'Record or choose video';
+
+  @override
+  String errorSelectingMedia(Object error) {
+    return 'Error selecting media: $error';
+  }
+
+  @override
+  String uploading(Object current, Object total) {
+    return 'Uploading... ($current/$total)';
+  }
+
+  @override
+  String mediaAttachments(Object count) {
+    return 'Media Attachments ($count)';
+  }
+
+  @override
+  String get failedToUploadMedia => 'Failed to upload media files';
+
+  @override
+  String get checkOutThisProduct => 'Check out this product!';
+
+  @override
+  String get interestedInYourService => 'Interested in your service';
+
+  @override
+  String get aboutMyLostPet => 'About my lost pet';
+
+  @override
+  String get petRescueConfirmation => 'Pet Rescue Confirmation';
+
+  @override
+  String didPersonHelpReunite(Object personName) {
+    return 'Did $personName successfully help you reunite with your lost pet at the scheduled meeting?';
+  }
+
+  @override
+  String get addToRescueCount => 'This will add +1 to their pet rescue count and help other pet owners.';
+
+  @override
+  String get no => 'No';
+
+  @override
+  String get yesRescued => 'Yes, Rescued!';
+
+  @override
+  String rescueRecorded(Object personName) {
+    return '🎉 Rescue recorded! $personName now has +1 pets rescued.';
+  }
+
+  @override
+  String failedToRecordRescue(Object error) {
+    return 'Failed to record rescue: $error';
+  }
+
+  @override
+  String get markMeetingAsFinished => 'Mark Meeting as Finished?';
+
+  @override
+  String get markMeetingCompleted => 'This will mark the scheduled meeting as completed and ask if your pet was successfully rescued.';
+
+  @override
+  String get onlyOncePerMeeting => 'You can only do this once per meeting.';
+
+  @override
+  String get markAsFinished => 'Mark as Finished';
+
+  @override
+  String get meetingMarkedFinished => '✅ Meeting marked as finished!';
+
+  @override
+  String failedToFinishMeeting(Object error) {
+    return 'Failed to finish meeting: $error';
+  }
+
+  @override
+  String get meetingProposalSent => 'Meeting proposal sent!';
+
+  @override
+  String get failedToProposeMeeting => 'Failed to propose meeting';
+
+  @override
+  String get meetingConfirmed => 'Meeting confirmed';
+
+  @override
+  String get failedToConfirmMeeting => 'Failed to confirm meeting';
+
+  @override
+  String get meetingRejected => 'Meeting rejected';
+
+  @override
+  String get failedToRejectMeeting => 'Failed to reject meeting';
+
+  @override
+  String get meetingDetailsUpdated => 'Meeting details updated!';
+
+  @override
+  String get failedToUpdateMeetingDetails => 'Failed to update meeting details';
+
+  @override
+  String get scheduleMeeting => 'Schedule Meeting';
+
+  @override
+  String get sharingProduct => 'Sharing product';
+
+  @override
+  String sharingService(Object serviceType) {
+    return 'Sharing $serviceType service';
+  }
+
+  @override
+  String get sharingOrderDetails => 'Sharing order details';
+
+  @override
+  String lostPet(Object petName) {
+    return 'Lost Pet: $petName';
+  }
+
+  @override
+  String get mixedBreed => 'Mixed breed';
+
+  @override
+  String reward(Object amount) {
+    return 'Reward: \$$amount';
+  }
+
+  @override
+  String get lostPetInformation => 'Lost Pet Information';
+
+  @override
+  String get orderConfirmation => 'ORDER CONFIRMATION';
+
+  @override
+  String orderNumber(Object orderId) {
+    return 'Order #$orderId';
+  }
+
+  @override
+  String get petIdentification => 'Pet Identification';
+
+  @override
+  String isThisMediaOfPet(Object mediaType) {
+    return 'Is this $mediaType of your missing pet?';
+  }
+
+  @override
+  String get confirmedThisIsPet => 'Confirmed: This is your pet';
+
+  @override
+  String get confirmedThisIsNotPet => 'Confirmed: This is not your pet';
+
+  @override
+  String get failedToSaveIdentification => 'Failed to save identification';
+
+  @override
+  String personConfirmedPet(Object personName) {
+    return '$personName has confirmed that this is their pet';
+  }
+
+  @override
+  String personConfirmedNotPet(Object personName) {
+    return '$personName has confirmed that this is not their pet';
+  }
+
+  @override
+  String get picture => 'picture';
+
+  @override
+  String get photo => 'PHOTO';
+
+  @override
+  String get book => 'Book';
+
+  @override
+  String get vetConsultation => 'VET CONSULTATION';
+
+  @override
+  String get storeChat => 'STORE CHAT';
+
+  @override
+  String get customerChat => 'CUSTOMER CHAT';
+
+  @override
+  String serviceProvider(Object serviceType) {
+    return '$serviceType PROVIDER';
+  }
+
+  @override
+  String get attachProduct => 'Attach Product';
+
+  @override
+  String get attachService => 'Attach Service';
+
+  @override
+  String get attachOrder => 'Attach Order';
+
+  @override
+  String get attachLostPet => 'Attach Lost Pet';
+
+  @override
+  String get attachPhoto => 'Attach Photo';
+
+  @override
+  String get attachVideo => 'Attach Video';
+
+  @override
+  String get gallery => 'Gallery';
+
+  @override
+  String get imageUploaded => 'Image uploaded successfully';
+
+  @override
+  String errorUploadingImage(Object error) {
+    return 'Error uploading image: $error';
+  }
+
+  @override
+  String get videoUploaded => 'Video uploaded successfully';
+
+  @override
+  String errorUploadingVideo(Object error) {
+    return 'Error uploading video: $error';
+  }
+
+  @override
+  String get yesterday => 'yesterday';
+
+  @override
+  String get longTimeAgo => 'a long time ago';
+
+  @override
+  String get messageDeleted => 'Message deleted';
+
+  @override
+  String get areYouSureDeleteMessage => 'Are you sure you want to delete this message?';
+
+  @override
+  String get yes => 'Yes';
+
+  @override
+  String get unblockUser => 'Unblock User';
+
+  @override
+  String get areYouSureBlockUser => 'Are you sure you want to block this user?';
+
+  @override
+  String get areYouSureUnblockUser => 'Are you sure you want to unblock this user?';
+
+  @override
+  String get userUnblocked => 'User unblocked successfully';
+
+  @override
+  String errorBlockingUser(Object error) {
+    return 'Error blocking user: $error';
+  }
+
+  @override
+  String errorUnblockingUser(Object error) {
+    return 'Error unblocking user: $error';
+  }
+
+  @override
+  String get reportReason => 'Report Reason';
+
+  @override
+  String get spam => 'Spam';
+
+  @override
+  String get harassment => 'Harassment';
+
+  @override
+  String get reportSubmitted => 'Report submitted successfully';
+
+  @override
+  String errorSubmittingReport(Object error) {
+    return 'Error submitting report: $error';
+  }
+
+  @override
+  String get areYouSureClearChat => 'Are you sure you want to clear all messages in this chat?';
+
+  @override
+  String errorClearingChat(Object error) {
+    return 'Error clearing chat: $error';
+  }
+
+  @override
+  String get meetingScheduled => 'Meeting scheduled successfully';
+
+  @override
+  String errorSchedulingMeeting(Object error) {
+    return 'Error scheduling meeting: $error';
+  }
+
+  @override
+  String get meetingDate => 'Meeting Date';
+
+  @override
+  String get meetingTime => 'Meeting Time';
+
+  @override
+  String get meetingLocation => 'Meeting Location';
+
+  @override
+  String get meetingNotes => 'Meeting Notes';
+
+  @override
+  String get confirmMeeting => 'Confirm Meeting';
+
+  @override
+  String get meetingCancelled => 'Meeting cancelled';
+
+  @override
+  String errorConfirmingMeeting(Object error) {
+    return 'Error confirming meeting: $error';
+  }
+
+  @override
+  String errorCancellingMeeting(Object error) {
+    return 'Error cancelling meeting: $error';
+  }
+
+  @override
+  String get coordinateMeeting => 'Coordinate a meeting to reunite with your pet! 🐾';
+
+  @override
+  String get proposeNewMeeting => 'Propose New Meeting';
+
+  @override
+  String get meetingPlace => 'Meeting Place';
+
+  @override
+  String get enterMeetingLocation => 'Enter meeting location...';
+
+  @override
+  String get selectDateAndTime => 'Select date and time...';
+
+  @override
+  String get updateMeeting => 'Update Meeting';
+
+  @override
+  String get proposeMeeting => 'Propose Meeting';
+
+  @override
+  String get waitingForConfirmation => 'Waiting for confirmation...';
+
+  @override
+  String get waitingForResponse => 'Waiting for response...';
+
+  @override
+  String get noLocationSet => 'No location set';
+
+  @override
+  String get reject => 'Reject';
+
+  @override
+  String get editDetails => 'Edit Details';
 }

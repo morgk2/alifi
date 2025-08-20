@@ -653,7 +653,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
       ),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text(l10n.error(snapshot.error.toString())));
+          return Center(child: Text(l10n.errorMessage(snapshot.error.toString())));
         }
 
         if (!snapshot.hasData) {
@@ -755,7 +755,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             stream: _databaseService.getNewMarketplaceProducts(limit: 5),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text(l10n.error(snapshot.error.toString())));
+                return Center(child: Text(l10n.errorMessage(snapshot.error.toString())));
               }
 
               if (!snapshot.hasData) {
@@ -810,7 +810,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             stream: _databaseService.getRecommendedMarketplaceProducts(limit: 5),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text(l10n.error(snapshot.error.toString())));
+                return Center(child: Text(l10n.errorMessage(snapshot.error.toString())));
               }
 
               if (!snapshot.hasData) {
@@ -880,7 +880,7 @@ class _MarketplacePageState extends State<MarketplacePage> with TickerProviderSt
             ),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(child: Text(l10n.error(snapshot.error.toString())));
+                return Center(child: Text(l10n.errorMessage(snapshot.error.toString())));
               }
 
               if (!snapshot.hasData) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/currency_service.dart';
+import '../l10n/app_localizations.dart';
 
 class PaymentSuccessPage extends StatelessWidget {
   final double amount;
@@ -43,9 +44,9 @@ class PaymentSuccessPage extends StatelessWidget {
               const SizedBox(height: 32),
               
               // Success Title
-              const Text(
-                'Payment Successful!',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)!.paymentSuccessful,
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -58,7 +59,7 @@ class PaymentSuccessPage extends StatelessWidget {
               Consumer<CurrencyService>(
                 builder: (context, currencyService, child) {
                   return Text(
-                    'Amount: ${currencyService.formatPrice(amount)}',
+                    AppLocalizations.of(context)!.amount(currencyService.formatPrice(amount)),
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.grey[600],
@@ -72,7 +73,7 @@ class PaymentSuccessPage extends StatelessWidget {
               
               // Payment Method
               Text(
-                'Payment Method: $paymentMethod',
+                AppLocalizations.of(context)!.paymentMethod(paymentMethod),
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -84,7 +85,7 @@ class PaymentSuccessPage extends StatelessWidget {
               // Order ID if available
               if (orderId != null) ...[
                 Text(
-                  'Order ID: $orderId',
+                  AppLocalizations.of(context)!.orderId(orderId!),
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[500],
@@ -98,7 +99,7 @@ class PaymentSuccessPage extends StatelessWidget {
               
               // Success Message
               Text(
-                'Your payment has been processed successfully. You will receive a confirmation email shortly.',
+                AppLocalizations.of(context)!.paymentProcessedSuccessfully,
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -122,9 +123,9 @@ class PaymentSuccessPage extends StatelessWidget {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'Continue',
-                    style: TextStyle(
+                  child: Text(
+                    AppLocalizations.of(context)!.continueButton,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,

@@ -242,7 +242,7 @@ class _MyPetsPageState extends State<MyPetsPage> with TickerProviderStateMixin {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)!.petMarkedAsFound(pet.name)),
+              content: Text(AppLocalizations.of(context)!.petMarkedAsFoundWithName(pet.name)),
               backgroundColor: Colors.green,
             ),
           );

@@ -588,14 +588,14 @@ abstract class AppLocalizations {
   /// No description provided for @error.
   ///
   /// In en, this message translates to:
-  /// **'Error: {errorMessage}'**
-  String error(Object error, Object errorMessage);
+  /// **'Error: {message}'**
+  String error(Object error, Object message);
 
   /// No description provided for @lastSeen.
   ///
   /// In en, this message translates to:
-  /// **'Last seen'**
-  String get lastSeen;
+  /// **'Last seen {time}'**
+  String lastSeen(Object location, Object time);
 
   /// No description provided for @physicalPetIdFor.
   ///
@@ -1056,7 +1056,7 @@ abstract class AppLocalizations {
   /// No description provided for @today.
   ///
   /// In en, this message translates to:
-  /// **'Today'**
+  /// **'today'**
   String get today;
 
   /// No description provided for @pet.
@@ -2136,7 +2136,7 @@ abstract class AppLocalizations {
   /// No description provided for @inappropriateContent.
   ///
   /// In en, this message translates to:
-  /// **'Inappropriate content'**
+  /// **'Inappropriate Content'**
   String get inappropriateContent;
 
   /// No description provided for @technicalProblems.
@@ -2934,8 +2934,8 @@ abstract class AppLocalizations {
   /// No description provided for @quantity.
   ///
   /// In en, this message translates to:
-  /// **'Quantity'**
-  String get quantity;
+  /// **'Qty: {qty}'**
+  String quantity(Object qty);
 
   /// No description provided for @selectQuantity.
   ///
@@ -2982,7 +2982,7 @@ abstract class AppLocalizations {
   /// No description provided for @orders.
   ///
   /// In en, this message translates to:
-  /// **'orders'**
+  /// **'Orders'**
   String get orders;
 
   /// No description provided for @pleaseLogIn.
@@ -3006,13 +3006,13 @@ abstract class AppLocalizations {
   /// No description provided for @thisWeek.
   ///
   /// In en, this message translates to:
-  /// **'This Week'**
+  /// **'this week'**
   String get thisWeek;
 
   /// No description provided for @thisMonth.
   ///
   /// In en, this message translates to:
-  /// **'This Month'**
+  /// **'this month'**
   String get thisMonth;
 
   /// No description provided for @keyMetrics.
@@ -3210,7 +3210,7 @@ abstract class AppLocalizations {
   /// No description provided for @orderDetails.
   ///
   /// In en, this message translates to:
-  /// **'Order Details'**
+  /// **'Order details'**
   String get orderDetails;
 
   /// No description provided for @orderStatus.
@@ -3402,8 +3402,8 @@ abstract class AppLocalizations {
   /// No description provided for @unreadMessages.
   ///
   /// In en, this message translates to:
-  /// **'Unread messages'**
-  String get unreadMessages;
+  /// **'{count} unread messages'**
+  String unreadMessages(Object count);
 
   /// No description provided for @markAsRead.
   ///
@@ -3414,7 +3414,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteMessage.
   ///
   /// In en, this message translates to:
-  /// **'Delete message'**
+  /// **'Delete Message'**
   String get deleteMessage;
 
   /// No description provided for @blockUser.
@@ -3432,19 +3432,19 @@ abstract class AppLocalizations {
   /// No description provided for @clearChat.
   ///
   /// In en, this message translates to:
-  /// **'Clear chat'**
+  /// **'Clear Chat'**
   String get clearChat;
 
   /// No description provided for @chatCleared.
   ///
   /// In en, this message translates to:
-  /// **'Chat cleared'**
+  /// **'Chat cleared successfully'**
   String get chatCleared;
 
   /// No description provided for @userBlocked.
   ///
   /// In en, this message translates to:
-  /// **'User blocked'**
+  /// **'User blocked successfully'**
   String get userBlocked;
 
   /// No description provided for @userReported.
@@ -7266,7 +7266,7 @@ abstract class AppLocalizations {
   /// No description provided for @order.
   ///
   /// In en, this message translates to:
-  /// **'Order'**
+  /// **'ORDER'**
   String get order;
 
   /// No description provided for @storeProducts.
@@ -7284,7 +7284,7 @@ abstract class AppLocalizations {
   /// No description provided for @product.
   ///
   /// In en, this message translates to:
-  /// **'Product'**
+  /// **'PRODUCT'**
   String get product;
 
   /// No description provided for @trySearchingWithDifferentNameOrEmail.
@@ -7770,7 +7770,7 @@ abstract class AppLocalizations {
   /// No description provided for @markAsFound.
   ///
   /// In en, this message translates to:
-  /// **'Mark as Found?'**
+  /// **'Mark as Found'**
   String get markAsFound;
 
   /// No description provided for @markAsFoundConfirmation.
@@ -7944,8 +7944,8 @@ abstract class AppLocalizations {
   /// No description provided for @petMarkedAsFound.
   ///
   /// In en, this message translates to:
-  /// **'{petName} has been marked as found!'**
-  String petMarkedAsFound(Object petName);
+  /// **'Pet marked as found successfully'**
+  String get petMarkedAsFound;
 
   /// No description provided for @failedToMarkAsFound.
   ///
@@ -8052,7 +8052,7 @@ abstract class AppLocalizations {
   /// No description provided for @total.
   ///
   /// In en, this message translates to:
-  /// **'Total'**
+  /// **'Total: '**
   String get total;
 
   /// No description provided for @addAddressToContinue.
@@ -8229,54 +8229,6 @@ abstract class AppLocalizations {
   /// **'Hello! I just placed an order for {productName}. Payment on delivery. Order ID: {orderId}'**
   String helloIJustPlacedAnOrder(Object orderId, Object productName);
 
-  /// No description provided for @paymentSuccessful.
-  ///
-  /// In en, this message translates to:
-  /// **'Payment Successful!'**
-  String get paymentSuccessful;
-
-  /// No description provided for @amount.
-  ///
-  /// In en, this message translates to:
-  /// **'Amount: {amount}'**
-  String amount(Object amount);
-
-  /// No description provided for @orderId.
-  ///
-  /// In en, this message translates to:
-  /// **'Order ID: {orderId}'**
-  String orderId(Object orderId);
-
-  /// No description provided for @paymentProcessedSuccessfully.
-  ///
-  /// In en, this message translates to:
-  /// **'Your payment has been processed successfully. You will receive a confirmation email shortly.'**
-  String get paymentProcessedSuccessfully;
-
-  /// No description provided for @continue.
-  ///
-  /// In en, this message translates to:
-  /// **'Continue'**
-  String get continue;
-
-  /// No description provided for @paymentFailedTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Payment Failed'**
-  String get paymentFailedTitle;
-
-  /// No description provided for @paymentCouldNotBeProcessed.
-  ///
-  /// In en, this message translates to:
-  /// **'Your payment could not be processed. Please check your payment details and try again.'**
-  String get paymentCouldNotBeProcessed;
-
-  /// No description provided for @goBack.
-  ///
-  /// In en, this message translates to:
-  /// **'Go Back'**
-  String get goBack;
-
   /// No description provided for @orderConfirmed.
   ///
   /// In en, this message translates to:
@@ -8300,6 +8252,936 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back to Home'**
   String get backToHome;
+
+  /// No description provided for @paymentSuccessful.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Successful!'**
+  String get paymentSuccessful;
+
+  /// No description provided for @amount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount: {amount}'**
+  String amount(Object amount);
+
+  /// No description provided for @orderId.
+  ///
+  /// In en, this message translates to:
+  /// **'Order ID: {id}'**
+  String orderId(Object id);
+
+  /// No description provided for @paymentProcessedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Your payment has been processed successfully. You will receive a confirmation email shortly.'**
+  String get paymentProcessedSuccessfully;
+
+  /// No description provided for @continueButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get continueButton;
+
+  /// No description provided for @paymentFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Failed'**
+  String get paymentFailedTitle;
+
+  /// No description provided for @paymentCouldNotBeProcessed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your payment could not be processed. Please check your payment details and try again.'**
+  String get paymentCouldNotBeProcessed;
+
+  /// No description provided for @goBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Go Back'**
+  String get goBack;
+
+  /// No description provided for @noOrdersYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No orders yet'**
+  String get noOrdersYet;
+
+  /// No description provided for @noMessagesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet'**
+  String get noMessagesYet;
+
+  /// No description provided for @viewOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'View Order'**
+  String get viewOrder;
+
+  /// No description provided for @orderCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Order cancelled successfully'**
+  String get orderCancelled;
+
+  /// No description provided for @errorCancellingOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Error cancelling order: {error}'**
+  String errorCancellingOrder(Object error);
+
+  /// No description provided for @noUnreadMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'No unread messages'**
+  String get noUnreadMessages;
+
+  /// No description provided for @pleaseLogInToViewOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in to view orders'**
+  String get pleaseLogInToViewOrders;
+
+  /// No description provided for @errorLoadingOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading orders: {error}'**
+  String errorLoadingOrders(Object error);
+
+  /// No description provided for @checkConsoleForErrorDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Check console for detailed error information'**
+  String get checkConsoleForErrorDetails;
+
+  /// No description provided for @yourOrdersWillAppearHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Your orders will appear here'**
+  String get yourOrdersWillAppearHere;
+
+  /// No description provided for @lastSeenLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Last seen'**
+  String get lastSeenLabel;
+
+  /// No description provided for @errorMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String errorMessage(Object error);
+
+  /// No description provided for @petMarkedAsFoundWithName.
+  ///
+  /// In en, this message translates to:
+  /// **'{petName} has been marked as found!'**
+  String petMarkedAsFoundWithName(Object petName);
+
+  /// No description provided for @storeWithName.
+  ///
+  /// In en, this message translates to:
+  /// **'Store: {storeName}'**
+  String storeWithName(Object storeName);
+
+  /// No description provided for @confirmDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Delivery'**
+  String get confirmDelivery;
+
+  /// No description provided for @orderStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'PENDING'**
+  String get orderStatusPending;
+
+  /// No description provided for @orderStatusOrdered.
+  ///
+  /// In en, this message translates to:
+  /// **'ORDERED'**
+  String get orderStatusOrdered;
+
+  /// No description provided for @orderStatusConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'CONFIRMED'**
+  String get orderStatusConfirmed;
+
+  /// No description provided for @orderStatusShipped.
+  ///
+  /// In en, this message translates to:
+  /// **'SHIPPED'**
+  String get orderStatusShipped;
+
+  /// No description provided for @orderStatusDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'DELIVERED'**
+  String get orderStatusDelivered;
+
+  /// No description provided for @orderStatusConfirmedDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'CONFIRMED DELIVERED'**
+  String get orderStatusConfirmedDelivered;
+
+  /// No description provided for @orderStatusDisputedDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'DISPUTED DELIVERY'**
+  String get orderStatusDisputedDelivery;
+
+  /// No description provided for @orderStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'CANCELLED'**
+  String get orderStatusCancelled;
+
+  /// No description provided for @orderStatusRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'REFUNDED'**
+  String get orderStatusRefunded;
+
+  /// No description provided for @daysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d ago'**
+  String daysAgo(Object days);
+
+  /// No description provided for @hoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h ago'**
+  String hoursAgo(Object hours);
+
+  /// No description provided for @minutesAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m ago'**
+  String minutesAgo(Object minutes);
+
+  /// No description provided for @unknownStore.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Store'**
+  String get unknownStore;
+
+  /// No description provided for @errorLoadingStoreInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading store information'**
+  String get errorLoadingStoreInfo;
+
+  /// No description provided for @noDiscussionsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No discussions yet'**
+  String get noDiscussionsYet;
+
+  /// No description provided for @conversationsWithSellersWillAppearHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Your conversations with sellers will appear here'**
+  String get conversationsWithSellersWillAppearHere;
+
+  /// No description provided for @errorLoadingDiscussions.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading discussions: {error}'**
+  String errorLoadingDiscussions(Object error);
+
+  /// No description provided for @pleaseLogInToViewDiscussions.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in to view discussions'**
+  String get pleaseLogInToViewDiscussions;
+
+  /// No description provided for @invalidConversationData.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid conversation data'**
+  String get invalidConversationData;
+
+  /// Order progress related strings
+  ///
+  /// In en, this message translates to:
+  /// **'Order Progress'**
+  String get orderProgress;
+
+  /// No description provided for @stepOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String stepOf(Object current, Object total);
+
+  /// No description provided for @typeAMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message...'**
+  String get typeAMessage;
+
+  /// No description provided for @shareMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Media'**
+  String get shareMedia;
+
+  /// No description provided for @camera.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get camera;
+
+  /// No description provided for @takeAPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get takeAPhoto;
+
+  /// No description provided for @photoLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo Library'**
+  String get photoLibrary;
+
+  /// No description provided for @chooseFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from library'**
+  String get chooseFromLibrary;
+
+  /// No description provided for @video.
+  ///
+  /// In en, this message translates to:
+  /// **'VIDEO'**
+  String get video;
+
+  /// No description provided for @recordOrChooseVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Record or choose video'**
+  String get recordOrChooseVideo;
+
+  /// No description provided for @errorSelectingMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Error selecting media: {error}'**
+  String errorSelectingMedia(Object error);
+
+  /// No description provided for @uploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading... ({current}/{total})'**
+  String uploading(Object current, Object total);
+
+  /// No description provided for @mediaAttachments.
+  ///
+  /// In en, this message translates to:
+  /// **'Media Attachments ({count})'**
+  String mediaAttachments(Object count);
+
+  /// No description provided for @failedToUploadMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to upload media files'**
+  String get failedToUploadMedia;
+
+  /// No description provided for @checkOutThisProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Check out this product!'**
+  String get checkOutThisProduct;
+
+  /// No description provided for @interestedInYourService.
+  ///
+  /// In en, this message translates to:
+  /// **'Interested in your service'**
+  String get interestedInYourService;
+
+  /// No description provided for @aboutMyLostPet.
+  ///
+  /// In en, this message translates to:
+  /// **'About my lost pet'**
+  String get aboutMyLostPet;
+
+  /// No description provided for @petRescueConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet Rescue Confirmation'**
+  String get petRescueConfirmation;
+
+  /// No description provided for @didPersonHelpReunite.
+  ///
+  /// In en, this message translates to:
+  /// **'Did {personName} successfully help you reunite with your lost pet at the scheduled meeting?'**
+  String didPersonHelpReunite(Object personName);
+
+  /// No description provided for @addToRescueCount.
+  ///
+  /// In en, this message translates to:
+  /// **'This will add +1 to their pet rescue count and help other pet owners.'**
+  String get addToRescueCount;
+
+  /// No description provided for @no.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get no;
+
+  /// No description provided for @yesRescued.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, Rescued!'**
+  String get yesRescued;
+
+  /// No description provided for @rescueRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'🎉 Rescue recorded! {personName} now has +1 pets rescued.'**
+  String rescueRecorded(Object personName);
+
+  /// No description provided for @failedToRecordRescue.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to record rescue: {error}'**
+  String failedToRecordRescue(Object error);
+
+  /// No description provided for @markMeetingAsFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Meeting as Finished?'**
+  String get markMeetingAsFinished;
+
+  /// No description provided for @markMeetingCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'This will mark the scheduled meeting as completed and ask if your pet was successfully rescued.'**
+  String get markMeetingCompleted;
+
+  /// No description provided for @onlyOncePerMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'You can only do this once per meeting.'**
+  String get onlyOncePerMeeting;
+
+  /// No description provided for @markAsFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as Finished'**
+  String get markAsFinished;
+
+  /// No description provided for @meetingMarkedFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'✅ Meeting marked as finished!'**
+  String get meetingMarkedFinished;
+
+  /// No description provided for @failedToFinishMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to finish meeting: {error}'**
+  String failedToFinishMeeting(Object error);
+
+  /// No description provided for @meetingProposalSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting proposal sent!'**
+  String get meetingProposalSent;
+
+  /// No description provided for @failedToProposeMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to propose meeting'**
+  String get failedToProposeMeeting;
+
+  /// No description provided for @meetingConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting confirmed'**
+  String get meetingConfirmed;
+
+  /// No description provided for @failedToConfirmMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to confirm meeting'**
+  String get failedToConfirmMeeting;
+
+  /// No description provided for @meetingRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting rejected'**
+  String get meetingRejected;
+
+  /// No description provided for @failedToRejectMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to reject meeting'**
+  String get failedToRejectMeeting;
+
+  /// No description provided for @meetingDetailsUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting details updated!'**
+  String get meetingDetailsUpdated;
+
+  /// No description provided for @failedToUpdateMeetingDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update meeting details'**
+  String get failedToUpdateMeetingDetails;
+
+  /// No description provided for @scheduleMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule Meeting'**
+  String get scheduleMeeting;
+
+  /// No description provided for @sharingProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing product'**
+  String get sharingProduct;
+
+  /// No description provided for @sharingService.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing {serviceType} service'**
+  String sharingService(Object serviceType);
+
+  /// No description provided for @sharingOrderDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing order details'**
+  String get sharingOrderDetails;
+
+  /// No description provided for @lostPet.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost Pet: {petName}'**
+  String lostPet(Object petName);
+
+  /// No description provided for @mixedBreed.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed breed'**
+  String get mixedBreed;
+
+  /// No description provided for @reward.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward: \${amount}'**
+  String reward(Object amount);
+
+  /// No description provided for @lostPetInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost Pet Information'**
+  String get lostPetInformation;
+
+  /// No description provided for @orderConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'ORDER CONFIRMATION'**
+  String get orderConfirmation;
+
+  /// No description provided for @orderNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Order #{orderId}'**
+  String orderNumber(Object orderId);
+
+  /// No description provided for @petIdentification.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet Identification'**
+  String get petIdentification;
+
+  /// No description provided for @isThisMediaOfPet.
+  ///
+  /// In en, this message translates to:
+  /// **'Is this {mediaType} of your missing pet?'**
+  String isThisMediaOfPet(Object mediaType);
+
+  /// No description provided for @confirmedThisIsPet.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed: This is your pet'**
+  String get confirmedThisIsPet;
+
+  /// No description provided for @confirmedThisIsNotPet.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed: This is not your pet'**
+  String get confirmedThisIsNotPet;
+
+  /// No description provided for @failedToSaveIdentification.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save identification'**
+  String get failedToSaveIdentification;
+
+  /// No description provided for @personConfirmedPet.
+  ///
+  /// In en, this message translates to:
+  /// **'{personName} has confirmed that this is their pet'**
+  String personConfirmedPet(Object personName);
+
+  /// No description provided for @personConfirmedNotPet.
+  ///
+  /// In en, this message translates to:
+  /// **'{personName} has confirmed that this is not their pet'**
+  String personConfirmedNotPet(Object personName);
+
+  /// No description provided for @picture.
+  ///
+  /// In en, this message translates to:
+  /// **'picture'**
+  String get picture;
+
+  /// No description provided for @photo.
+  ///
+  /// In en, this message translates to:
+  /// **'PHOTO'**
+  String get photo;
+
+  /// No description provided for @book.
+  ///
+  /// In en, this message translates to:
+  /// **'Book'**
+  String get book;
+
+  /// No description provided for @vetConsultation.
+  ///
+  /// In en, this message translates to:
+  /// **'VET CONSULTATION'**
+  String get vetConsultation;
+
+  /// No description provided for @storeChat.
+  ///
+  /// In en, this message translates to:
+  /// **'STORE CHAT'**
+  String get storeChat;
+
+  /// No description provided for @customerChat.
+  ///
+  /// In en, this message translates to:
+  /// **'CUSTOMER CHAT'**
+  String get customerChat;
+
+  /// No description provided for @serviceProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'{serviceType} PROVIDER'**
+  String serviceProvider(Object serviceType);
+
+  /// No description provided for @attachProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach Product'**
+  String get attachProduct;
+
+  /// No description provided for @attachService.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach Service'**
+  String get attachService;
+
+  /// No description provided for @attachOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach Order'**
+  String get attachOrder;
+
+  /// No description provided for @attachLostPet.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach Lost Pet'**
+  String get attachLostPet;
+
+  /// No description provided for @attachPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach Photo'**
+  String get attachPhoto;
+
+  /// No description provided for @attachVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach Video'**
+  String get attachVideo;
+
+  /// No description provided for @gallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get gallery;
+
+  /// No description provided for @imageUploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Image uploaded successfully'**
+  String get imageUploaded;
+
+  /// No description provided for @errorUploadingImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Error uploading image: {error}'**
+  String errorUploadingImage(Object error);
+
+  /// No description provided for @videoUploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Video uploaded successfully'**
+  String get videoUploaded;
+
+  /// No description provided for @errorUploadingVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Error uploading video: {error}'**
+  String errorUploadingVideo(Object error);
+
+  /// No description provided for @yesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'yesterday'**
+  String get yesterday;
+
+  /// No description provided for @longTimeAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'a long time ago'**
+  String get longTimeAgo;
+
+  /// No description provided for @messageDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Message deleted'**
+  String get messageDeleted;
+
+  /// No description provided for @areYouSureDeleteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this message?'**
+  String get areYouSureDeleteMessage;
+
+  /// No description provided for @yes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get yes;
+
+  /// No description provided for @unblockUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock User'**
+  String get unblockUser;
+
+  /// No description provided for @areYouSureBlockUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to block this user?'**
+  String get areYouSureBlockUser;
+
+  /// No description provided for @areYouSureUnblockUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to unblock this user?'**
+  String get areYouSureUnblockUser;
+
+  /// No description provided for @userUnblocked.
+  ///
+  /// In en, this message translates to:
+  /// **'User unblocked successfully'**
+  String get userUnblocked;
+
+  /// No description provided for @errorBlockingUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Error blocking user: {error}'**
+  String errorBlockingUser(Object error);
+
+  /// No description provided for @errorUnblockingUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Error unblocking user: {error}'**
+  String errorUnblockingUser(Object error);
+
+  /// No description provided for @reportReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Report Reason'**
+  String get reportReason;
+
+  /// No description provided for @spam.
+  ///
+  /// In en, this message translates to:
+  /// **'Spam'**
+  String get spam;
+
+  /// No description provided for @harassment.
+  ///
+  /// In en, this message translates to:
+  /// **'Harassment'**
+  String get harassment;
+
+  /// No description provided for @reportSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Report submitted successfully'**
+  String get reportSubmitted;
+
+  /// No description provided for @errorSubmittingReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Error submitting report: {error}'**
+  String errorSubmittingReport(Object error);
+
+  /// No description provided for @areYouSureClearChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to clear all messages in this chat?'**
+  String get areYouSureClearChat;
+
+  /// No description provided for @errorClearingChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Error clearing chat: {error}'**
+  String errorClearingChat(Object error);
+
+  /// No description provided for @meetingScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting scheduled successfully'**
+  String get meetingScheduled;
+
+  /// No description provided for @errorSchedulingMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Error scheduling meeting: {error}'**
+  String errorSchedulingMeeting(Object error);
+
+  /// No description provided for @meetingDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting Date'**
+  String get meetingDate;
+
+  /// No description provided for @meetingTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting Time'**
+  String get meetingTime;
+
+  /// No description provided for @meetingLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting Location'**
+  String get meetingLocation;
+
+  /// No description provided for @meetingNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting Notes'**
+  String get meetingNotes;
+
+  /// No description provided for @confirmMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Meeting'**
+  String get confirmMeeting;
+
+  /// No description provided for @meetingCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting cancelled'**
+  String get meetingCancelled;
+
+  /// No description provided for @errorConfirmingMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Error confirming meeting: {error}'**
+  String errorConfirmingMeeting(Object error);
+
+  /// No description provided for @errorCancellingMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Error cancelling meeting: {error}'**
+  String errorCancellingMeeting(Object error);
+
+  /// No description provided for @coordinateMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Coordinate a meeting to reunite with your pet! 🐾'**
+  String get coordinateMeeting;
+
+  /// No description provided for @proposeNewMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Propose New Meeting'**
+  String get proposeNewMeeting;
+
+  /// No description provided for @meetingPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting Place'**
+  String get meetingPlace;
+
+  /// No description provided for @enterMeetingLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter meeting location...'**
+  String get enterMeetingLocation;
+
+  /// No description provided for @selectDateAndTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date and time...'**
+  String get selectDateAndTime;
+
+  /// No description provided for @updateMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Meeting'**
+  String get updateMeeting;
+
+  /// No description provided for @proposeMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Propose Meeting'**
+  String get proposeMeeting;
+
+  /// No description provided for @waitingForConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for confirmation...'**
+  String get waitingForConfirmation;
+
+  /// No description provided for @waitingForResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for response...'**
+  String get waitingForResponse;
+
+  /// No description provided for @noLocationSet.
+  ///
+  /// In en, this message translates to:
+  /// **'No location set'**
+  String get noLocationSet;
+
+  /// No description provided for @reject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get reject;
+
+  /// No description provided for @editDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Details'**
+  String get editDetails;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

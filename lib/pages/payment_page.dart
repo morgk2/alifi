@@ -14,6 +14,7 @@ import '../services/payment_status_service.dart';
 import '../widgets/chargily_payment_webview.dart';
 import 'payment_success_page.dart';
 import 'payment_failed_page.dart';
+import '../l10n/app_localizations.dart';
 
 class PaymentPage extends StatefulWidget {
   final StoreProduct product;
@@ -60,8 +61,8 @@ class _PaymentPageState extends State<PaymentPage> {
   void _processPayment() async {
     if (_selectedPaymentIndex == -1) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a payment method.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.pleaseSelectAPaymentMethod),
           backgroundColor: Colors.red,
         ),
       );
@@ -80,7 +81,7 @@ class _PaymentPageState extends State<PaymentPage> {
       // TODO: Implement other payment methods
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${method['name']} payment coming soon!'),
+          content: Text(AppLocalizations.of(context)!.paymentComingSoon(method['name'])),
           backgroundColor: Colors.orange,
         ),
       );
@@ -122,7 +123,7 @@ class _PaymentPageState extends State<PaymentPage> {
         paymentMethod: paymentMethod,
         backUrl: 'https://alifi.app/payment/return',
         webhookUrl: 'https://slkygguxwqzwpnahnici.supabase.co/functions/v1/chargily-webhook',
-        description: 'Payment for ${widget.product.name} + App Fee',
+        description: AppLocalizations.of(context)!.paymentForProductPlusAppFee(widget.product.name),
         metadata: {
           'userId': user.id,
           'productId': widget.product.id,
@@ -157,7 +158,7 @@ class _PaymentPageState extends State<PaymentPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating payment: $e'),
+            content: Text(AppLocalizations.of(context)!.errorCreatingPayment(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -184,7 +185,7 @@ class _PaymentPageState extends State<PaymentPage> {
           builder: (context) => PaymentFailedPage(
             amount: dzdAmount, // Pass the converted DZD amount
             paymentMethod: _paymentMethods[_selectedPaymentIndex]['name'],
-            errorMessage: 'Payment was cancelled',
+            errorMessage: AppLocalizations.of(context)!.paymentWasCancelled,
             onRetry: () {
               Navigator.of(context).pop();
               _processChargilyPayment(_paymentMethods[_selectedPaymentIndex]['name']);
@@ -238,7 +239,7 @@ class _PaymentPageState extends State<PaymentPage> {
               
               // Title
               Text(
-                'Processing Payment',
+                AppLocalizations.of(context)!.processingPaymentTitle,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -249,7 +250,7 @@ class _PaymentPageState extends State<PaymentPage> {
               
               // Subtitle
               Text(
-                'Please wait while we verify your payment',
+                AppLocalizations.of(context)!.pleaseWaitWhileWeVerifyYourPayment,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey.shade600,
@@ -267,7 +268,7 @@ class _PaymentPageState extends State<PaymentPage> {
               
               // Status text
               Text(
-                'Verifying payment status...',
+                AppLocalizations.of(context)!.verifyingPaymentStatus,
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade500,
@@ -324,7 +325,7 @@ class _PaymentPageState extends State<PaymentPage> {
               builder: (context) => PaymentFailedPage(
                 amount: dzdAmount,
                 paymentMethod: _paymentMethods[_selectedPaymentIndex]['name'],
-                errorMessage: 'Payment failed',
+                errorMessage: AppLocalizations.of(context)!.paymentFailed,
                 onRetry: () {
                   Navigator.of(context).pop();
                   _processChargilyPayment(_paymentMethods[_selectedPaymentIndex]['name']);
@@ -395,7 +396,7 @@ class _PaymentPageState extends State<PaymentPage> {
               
               // Title
               Text(
-                'Verifying Payment',
+                AppLocalizations.of(context)!.verifyingPayment,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -406,7 +407,7 @@ class _PaymentPageState extends State<PaymentPage> {
               
               // Subtitle
               Text(
-                'Checking payment status manually',
+                AppLocalizations.of(context)!.checkingPaymentStatusManually,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey.shade600,
@@ -424,7 +425,7 @@ class _PaymentPageState extends State<PaymentPage> {
               
               // Status text
               Text(
-                'Please wait while we verify your payment',
+                AppLocalizations.of(context)!.pleaseWaitWhileWeVerifyYourPayment,
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade500,
@@ -466,7 +467,7 @@ class _PaymentPageState extends State<PaymentPage> {
             builder: (context) => PaymentFailedPage(
               amount: dzdAmount,
               paymentMethod: _paymentMethods[_selectedPaymentIndex]['name'],
-              errorMessage: 'Payment verification timeout. Please check your payment status manually.',
+              errorMessage: AppLocalizations.of(context)!.paymentVerificationTimeout,
               onRetry: () {
                 Navigator.of(context).pop();
                 _processChargilyPayment(_paymentMethods[_selectedPaymentIndex]['name']);
@@ -530,7 +531,7 @@ class _PaymentPageState extends State<PaymentPage> {
         status: 'ordered',
         createdAt: DateTime.now(),
         chatMessageId: '', // Will be set after creating the order
-        notes: 'Payment Method: Cash on Delivery | Status: Pending Payment',
+        notes: AppLocalizations.of(context)!.paymentMethodCashOnDelivery,
       );
 
       // Create the order using DatabaseService (this will increment product totalOrders)
@@ -540,7 +541,7 @@ class _PaymentPageState extends State<PaymentPage> {
       await FirebaseFirestore.instance.collection('chat_messages').add({
         'senderId': user.id,
         'receiverId': widget.product.storeId,
-        'message': 'Hello! I just placed an order for ${widget.product.name}. Payment on delivery. Order ID: $orderId',
+        'message': AppLocalizations.of(context)!.helloIJustPlacedAnOrder(widget.product.name, orderId),
         'timestamp': FieldValue.serverTimestamp(),
         'isRead': false,
         'productAttachment': {
@@ -572,7 +573,7 @@ class _PaymentPageState extends State<PaymentPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error processing order: $e'),
+            content: Text(AppLocalizations.of(context)!.errorProcessingOrder(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -639,9 +640,9 @@ class _PaymentPageState extends State<PaymentPage> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  const Text(
-                    'Complete Payment',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.completePayment,
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
@@ -675,9 +676,9 @@ class _PaymentPageState extends State<PaymentPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Order Summary',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context)!.orderSummary,
+                            style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
@@ -759,13 +760,13 @@ class _PaymentPageState extends State<PaymentPage> {
                             builder: (context, currencyService, child) {
                               return Column(
                                 children: [
-                                  _buildPriceRow('Subtotal', currencyService.formatProductPrice(widget.subtotal, widget.product.currency)),
+                                  _buildPriceRow(AppLocalizations.of(context)!.subtotal(widget.quantity), currencyService.formatProductPrice(widget.subtotal, widget.product.currency)),
                                   const SizedBox(height: 12),
-                                  _buildPriceRow('Tax', currencyService.formatProductPrice(widget.tax, widget.product.currency)),
+                                  _buildPriceRow(AppLocalizations.of(context)!.tax, currencyService.formatProductPrice(widget.tax, widget.product.currency)),
                                   const SizedBox(height: 12),
-                                  _buildPriceRow('App Fee', currencyService.formatProductPrice(470.0, 'DZD'), isHighlighted: true),
+                                  _buildPriceRow(AppLocalizations.of(context)!.appFee, currencyService.formatProductPrice(470.0, 'DZD'), isHighlighted: true),
                                   const SizedBox(height: 12),
-                                  _buildPriceRow('Shipping', 'Free', isGreen: true),
+                                  _buildPriceRow(AppLocalizations.of(context)!.shipping, AppLocalizations.of(context)!.free, isGreen: true),
                                   const SizedBox(height: 16),
                                   Container(
                                     height: 1,
@@ -773,7 +774,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                   ),
                                   const SizedBox(height: 16),
                                   _buildPriceRow(
-                                    'Total',
+                                    AppLocalizations.of(context)!.total,
                                     currencyService.formatProductPrice(widget.total + 470.0, 'DZD'),
                                     isTotal: true,
                                   ),
@@ -805,9 +806,9 @@ class _PaymentPageState extends State<PaymentPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Choose Payment Method',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context)!.choosePaymentMethod,
+                            style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
@@ -881,7 +882,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'CIB e-payment',
+                                          AppLocalizations.of(context)!.cibEpayment,
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
@@ -892,7 +893,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Pay securely with your CIB card',
+                                          AppLocalizations.of(context)!.paySecurelyWithYourCibCard,
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: Colors.grey[600],
@@ -991,7 +992,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'EDAHABIA',
+                                          AppLocalizations.of(context)!.edahabia,
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
@@ -1002,7 +1003,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Pay with your EDAHABIA card',
+                                          AppLocalizations.of(context)!.payWithYourEdahabiaCard,
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: Colors.grey[600],
@@ -1040,7 +1041,7 @@ class _PaymentPageState extends State<PaymentPage> {
                             child: Column(
                               children: [
                                 Text(
-                                  'Powered by',
+                                  AppLocalizations.of(context)!.poweredBy,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey[500],
@@ -1115,7 +1116,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'Payment on Delivery',
+                                          AppLocalizations.of(context)!.paymentOnDelivery,
                                           style: TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w600,
@@ -1126,7 +1127,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          'Pay when your order arrives',
+                                          AppLocalizations.of(context)!.payWhenYourOrderArrives,
                                           style: TextStyle(
                                             fontSize: 13,
                                             color: Colors.grey[600],
@@ -1204,9 +1205,9 @@ class _PaymentPageState extends State<PaymentPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Total Amount',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.totalAmount,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: Colors.black,
@@ -1256,9 +1257,9 @@ class _PaymentPageState extends State<PaymentPage> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            const Text(
-                              'Processing Payment...',
-                              style: TextStyle(
+                            Text(
+                              AppLocalizations.of(context)!.processingPayment,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -1277,8 +1278,8 @@ class _PaymentPageState extends State<PaymentPage> {
                             const SizedBox(width: 8),
                             Text(
                               _selectedPaymentIndex == -1 
-                                  ? 'Select Payment Method'
-                                  : 'Complete Secure Payment',
+                                  ? AppLocalizations.of(context)!.selectPaymentMethod
+                                  : AppLocalizations.of(context)!.completeSecurePayment,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1331,9 +1332,9 @@ class OrderConfirmationPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              const Text(
-                'Order Confirmed!',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)!.orderConfirmed,
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -1344,7 +1345,7 @@ class OrderConfirmationPage extends StatelessWidget {
                              Consumer<CurrencyService>(
                  builder: (context, currencyService, child) {
                    return Text(
-                     'Your order of ${currencyService.formatPrice(orderTotal)} has been confirmed.',
+                     AppLocalizations.of(context)!.yourOrderOfHasBeenConfirmed(currencyService.formatPrice(orderTotal)),
                      style: TextStyle(
                        fontSize: 16,
                        color: Colors.grey[600],
@@ -1371,7 +1372,7 @@ class OrderConfirmationPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Payment on Delivery',
+                        AppLocalizations.of(context)!.paymentOnDelivery,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -1380,7 +1381,7 @@ class OrderConfirmationPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Your order has been confirmed! You will pay when the product is delivered to your address.',
+                        AppLocalizations.of(context)!.yourOrderHasBeenConfirmed,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.green[700],
@@ -1405,9 +1406,9 @@ class OrderConfirmationPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Back to Home',
-                    style: TextStyle(
+                  child: Text(
+                    AppLocalizations.of(context)!.backToHome,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,

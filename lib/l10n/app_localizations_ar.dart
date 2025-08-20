@@ -88,7 +88,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String errorMarkingPetAsFound(Object error) {
-    return 'خطأ في تمييز الحيوان كأنه تم العثور عليه: $error';
+    return 'خطأ في تحديد الحيوان الأليف كموجود: $error';
   }
 
   @override
@@ -274,12 +274,14 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String error(Object error, Object errorMessage) {
-    return 'خطأ: $errorMessage';
+  String error(Object error, Object message) {
+    return 'خطأ: $message';
   }
 
   @override
-  String get lastSeen => 'آخر مرة شوهد';
+  String lastSeen(Object location, Object time) {
+    return 'آخر رؤية: $location';
+  }
 
   @override
   String physicalPetIdFor(Object petName) {
@@ -1104,7 +1106,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get technicalProblems => 'مشاكل تقنية';
 
   @override
-  String get other => 'آخر';
+  String get other => 'أخرى';
 
   @override
   String get selectProblemType => 'اختر نوع المشكلة';
@@ -1501,7 +1503,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get inStock => 'متوفر';
 
   @override
-  String get quantity => 'الكمية';
+  String quantity(Object qty) {
+    return 'الكمية: $qty';
+  }
 
   @override
   String get selectQuantity => 'اختر الكمية';
@@ -1680,7 +1684,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shipped => 'تم الشحن';
 
   @override
-  String get delivered => 'تم التوصيل';
+  String get delivered => 'تم التسليم';
 
   @override
   String get cancelled => 'ملغي';
@@ -1745,7 +1749,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get newMessage => 'رسالة جديدة';
 
   @override
-  String get unreadMessages => 'رسائل غير مقروءة';
+  String unreadMessages(Object count) {
+    return '$count رسائل غير مقروءة';
+  }
 
   @override
   String get markAsRead => 'تحديد كمقروء';
@@ -1763,10 +1769,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get clearChat => 'مسح المحادثة';
 
   @override
-  String get chatCleared => 'تم مسح المحادثة';
+  String get chatCleared => 'تم مسح المحادثة بنجاح';
 
   @override
-  String get userBlocked => 'تم حظر المستخدم';
+  String get userBlocked => 'تم حظر المستخدم بنجاح';
 
   @override
   String get userReported => 'تم الإبلاغ عن المستخدم';
@@ -2141,7 +2147,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String failedToSendMessage(Object error) {
-    return 'Failed to send message: $error';
+    return 'فشل في إرسال الرسالة: $error';
   }
 
   @override
@@ -2513,7 +2519,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get minute => 'minute';
 
   @override
-  String get justNow => 'Just now';
+  String get justNow => 'الآن';
 
   @override
   String get ago => 'ago';
@@ -3769,7 +3775,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get selectPetToReportMissing => 'اختر حيوان أليف للإبلاغ عن فقدانه';
 
   @override
-  String get report => 'إبلاغ';
+  String get report => 'بلاغ';
 
   @override
   String get lb => 'رطل';
@@ -4065,7 +4071,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get found => 'تم العثور عليه';
 
   @override
-  String get markAsFound => 'تحديد كموجود؟';
+  String get markAsFound => 'تحديد كموجود';
 
   @override
   String get markAsFoundConfirmation => 'هل أنت متأكد من أنك تريد تحديد هذا الحيوان كموجود؟';
@@ -4164,9 +4170,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String petMarkedAsFound(Object petName) {
-    return 'تم تحديد $petName كموجود!';
-  }
+  String get petMarkedAsFound => 'تم تحديد الحيوان الأليف كموجود بنجاح';
 
   @override
   String failedToMarkAsFound(Object error) {
@@ -4224,13 +4228,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get appFee => 'رسوم التطبيق';
 
   @override
-  String get total => 'المجموع';
+  String get total => 'المجموع: ';
 
   @override
   String get addAddressToContinue => 'أضف عنوان للمتابعة';
 
   @override
-  String get completePayment => 'إكمال الدفع';
+  String get completePayment => 'إتمام الدفع';
 
   @override
   String get choosePaymentMethod => 'اختر طريقة الدفع';
@@ -4242,16 +4246,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get paySecurelyWithYourCibCard => 'ادفع بأمان ببطاقة CIB الخاصة بك';
 
   @override
-  String get edahabia => 'العهدية';
+  String get edahabia => 'الذهبية';
 
   @override
-  String get payWithYourEdahabiaCard => 'ادفع ببطاقة العهدية الخاصة بك';
+  String get payWithYourEdahabiaCard => 'ادفع ببطاقة الذهبية الخاصة بك';
 
   @override
-  String get poweredBy => 'مدعوم بواسطة';
+  String get poweredBy => 'مدعوم من';
 
   @override
-  String get paymentOnDelivery => 'الدفع عند التوصيل';
+  String get paymentOnDelivery => 'الدفع عند التسليم';
 
   @override
   String get payWhenYourOrderArrives => 'ادفع عند وصول طلبك';
@@ -4263,10 +4267,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get selectPaymentMethod => 'اختر طريقة الدفع';
 
   @override
-  String get completeSecurePayment => 'إكمال الدفع الآمن';
+  String get completeSecurePayment => 'إتمام الدفع الآمن';
 
   @override
-  String get processingPayment => 'جاري معالجة الدفع...';
+  String get processingPayment => 'معالجة الدفع...';
 
   @override
   String get pleaseSelectAPaymentMethod => 'يرجى اختيار طريقة دفع.';
@@ -4291,16 +4295,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pleaseWaitWhileWeVerifyYourPayment => 'يرجى الانتظار بينما نتحقق من دفعتك';
 
   @override
-  String get verifyingPaymentStatus => 'جاري التحقق من حالة الدفع...';
+  String get verifyingPaymentStatus => 'التحقق من حالة الدفع...';
 
   @override
   String get verifyingPayment => 'التحقق من الدفع';
 
   @override
-  String get checkingPaymentStatusManually => 'التحقق من حالة الدفع يدوياً';
+  String get checkingPaymentStatusManually => 'فحص حالة الدفع يدوياً';
 
   @override
-  String get paymentVerificationTimeout => 'انتهت مهلة التحقق من الدفع. يرجى التحقق من حالة دفعتك يدوياً.';
+  String get paymentVerificationTimeout => 'انتهت مهلة التحقق من الدفع. يرجى فحص حالة الدفع يدوياً.';
 
   @override
   String get paymentFailed => 'فشل الدفع';
@@ -4312,16 +4316,30 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String paymentForProductPlusAppFee(Object productName) {
-    return 'الدفع مقابل $productName + رسوم التطبيق';
+    return 'الدفع لـ $productName + رسوم التطبيق';
   }
 
   @override
-  String get paymentMethodCashOnDelivery => 'طريقة الدفع: نقداً عند التوصيل | الحالة: انتظار الدفع';
+  String get paymentMethodCashOnDelivery => 'طريقة الدفع: الدفع عند التسليم | الحالة: في انتظار الدفع';
 
   @override
   String helloIJustPlacedAnOrder(Object orderId, Object productName) {
-    return 'مرحباً! لقد قدمت طلباً لـ $productName. الدفع عند التوصيل. رقم الطلب: $orderId';
+    return 'مرحباً! لقد قمت للتو بتقديم طلب لـ $productName. الدفع عند التسليم. رقم الطلب: $orderId';
   }
+
+  @override
+  String get orderConfirmed => 'تم تأكيد الطلب!';
+
+  @override
+  String yourOrderOfHasBeenConfirmed(Object amount) {
+    return 'تم تأكيد طلبك بقيمة $amount.';
+  }
+
+  @override
+  String get yourOrderHasBeenConfirmed => 'تم تأكيد طلبك! ستدفع عند تسليم المنتج إلى عنوانك.';
+
+  @override
+  String get backToHome => 'العودة إلى الصفحة الرئيسية';
 
   @override
   String get paymentSuccessful => 'تم الدفع بنجاح!';
@@ -4332,15 +4350,15 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String orderId(Object orderId) {
-    return 'رقم الطلب: $orderId';
+  String orderId(Object id) {
+    return 'رقم الطلب: $id';
   }
 
   @override
-  String get paymentProcessedSuccessfully => 'تم معالجة دفعتك بنجاح. ستتلقى بريد إلكتروني للتأكيد قريباً.';
+  String get paymentProcessedSuccessfully => 'تم معالجة دفعتك بنجاح. ستتلقى رسالة تأكيد بالبريد الإلكتروني قريباً.';
 
   @override
-  String get continue => 'متابعة';
+  String get continueButton => 'متابعة';
 
   @override
   String get paymentFailedTitle => 'فشل الدفع';
@@ -4352,16 +4370,511 @@ class AppLocalizationsAr extends AppLocalizations {
   String get goBack => 'العودة';
 
   @override
-  String get orderConfirmed => 'تم تأكيد الطلب!';
+  String get noOrdersYet => 'لا توجد طلبات بعد';
 
   @override
-  String yourOrderOfHasBeenConfirmed(Object amount) {
-    return 'تم تأكيد طلبك البالغ $amount.';
+  String get noMessagesYet => 'لا توجد رسائل بعد';
+
+  @override
+  String get viewOrder => 'عرض الطلب';
+
+  @override
+  String get orderCancelled => 'تم إلغاء الطلب بنجاح';
+
+  @override
+  String errorCancellingOrder(Object error) {
+    return 'خطأ في إلغاء الطلب: $error';
   }
 
   @override
-  String get yourOrderHasBeenConfirmed => 'تم تأكيد طلبك! ستدفع عند توصيل المنتج إلى عنوانك.';
+  String get noUnreadMessages => 'لا توجد رسائل غير مقروءة';
 
   @override
-  String get backToHome => 'العودة إلى الرئيسية';
+  String get pleaseLogInToViewOrders => 'يرجى تسجيل الدخول لعرض الطلبات';
+
+  @override
+  String errorLoadingOrders(Object error) {
+    return 'خطأ في تحميل الطلبات: $error';
+  }
+
+  @override
+  String get checkConsoleForErrorDetails => 'تحقق من وحدة التحكم للحصول على تفاصيل الخطأ';
+
+  @override
+  String get yourOrdersWillAppearHere => 'ستظهر طلباتك هنا';
+
+  @override
+  String get lastSeenLabel => 'آخر مرة شوهد';
+
+  @override
+  String errorMessage(Object error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String petMarkedAsFoundWithName(Object petName) {
+    return 'تم تحديد $petName كموجود!';
+  }
+
+  @override
+  String storeWithName(Object storeName) {
+    return 'المتجر: $storeName';
+  }
+
+  @override
+  String get confirmDelivery => 'تأكيد التسليم';
+
+  @override
+  String get orderStatusPending => 'في الانتظار';
+
+  @override
+  String get orderStatusOrdered => 'تم الطلب';
+
+  @override
+  String get orderStatusConfirmed => 'مؤكد';
+
+  @override
+  String get orderStatusShipped => 'تم الشحن';
+
+  @override
+  String get orderStatusDelivered => 'تم التسليم';
+
+  @override
+  String get orderStatusConfirmedDelivered => 'تم تأكيد التسليم';
+
+  @override
+  String get orderStatusDisputedDelivery => 'تسليم متنازع عليه';
+
+  @override
+  String get orderStatusCancelled => 'ملغى';
+
+  @override
+  String get orderStatusRefunded => 'مسترد';
+
+  @override
+  String daysAgo(Object days) {
+    return 'منذ $days يوم';
+  }
+
+  @override
+  String hoursAgo(Object hours) {
+    return 'منذ $hours ساعة';
+  }
+
+  @override
+  String minutesAgo(Object minutes) {
+    return 'منذ $minutes دقيقة';
+  }
+
+  @override
+  String get unknownStore => 'متجر غير معروف';
+
+  @override
+  String get errorLoadingStoreInfo => 'خطأ في تحميل معلومات المتجر';
+
+  @override
+  String get noDiscussionsYet => 'لا توجد مناقشات بعد';
+
+  @override
+  String get conversationsWithSellersWillAppearHere => 'ستظهر محادثاتك مع البائعين هنا';
+
+  @override
+  String errorLoadingDiscussions(Object error) {
+    return 'خطأ في تحميل المناقشات: $error';
+  }
+
+  @override
+  String get pleaseLogInToViewDiscussions => 'يرجى تسجيل الدخول لعرض المناقشات';
+
+  @override
+  String get invalidConversationData => 'بيانات محادثة غير صالحة';
+
+  @override
+  String get orderProgress => 'تقدم الطلب';
+
+  @override
+  String stepOf(Object current, Object total) {
+    return 'الخطوة $current من $total';
+  }
+
+  @override
+  String get typeAMessage => 'اكتب رسالة...';
+
+  @override
+  String get shareMedia => 'مشاركة الوسائط';
+
+  @override
+  String get camera => 'الكاميرا';
+
+  @override
+  String get takeAPhoto => 'التقاط صورة';
+
+  @override
+  String get photoLibrary => 'مكتبة الصور';
+
+  @override
+  String get chooseFromLibrary => 'اختيار من المكتبة';
+
+  @override
+  String get video => 'فيديو';
+
+  @override
+  String get recordOrChooseVideo => 'تسجيل أو اختيار فيديو';
+
+  @override
+  String errorSelectingMedia(Object error) {
+    return 'خطأ في اختيار الوسائط: $error';
+  }
+
+  @override
+  String uploading(Object current, Object total) {
+    return 'جاري الرفع... ($current/$total)';
+  }
+
+  @override
+  String mediaAttachments(Object count) {
+    return 'مرفقات الوسائط ($count)';
+  }
+
+  @override
+  String get failedToUploadMedia => 'فشل في رفع ملفات الوسائط';
+
+  @override
+  String get checkOutThisProduct => 'تحقق من هذا المنتج!';
+
+  @override
+  String get interestedInYourService => 'مهتم بخدمتك';
+
+  @override
+  String get aboutMyLostPet => 'عن حيواني الأليف المفقود';
+
+  @override
+  String get petRescueConfirmation => 'تأكيد إنقاذ الحيوان الأليف';
+
+  @override
+  String didPersonHelpReunite(Object personName) {
+    return 'هل ساعدك $personName بنجاح في لم شملك بحيوانك الأليف المفقود في الاجتماع المجدول؟';
+  }
+
+  @override
+  String get addToRescueCount => 'سيضيف هذا +1 إلى عدد الحيوانات الأليفة التي أنقذها ويساعد أصحاب الحيوانات الأليفة الآخرين.';
+
+  @override
+  String get no => 'لا';
+
+  @override
+  String get yesRescued => 'نعم، تم الإنقاذ!';
+
+  @override
+  String rescueRecorded(Object personName) {
+    return '🎉 تم تسجيل الإنقاذ! $personName لديه الآن +1 حيوان أليف تم إنقاذه.';
+  }
+
+  @override
+  String failedToRecordRescue(Object error) {
+    return 'فشل في تسجيل الإنقاذ: $error';
+  }
+
+  @override
+  String get markMeetingAsFinished => 'تحديد الاجتماع كمنتهي؟';
+
+  @override
+  String get markMeetingCompleted => 'سيحدد هذا الاجتماع المجدول كمكتمل ويسأل عما إذا كان حيوانك الأليف قد تم إنقاذه بنجاح.';
+
+  @override
+  String get onlyOncePerMeeting => 'يمكنك القيام بذلك مرة واحدة فقط لكل اجتماع.';
+
+  @override
+  String get markAsFinished => 'وضع علامة كمنتهي';
+
+  @override
+  String get meetingMarkedFinished => '✅ تم تحديد الاجتماع كمنتهي!';
+
+  @override
+  String failedToFinishMeeting(Object error) {
+    return 'فشل في إنهاء الاجتماع: $error';
+  }
+
+  @override
+  String get meetingProposalSent => 'تم إرسال اقتراح الاجتماع!';
+
+  @override
+  String get failedToProposeMeeting => 'فشل في اقتراح اللقاء';
+
+  @override
+  String get meetingConfirmed => 'تم تأكيد الاجتماع';
+
+  @override
+  String get failedToConfirmMeeting => 'فشل في تأكيد اللقاء';
+
+  @override
+  String get meetingRejected => 'تم رفض اللقاء';
+
+  @override
+  String get failedToRejectMeeting => 'فشل في رفض اللقاء';
+
+  @override
+  String get meetingDetailsUpdated => 'تم تحديث تفاصيل اللقاء!';
+
+  @override
+  String get failedToUpdateMeetingDetails => 'فشل في تحديث تفاصيل اللقاء';
+
+  @override
+  String get scheduleMeeting => 'جدولة اجتماع';
+
+  @override
+  String get sharingProduct => 'مشاركة منتج';
+
+  @override
+  String sharingService(Object serviceType) {
+    return 'مشاركة خدمة $serviceType';
+  }
+
+  @override
+  String get sharingOrderDetails => 'مشاركة تفاصيل الطلب';
+
+  @override
+  String lostPet(Object petName) {
+    return 'حيوان أليف مفقود: $petName';
+  }
+
+  @override
+  String get mixedBreed => 'سلالة مختلطة';
+
+  @override
+  String reward(Object amount) {
+    return 'مكافأة: \$$amount';
+  }
+
+  @override
+  String get lostPetInformation => 'معلومات الحيوان الأليف المفقود';
+
+  @override
+  String get orderConfirmation => 'تأكيد الطلب';
+
+  @override
+  String orderNumber(Object orderId) {
+    return 'الطلب رقم #$orderId';
+  }
+
+  @override
+  String get petIdentification => 'تحديد هوية الحيوان الأليف';
+
+  @override
+  String isThisMediaOfPet(Object mediaType) {
+    return 'هل هذه $mediaType لحيوانك الأليف المفقود؟';
+  }
+
+  @override
+  String get confirmedThisIsPet => 'مؤكد: هذا هو حيوانك الأليف';
+
+  @override
+  String get confirmedThisIsNotPet => 'مؤكد: هذا ليس حيوانك الأليف';
+
+  @override
+  String get failedToSaveIdentification => 'فشل في حفظ التحديد';
+
+  @override
+  String personConfirmedPet(Object personName) {
+    return 'أكد $personName أن هذا هو حيوانه الأليف';
+  }
+
+  @override
+  String personConfirmedNotPet(Object personName) {
+    return 'أكد $personName أن هذا ليس حيوانه الأليف';
+  }
+
+  @override
+  String get picture => 'صورة';
+
+  @override
+  String get photo => 'صورة';
+
+  @override
+  String get book => 'حجز';
+
+  @override
+  String get vetConsultation => 'استشارة طبيب بيطري';
+
+  @override
+  String get storeChat => 'محادثة المتجر';
+
+  @override
+  String get customerChat => 'محادثة العميل';
+
+  @override
+  String serviceProvider(Object serviceType) {
+    return 'مقدم خدمة $serviceType';
+  }
+
+  @override
+  String get attachProduct => 'إرفاق منتج';
+
+  @override
+  String get attachService => 'إرفاق خدمة';
+
+  @override
+  String get attachOrder => 'إرفاق طلب';
+
+  @override
+  String get attachLostPet => 'إرفاق حيوان أليف مفقود';
+
+  @override
+  String get attachPhoto => 'إرفاق صورة';
+
+  @override
+  String get attachVideo => 'إرفاق فيديو';
+
+  @override
+  String get gallery => 'المعرض';
+
+  @override
+  String get imageUploaded => 'تم رفع الصورة بنجاح';
+
+  @override
+  String errorUploadingImage(Object error) {
+    return 'خطأ في رفع الصورة: $error';
+  }
+
+  @override
+  String get videoUploaded => 'تم رفع الفيديو بنجاح';
+
+  @override
+  String errorUploadingVideo(Object error) {
+    return 'خطأ في رفع الفيديو: $error';
+  }
+
+  @override
+  String get yesterday => 'أمس';
+
+  @override
+  String get longTimeAgo => 'منذ وقت طويل';
+
+  @override
+  String get messageDeleted => 'تم حذف الرسالة';
+
+  @override
+  String get areYouSureDeleteMessage => 'هل أنت متأكد من حذف هذه الرسالة؟';
+
+  @override
+  String get yes => 'نعم';
+
+  @override
+  String get unblockUser => 'إلغاء حظر المستخدم';
+
+  @override
+  String get areYouSureBlockUser => 'هل أنت متأكد من حظر هذا المستخدم؟';
+
+  @override
+  String get areYouSureUnblockUser => 'هل أنت متأكد من إلغاء حظر هذا المستخدم؟';
+
+  @override
+  String get userUnblocked => 'تم إلغاء حظر المستخدم بنجاح';
+
+  @override
+  String errorBlockingUser(Object error) {
+    return 'خطأ في حظر المستخدم: $error';
+  }
+
+  @override
+  String errorUnblockingUser(Object error) {
+    return 'خطأ في إلغاء حظر المستخدم: $error';
+  }
+
+  @override
+  String get reportReason => 'سبب الإبلاغ';
+
+  @override
+  String get spam => 'رسائل مزعجة';
+
+  @override
+  String get harassment => 'تحرش';
+
+  @override
+  String get reportSubmitted => 'تم تقديم البلاغ بنجاح';
+
+  @override
+  String errorSubmittingReport(Object error) {
+    return 'خطأ في تقديم البلاغ: $error';
+  }
+
+  @override
+  String get areYouSureClearChat => 'هل أنت متأكد من مسح جميع الرسائل في هذه المحادثة؟';
+
+  @override
+  String errorClearingChat(Object error) {
+    return 'خطأ في مسح المحادثة: $error';
+  }
+
+  @override
+  String get meetingScheduled => 'تم جدولة الاجتماع بنجاح';
+
+  @override
+  String errorSchedulingMeeting(Object error) {
+    return 'خطأ في جدولة الاجتماع: $error';
+  }
+
+  @override
+  String get meetingDate => 'تاريخ الاجتماع';
+
+  @override
+  String get meetingTime => 'وقت اللقاء';
+
+  @override
+  String get meetingLocation => 'موقع الاجتماع';
+
+  @override
+  String get meetingNotes => 'ملاحظات الاجتماع';
+
+  @override
+  String get confirmMeeting => 'تأكيد الاجتماع';
+
+  @override
+  String get meetingCancelled => 'تم إلغاء الاجتماع';
+
+  @override
+  String errorConfirmingMeeting(Object error) {
+    return 'خطأ في تأكيد الاجتماع: $error';
+  }
+
+  @override
+  String errorCancellingMeeting(Object error) {
+    return 'خطأ في إلغاء الاجتماع: $error';
+  }
+
+  @override
+  String get coordinateMeeting => 'تنسيق لقاء لإعادة توحيدك مع حيوانك الأليف! 🐾';
+
+  @override
+  String get proposeNewMeeting => 'اقتراح لقاء جديد';
+
+  @override
+  String get meetingPlace => 'مكان اللقاء';
+
+  @override
+  String get enterMeetingLocation => 'أدخل موقع اللقاء...';
+
+  @override
+  String get selectDateAndTime => 'اختر التاريخ والوقت...';
+
+  @override
+  String get updateMeeting => 'تحديث اللقاء';
+
+  @override
+  String get proposeMeeting => 'اقتراح لقاء';
+
+  @override
+  String get waitingForConfirmation => 'في انتظار التأكيد...';
+
+  @override
+  String get waitingForResponse => 'في انتظار الرد...';
+
+  @override
+  String get noLocationSet => 'لم يتم تحديد الموقع';
+
+  @override
+  String get reject => 'رفض';
+
+  @override
+  String get editDetails => 'تعديل التفاصيل';
 }

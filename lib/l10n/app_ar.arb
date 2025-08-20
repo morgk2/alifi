@@ -2256,5 +2256,294 @@
   "appFee": "رسوم التطبيق",
   "total": "المجموع",
   "next": "التالي",
-  "addAddressToContinue": "أضف عنوان للمتابعة"
+  "addAddressToContinue": "أضف عنوان للمتابعة",
+  
+  "@paymentPage": {
+    "description": "نصوص صفحة الدفع"
+  },
+  "completePayment": "إتمام الدفع",
+  "orderSummary": "ملخص الطلب",
+  "choosePaymentMethod": "اختر طريقة الدفع",
+  "cibEpayment": "الدفع الإلكتروني CIB",
+  "paySecurelyWithYourCibCard": "ادفع بأمان ببطاقة CIB الخاصة بك",
+  "edahabia": "الذهبية",
+  "payWithYourEdahabiaCard": "ادفع ببطاقة الذهبية الخاصة بك",
+  "poweredBy": "مدعوم من",
+  "paymentOnDelivery": "الدفع عند التسليم",
+  "payWhenYourOrderArrives": "ادفع عند وصول طلبك",
+  "totalAmount": "المبلغ الإجمالي",
+  "selectPaymentMethod": "اختر طريقة الدفع",
+  "completeSecurePayment": "إتمام الدفع الآمن",
+  "processingPayment": "معالجة الدفع...",
+  "pleaseSelectAPaymentMethod": "يرجى اختيار طريقة دفع.",
+  "paymentComingSoon": "دفع {methodName} قريباً!",
+  "errorCreatingPayment": "خطأ في إنشاء الدفع: {error}",
+  "paymentWasCancelled": "تم إلغاء الدفع",
+  "processingPaymentTitle": "معالجة الدفع",
+  "pleaseWaitWhileWeVerifyYourPayment": "يرجى الانتظار بينما نتحقق من دفعتك",
+  "verifyingPaymentStatus": "التحقق من حالة الدفع...",
+  "verifyingPayment": "التحقق من الدفع",
+  "checkingPaymentStatusManually": "فحص حالة الدفع يدوياً",
+  "paymentVerificationTimeout": "انتهت مهلة التحقق من الدفع. يرجى فحص حالة الدفع يدوياً.",
+  "paymentFailed": "فشل الدفع",
+  "errorProcessingOrder": "خطأ في معالجة الطلب: {error}",
+  "paymentForProductPlusAppFee": "الدفع لـ {productName} + رسوم التطبيق",
+  "paymentMethodCashOnDelivery": "طريقة الدفع: الدفع عند التسليم | الحالة: في انتظار الدفع",
+  "helloIJustPlacedAnOrder": "مرحباً! لقد قمت للتو بتقديم طلب لـ {productName}. الدفع عند التسليم. رقم الطلب: {orderId}",
+  
+  "@orderConfirmationPage": {
+    "description": "نصوص صفحة تأكيد الطلب"
+  },
+  "orderConfirmed": "تم تأكيد الطلب!",
+  "yourOrderOfHasBeenConfirmed": "تم تأكيد طلبك بقيمة {amount}.",
+  "yourOrderHasBeenConfirmed": "تم تأكيد طلبك! ستدفع عند تسليم المنتج إلى عنوانك.",
+  "backToHome": "العودة إلى الصفحة الرئيسية",
+
+  "@paymentSuccessPage": {
+    "description": "Payment success page related strings"
+  },
+  "paymentSuccessful": "تم الدفع بنجاح!",
+  "amount": "المبلغ: {amount}",
+  "paymentMethod": "طريقة الدفع: {method}",
+  "orderId": "رقم الطلب: {id}",
+  "paymentProcessedSuccessfully": "تم معالجة دفعتك بنجاح. ستتلقى رسالة تأكيد بالبريد الإلكتروني قريباً.",
+  "continueButton": "متابعة",
+
+  "@paymentFailedPage": {
+    "description": "Payment failed page related strings"
+  },
+  "paymentFailedTitle": "فشل الدفع",
+  "error": "خطأ: {message}",
+  "paymentCouldNotBeProcessed": "تعذر معالجة دفعتك. يرجى التحقق من تفاصيل الدفع والمحاولة مرة أخرى.",
+  "tryAgain": "حاول مرة أخرى",
+  "goBack": "العودة",
+
+  "@userOrdersPage": {
+    "description": "User orders page related strings"
+  },
+  "ordersAndMessages": "الطلبات والرسائل",
+  "orders": "الطلبات",
+  "messages": "الرسائل",
+  "noOrdersYet": "لا توجد طلبات بعد",
+  "noMessagesYet": "لا توجد رسائل بعد",
+  "orderStatus": "حالة الطلب",
+  "orderDate": "تاريخ الطلب",
+  "orderTotal": "إجمالي الطلب",
+  "viewOrder": "عرض الطلب",
+  "cancelOrder": "إلغاء الطلب",
+  "markAsFound": "تحديد كموجود",
+  "orderCancelled": "تم إلغاء الطلب بنجاح",
+  "errorCancellingOrder": "خطأ في إلغاء الطلب: {error}",
+  "petMarkedAsFound": "تم تحديد الحيوان الأليف كموجود بنجاح",
+  "errorMarkingPetAsFound": "خطأ في تحديد الحيوان الأليف كموجود: {error}",
+  "noUnreadMessages": "لا توجد رسائل غير مقروءة",
+  "unreadMessages": "{count} رسائل غير مقروءة",
+  "pleaseLogInToViewOrders": "يرجى تسجيل الدخول لعرض الطلبات",
+  "errorLoadingOrders": "خطأ في تحميل الطلبات: {error}",
+  "checkConsoleForErrorDetails": "تحقق من وحدة التحكم للحصول على تفاصيل الخطأ",
+  "yourOrdersWillAppearHere": "ستظهر طلباتك هنا",
+  "lastSeenLabel": "آخر مرة شوهد",
+  "errorMessage": "خطأ: {error}",
+  "petMarkedAsFoundWithName": "تم تحديد {petName} كموجود!",
+
+  "@orderCard": {
+    "description": "Order card related strings"
+  },
+  "storeWithName": "المتجر: {storeName}",
+  "quantity": "الكمية: {qty}",
+  "cancel": "إلغاء",
+  "report": "بلاغ",
+  "confirmDelivery": "تأكيد التسليم",
+  "orderStatusPending": "في الانتظار",
+  "orderStatusOrdered": "تم الطلب", 
+  "orderStatusConfirmed": "مؤكد",
+  "orderStatusShipped": "تم الشحن",
+  "orderStatusDelivered": "تم التسليم",
+  "orderStatusConfirmedDelivered": "تم تأكيد التسليم",
+  "orderStatusDisputedDelivery": "تسليم متنازع عليه",
+  "orderStatusCancelled": "ملغى",
+  "orderStatusRefunded": "مسترد",
+  "daysAgo": "منذ {days} أيام",
+  "hoursAgo": "منذ {hours} ساعات", 
+  "minutesAgo": "منذ {minutes} دقائق",
+  "justNow": "الآن",
+
+  "@discussionCard": {
+    "description": "Discussion/message card related strings"
+  },
+  "loading": "جاري التحميل...",
+  "unknownStore": "متجر غير معروف",
+  "errorLoadingStoreInfo": "خطأ في تحميل معلومات المتجر",
+  "noMessagesYet": "لا توجد رسائل بعد",
+  "noDiscussionsYet": "لا توجد مناقشات بعد",
+  "conversationsWithSellersWillAppearHere": "ستظهر محادثاتك مع البائعين هنا",
+  "errorLoadingDiscussions": "خطأ في تحميل المناقشات: {error}",
+  "pleaseLogInToViewDiscussions": "يرجى تسجيل الدخول لعرض المناقشات",
+  "invalidConversationData": "بيانات محادثة غير صالحة",
+
+  "@orderProgress": {
+    "description": "Order progress related strings"
+  },
+  "orderProgress": "تقدم الطلب",
+  "stepOf": "الخطوة {current} من {total}",
+  "ordered": "تم الطلب",
+  "confirmed": "مؤكد",
+  "shipped": "تم الشحن",
+  "delivered": "تم التسليم",
+
+  "@universalChatPage": {
+    "description": "Universal chat page related strings"
+  },
+  "typeAMessage": "اكتب رسالة...",
+  "send": "إرسال",
+  "attachProduct": "إرفاق منتج",
+  "attachService": "إرفاق خدمة",
+  "attachOrder": "إرفاق طلب",
+  "attachLostPet": "إرفاق حيوان أليف مفقود",
+  "attachPhoto": "إرفاق صورة",
+  "attachVideo": "إرفاق فيديو",
+  "camera": "الكاميرا",
+  "gallery": "المعرض",
+  "cancel": "إلغاء",
+  "messageSent": "تم إرسال الرسالة",
+  "errorSendingMessage": "خطأ في إرسال الرسالة: {error}",
+  "imageUploaded": "تم رفع الصورة بنجاح",
+  "errorUploadingImage": "خطأ في رفع الصورة: {error}",
+  "videoUploaded": "تم رفع الفيديو بنجاح",
+  "errorUploadingVideo": "خطأ في رفع الفيديو: {error}",
+  "typing": "يكتب...",
+  "online": "متصل",
+  "lastSeen": "آخر ظهور {time}",
+  "today": "اليوم",
+  "yesterday": "أمس",
+  "thisWeek": "هذا الأسبوع",
+  "thisMonth": "هذا الشهر",
+  "longTimeAgo": "منذ وقت طويل",
+  "messageDeleted": "تم حذف الرسالة",
+  "deleteMessage": "حذف الرسالة",
+  "areYouSureDeleteMessage": "هل أنت متأكد من حذف هذه الرسالة؟",
+  "yes": "نعم",
+  "no": "لا",
+  "blockUser": "حظر المستخدم",
+  "unblockUser": "إلغاء حظر المستخدم",
+  "areYouSureBlockUser": "هل أنت متأكد من حظر هذا المستخدم؟",
+  "areYouSureUnblockUser": "هل أنت متأكد من إلغاء حظر هذا المستخدم؟",
+  "userBlocked": "تم حظر المستخدم بنجاح",
+  "userUnblocked": "تم إلغاء حظر المستخدم بنجاح",
+  "errorBlockingUser": "خطأ في حظر المستخدم: {error}",
+  "errorUnblockingUser": "خطأ في إلغاء حظر المستخدم: {error}",
+  "reportUser": "الإبلاغ عن المستخدم",
+  "reportReason": "سبب الإبلاغ",
+  "spam": "رسائل مزعجة",
+  "inappropriateContent": "محتوى غير مناسب",
+  "harassment": "تحرش",
+  "other": "أخرى",
+  "reportSubmitted": "تم تقديم البلاغ بنجاح",
+  "errorSubmittingReport": "خطأ في تقديم البلاغ: {error}",
+  "clearChat": "مسح المحادثة",
+  "areYouSureClearChat": "هل أنت متأكد من مسح جميع الرسائل في هذه المحادثة؟",
+  "chatCleared": "تم مسح المحادثة بنجاح",
+  "errorClearingChat": "خطأ في مسح المحادثة: {error}",
+  "meetingScheduled": "تم جدولة الاجتماع بنجاح",
+  "errorSchedulingMeeting": "خطأ في جدولة الاجتماع: {error}",
+  "scheduleMeeting": "جدولة اجتماع",
+  "meetingDate": "تاريخ الاجتماع",
+  "meetingTime": "وقت الاجتماع",
+  "meetingLocation": "موقع الاجتماع",
+  "meetingNotes": "ملاحظات الاجتماع",
+  "confirmMeeting": "تأكيد الاجتماع",
+  "meetingConfirmed": "تم تأكيد الاجتماع",
+  "meetingCancelled": "تم إلغاء الاجتماع",
+  "errorConfirmingMeeting": "خطأ في تأكيد الاجتماع: {error}",
+  "errorCancellingMeeting": "خطأ في إلغاء الاجتماع: {error}",
+  
+  "shareMedia": "مشاركة الوسائط",
+  "takeAPhoto": "التقاط صورة",
+  "photoLibrary": "مكتبة الصور",
+  "chooseFromLibrary": "اختيار من المكتبة",
+  "recordOrChooseVideo": "تسجيل أو اختيار فيديو",
+  "errorSelectingMedia": "خطأ في اختيار الوسائط: {error}",
+  "uploading": "جاري الرفع... ({current}/{total})",
+  "mediaAttachments": "مرفقات الوسائط ({count})",
+  "failedToUploadMedia": "فشل في رفع ملفات الوسائط",
+  "checkOutThisProduct": "تحقق من هذا المنتج!",
+  "interestedInYourService": "مهتم بخدمتك",
+  "orderDetails": "تفاصيل الطلب",
+  "aboutMyLostPet": "عن حيواني الأليف المفقود",
+  "failedToSendMessage": "فشل في إرسال الرسالة: {error}",
+  "justNow": "الآن",
+  "minutesAgo": "منذ {minutes} دقيقة",
+  "hoursAgo": "منذ {hours} ساعة",
+  "daysAgo": "منذ {days} يوم",
+  "petRescueConfirmation": "تأكيد إنقاذ الحيوان الأليف",
+  "didPersonHelpReunite": "هل ساعدك {personName} بنجاح في لم شملك بحيوانك الأليف المفقود في الاجتماع المجدول؟",
+  "addToRescueCount": "سيضيف هذا +1 إلى عدد الحيوانات الأليفة التي أنقذها ويساعد أصحاب الحيوانات الأليفة الآخرين.",
+  "yesRescued": "نعم، تم الإنقاذ!",
+  "rescueRecorded": "🎉 تم تسجيل الإنقاذ! {personName} لديه الآن +1 حيوان أليف تم إنقاذه.",
+  "failedToRecordRescue": "فشل في تسجيل الإنقاذ: {error}",
+  "markMeetingAsFinished": "تحديد الاجتماع كمنتهي؟",
+  "markMeetingCompleted": "سيحدد هذا الاجتماع المجدول كمكتمل ويسأل عما إذا كان حيوانك الأليف قد تم إنقاذه بنجاح.",
+  "onlyOncePerMeeting": "يمكنك القيام بذلك مرة واحدة فقط لكل اجتماع.",
+  "markAsFinished": "تحديد كمنتهي",
+  "meetingMarkedFinished": "✅ تم تحديد الاجتماع كمنتهي!",
+  "failedToFinishMeeting": "فشل في إنهاء الاجتماع: {error}",
+  "meetingProposalSent": "تم إرسال اقتراح الاجتماع!",
+  "failedToProposeMeeting": "فشل في اقتراح الاجتماع",
+  "meetingConfirmed": "تم تأكيد الاجتماع!",
+  "failedToConfirmMeeting": "فشل في تأكيد الاجتماع",
+  "meetingRejected": "تم رفض الاجتماع",
+  "failedToRejectMeeting": "فشل في رفض الاجتماع",
+  "meetingDetailsUpdated": "تم تحديث تفاصيل الاجتماع!",
+  "failedToUpdateMeetingDetails": "فشل في تحديث تفاصيل الاجتماع",
+  "meetingConfirmed": "تم تأكيد الاجتماع",
+  "sharingProduct": "مشاركة منتج",
+  "sharingService": "مشاركة خدمة {serviceType}",
+  "sharingOrderDetails": "مشاركة تفاصيل الطلب",
+  "lostPet": "حيوان أليف مفقود: {petName}",
+  "mixedBreed": "سلالة مختلطة",
+  "reward": "مكافأة: ${amount}",
+  "lostPetInformation": "معلومات الحيوان الأليف المفقود",
+  "lastSeen": "آخر رؤية: {location}",
+  "orderConfirmation": "تأكيد الطلب",
+  "product": "المنتج",
+  "order": "الطلب",
+  "orderNumber": "الطلب رقم #{orderId}",
+  "total": "المجموع: ",
+  "petIdentification": "تحديد هوية الحيوان الأليف",
+  "isThisMediaOfPet": "هل هذه {mediaType} لحيوانك الأليف المفقود؟",
+  "confirmedThisIsPet": "مؤكد: هذا هو حيوانك الأليف",
+  "confirmedThisIsNotPet": "مؤكد: هذا ليس حيوانك الأليف",
+  "failedToSaveIdentification": "فشل في حفظ التحديد",
+  "personConfirmedPet": "أكد {personName} أن هذا هو حيوانه الأليف",
+  "personConfirmedNotPet": "أكد {personName} أن هذا ليس حيوانه الأليف",
+  "picture": "صورة",
+  "video": "فيديو",
+  "photo": "صورة",
+  "video": "فيديو",
+  "book": "حجز",
+  "vetConsultation": "استشارة طبيب بيطري",
+  "storeChat": "محادثة المتجر",
+  "customerChat": "محادثة العميل",
+  "serviceProvider": "مقدم خدمة {serviceType}",
+  "coordinateMeeting": "تنسيق لقاء لإعادة توحيدك مع حيوانك الأليف! 🐾",
+  "proposeNewMeeting": "اقتراح لقاء جديد",
+  "meetingPlace": "مكان اللقاء",
+  "enterMeetingLocation": "أدخل موقع اللقاء...",
+  "meetingTime": "وقت اللقاء",
+  "selectDateAndTime": "اختر التاريخ والوقت...",
+  "updateMeeting": "تحديث اللقاء",
+  "proposeMeeting": "اقتراح لقاء",
+  "waitingForConfirmation": "في انتظار التأكيد...",
+  "waitingForResponse": "في انتظار الرد...",
+  "noLocationSet": "لم يتم تحديد الموقع",
+  "reject": "رفض",
+  "confirm": "تأكيد",
+  "meetingRejected": "تم رفض اللقاء",
+  "editDetails": "تعديل التفاصيل",
+  "failedToProposeMeeting": "فشل في اقتراح اللقاء",
+  "failedToConfirmMeeting": "فشل في تأكيد اللقاء",
+  "failedToRejectMeeting": "فشل في رفض اللقاء",
+  "failedToUpdateMeetingDetails": "فشل في تحديث تفاصيل اللقاء",
+  "meetingDetailsUpdated": "تم تحديث تفاصيل اللقاء!",
+  "markAsFinished": "وضع علامة كمنتهي"
 }

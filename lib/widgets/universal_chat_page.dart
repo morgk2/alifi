@@ -14,7 +14,7 @@ import '../models/user.dart';
 import '../models/chat_message.dart';
 import '../models/store_product.dart';
 import '../models/service_ad.dart';
-import '../models/lost_pet.dart';
+
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../services/notification_service.dart';
@@ -25,6 +25,7 @@ import '../pages/service_ad_detail_page.dart';
 import '../pages/product_details_page.dart';
 import '../pages/booking_page.dart';
 import '../pages/user_profile_page.dart';
+import '../l10n/app_localizations.dart';
 
 enum ChatType {
   discussion,
@@ -108,6 +109,9 @@ class _UniversalChatPageState extends State<UniversalChatPage>
   bool _isUploadingMedia = false;
   int _uploadProgress = 0;
   int _totalUploads = 0;
+  
+  // Tapped messages to show timestamp
+  Set<String> _tappedMessages = {};
 
   @override
   void initState() {
@@ -195,10 +199,10 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.all(16),
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Text(
-                'Share Media',
+                AppLocalizations.of(context)!.shareMedia,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -214,8 +218,8 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 ),
                 child: const Icon(CupertinoIcons.camera, color: Colors.blue),
               ),
-              title: const Text('Camera'),
-              subtitle: const Text('Take a photo'),
+              title: Text(AppLocalizations.of(context)!.camera),
+              subtitle: Text(AppLocalizations.of(context)!.takeAPhoto),
               onTap: () {
                 Navigator.pop(context);
                 _pickMedia(ImageSource.camera, isVideo: false);
@@ -230,8 +234,8 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 ),
                 child: const Icon(CupertinoIcons.photo, color: Colors.green),
               ),
-              title: const Text('Photo Library'),
-              subtitle: const Text('Choose from library'),
+              title: Text(AppLocalizations.of(context)!.photoLibrary),
+              subtitle: Text(AppLocalizations.of(context)!.chooseFromLibrary),
               onTap: () {
                 Navigator.pop(context);
                 _pickMedia(ImageSource.gallery, isVideo: false);
@@ -246,8 +250,8 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 ),
                 child: const Icon(CupertinoIcons.videocam, color: Colors.purple),
               ),
-              title: const Text('Video'),
-              subtitle: const Text('Record or choose video'),
+              title: Text(AppLocalizations.of(context)!.video),
+              subtitle: Text(AppLocalizations.of(context)!.recordOrChooseVideo),
               onTap: () {
                 Navigator.pop(context);
                 _pickMedia(ImageSource.gallery, isVideo: true);
@@ -286,7 +290,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error selecting media: $e'),
+            content: Text(AppLocalizations.of(context)!.errorSelectingMedia(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -390,7 +394,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 
                 // Title
                 Text(
-                  'Pet Rescue Confirmation',
+                  AppLocalizations.of(context)!.petRescueConfirmation,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -401,7 +405,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 
                 // Content
                 Text(
-                  'Did $rescuerName successfully help you reunite with your lost pet at the scheduled meeting?',
+                  AppLocalizations.of(context)!.didPersonHelpReunite(rescuerName),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -412,7 +416,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 const SizedBox(height: 8),
                 
                 Text(
-                  'This will add +1 to their pet rescue count and help other pet owners.',
+                  AppLocalizations.of(context)!.addToRescueCount,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -449,7 +453,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'No',
+                                AppLocalizations.of(context)!.no,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -485,7 +489,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                               ),
                             ],
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
@@ -495,7 +499,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                               ),
                               SizedBox(width: 6),
                               Text(
-                                'Yes, Rescued!',
+                                AppLocalizations.of(context)!.yesRescued,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -553,7 +557,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🎉 Rescue recorded! ${widget.otherUser.displayName} now has +1 pets rescued.'),
+            content: Text(AppLocalizations.of(context)!.rescueRecorded(widget.otherUser.displayName ?? 'Someone')),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 4),
           ),
@@ -564,7 +568,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to record rescue: $e'),
+            content: Text(AppLocalizations.of(context)!.failedToRecordRescue(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -622,7 +626,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 
                 // Title
                 Text(
-                  'Mark Meeting as Finished?',
+                  AppLocalizations.of(context)!.markMeetingAsFinished,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -633,7 +637,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 
                 // Content
                 Text(
-                  'This will mark the scheduled meeting as completed and ask if your pet was successfully rescued.',
+                  AppLocalizations.of(context)!.markMeetingCompleted,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -644,7 +648,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 const SizedBox(height: 8),
                 
                 Text(
-                  'You can only do this once per meeting.',
+                  AppLocalizations.of(context)!.onlyOncePerMeeting,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -681,7 +685,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Cancel',
+                                AppLocalizations.of(context)!.cancel,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -717,7 +721,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                               ),
                             ],
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
@@ -727,7 +731,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                               ),
                               SizedBox(width: 6),
                               Text(
-                                'Mark as Finished',
+                                AppLocalizations.of(context)!.markAsFinished,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -761,8 +765,8 @@ class _UniversalChatPageState extends State<UniversalChatPage>
       // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Meeting marked as finished!'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.meetingMarkedFinished),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -782,7 +786,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to finish meeting: $e'),
+            content: Text(AppLocalizations.of(context)!.failedToFinishMeeting(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -938,60 +942,72 @@ class _UniversalChatPageState extends State<UniversalChatPage>
       //   _selectedDateTime = null;
       // });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Meeting proposal sent!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.meetingProposalSent),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       print('❌ Error proposing meeting: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to propose meeting'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.failedToProposeMeeting),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _confirmMeeting(String meetingId) async {
     try {
       await DatabaseService().updateMeetingStatus(meetingId, 'confirmed');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Meeting confirmed!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.meetingConfirmed),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       print('❌ Error confirming meeting: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to confirm meeting'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.failedToConfirmMeeting),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _rejectMeeting(String meetingId) async {
     try {
       await DatabaseService().updateMeetingStatus(meetingId, 'rejected');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Meeting rejected'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.meetingRejected),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     } catch (e) {
       print('❌ Error rejecting meeting: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to reject meeting'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.failedToRejectMeeting),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -1024,20 +1040,24 @@ class _UniversalChatPageState extends State<UniversalChatPage>
         _editingMeetingId = null;
       });
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Meeting details updated!'),
-          backgroundColor: Colors.blue,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.meetingDetailsUpdated),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
     } catch (e) {
       print('❌ Error updating meeting details: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to update meeting details'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.failedToUpdateMeetingDetails),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -1175,16 +1195,16 @@ class _UniversalChatPageState extends State<UniversalChatPage>
         if (finalMessage.isEmpty && attachmentData != null) {
           switch (attachmentData['type']) {
             case 'product':
-              finalMessage = 'Check out this product!';
+              finalMessage = AppLocalizations.of(context)!.checkOutThisProduct;
               break;
             case 'serviceAd':
-              finalMessage = 'Interested in your service';
+              finalMessage = AppLocalizations.of(context)!.interestedInYourService;
               break;
             case 'order':
-              finalMessage = 'Order details';
+              finalMessage = AppLocalizations.of(context)!.orderDetails;
               break;
             case 'lostPet':
-              finalMessage = 'About my lost pet';
+              finalMessage = AppLocalizations.of(context)!.aboutMyLostPet;
               break;
             case 'media':
               // Allow empty message for media - no forced text
@@ -1206,7 +1226,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to send message: $e'),
+            content: Text(AppLocalizations.of(context)!.failedToSendMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -1248,14 +1268,14 @@ class _UniversalChatPageState extends State<UniversalChatPage>
     
     switch (widget.chatType) {
       case ChatType.vetConsultation:
-        return 'VET CONSULTATION';
+        return AppLocalizations.of(context)!.vetConsultation;
       case ChatType.storeProduct:
-        return 'STORE CHAT';
+        return AppLocalizations.of(context)!.storeChat;
       case ChatType.storeReceiver:
-        return 'CUSTOMER CHAT';
+        return AppLocalizations.of(context)!.customerChat;
       case ChatType.serviceAd:
         return _attachedServiceAd != null 
-            ? '${_attachedServiceAd!.serviceType.name.toUpperCase()} PROVIDER'
+            ? AppLocalizations.of(context)!.serviceProvider(_attachedServiceAd!.serviceType.name)
             : null;
       case ChatType.discussion:
         return null;
@@ -1289,12 +1309,27 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                     final currentUser = authService.currentUser;
                     final isFromUser = currentUser?.id == message.senderId;
                     
+                    // Check if we should show date separator
+                    bool showDateSeparator = false;
+                    if (index > 0) {
+                      final previousMessage = _messages[index - 1];
+                      final timeDifference = message.timestamp.difference(previousMessage.timestamp).inMinutes;
+                      showDateSeparator = timeDifference > 30;
+                    } else {
+                      showDateSeparator = true; // Show for first message
+                    }
+                    
                     return Column(
                       children: [
+                        // Date separator
+                        if (showDateSeparator)
+                          _buildDateSeparator(message.timestamp),
+                        
                         _buildMessageWithAvatar(
                           isFromUser: isFromUser,
                           message: message.message,
                           timestamp: message.timestamp,
+                          messageId: message.id,
                         ),
                         if (message.productAttachment != null) ...[
                           const SizedBox(height: 8),
@@ -1415,7 +1450,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Book',
+                  AppLocalizations.of(context)!.book,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -1465,24 +1500,78 @@ class _UniversalChatPageState extends State<UniversalChatPage>
     );
   }
 
+  Widget _buildDateSeparator(DateTime timestamp) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 1,
+              color: Colors.grey[300],
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _formatDate(timestamp),
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+                fontFamily: AppFonts.getLocalizedFontFamily(context),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              height: 1,
+              color: Colors.grey[300],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMessageWithAvatar({
     required bool isFromUser,
     required String message,
     required DateTime timestamp,
+    required String messageId,
   }) {
     // Return empty container for empty messages (media-only messages)
     if (message.isEmpty) {
       return const SizedBox.shrink();
     }
     
+    // Determine alignment based on text direction and message sender
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    final isUserMessage = isFromUser;
+    
+    // For RTL (Arabic): user messages on left, other messages on right
+    // For LTR (English/French): user messages on right, other messages on left
+    final alignment = isRTL 
+        ? (isUserMessage ? Alignment.centerLeft : Alignment.centerRight)
+        : (isUserMessage ? Alignment.bottomRight : Alignment.centerLeft);
+    
+    final mainAxisAlignment = isRTL
+        ? (isUserMessage ? MainAxisAlignment.start : MainAxisAlignment.end)
+        : (isUserMessage ? MainAxisAlignment.end : MainAxisAlignment.start);
+    
     return Align(
-      alignment: isFromUser ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: alignment,
       child: Row(
-        mainAxisAlignment: isFromUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: mainAxisAlignment,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Avatar for messages from other user (left side)
-          if (!isFromUser) ...[
+          // Avatar for messages from other user
+          if (!isUserMessage) ...[
             GestureDetector(
               onTap: () => _navigateToUserProfile(widget.otherUser),
               child: ClipRRect(
@@ -1520,42 +1609,63 @@ class _UniversalChatPageState extends State<UniversalChatPage>
             const SizedBox(width: 8),
           ],
           
-          // Message bubble
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.65,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isFromUser ? themeColor : Colors.grey[100],
-              borderRadius: BorderRadius.circular(20),
-            ),
+          // Message bubble - now pill-shaped without date, tappable to show timestamp
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                if (_tappedMessages.contains(messageId)) {
+                  _tappedMessages.remove(messageId);
+                } else {
+                  _tappedMessages.add(messageId);
+                }
+              });
+            },
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  message,
-                  style: TextStyle(
-                    color: isFromUser ? Colors.white : Colors.black87,
-                    fontSize: 16,
-                    fontFamily: AppFonts.getLocalizedFontFamily(context),
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.6,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isFromUser ? themeColor : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(25), // Perfect pill shape
+                  ),
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      color: isFromUser ? Colors.white : Colors.black87,
+                      fontSize: 16,
+                      fontFamily: AppFonts.getLocalizedFontFamily(context),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _formatTime(timestamp),
-                  style: TextStyle(
-                    color: isFromUser ? Colors.white70 : Colors.grey[600],
-                    fontSize: 12,
-                    fontFamily: AppFonts.getLocalizedFontFamily(context),
+                // Show timestamp when tapped
+                if (_tappedMessages.contains(messageId)) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _formatTime(timestamp),
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 11,
+                        fontFamily: AppFonts.getLocalizedFontFamily(context),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
           
-          // Spacing for messages from current user (right side)
-          if (isFromUser) const SizedBox(width: 40),
+          // Spacing for messages from current user - moved very close to right edge
+          if (isUserMessage) const SizedBox(width: 4),
         ],
       ),
     );
@@ -1571,18 +1681,33 @@ class _UniversalChatPageState extends State<UniversalChatPage>
       isFromUser: isFromUser,
       message: message,
       timestamp: timestamp,
+      messageId: '', // Empty string for backward compatibility
     );
   }
 
   Widget _buildUniversalAttachmentWithAvatar(Map<String, dynamic> attachmentData, bool isFromUser, ChatMessage message) {
+    // Determine alignment based on text direction and message sender
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    final isUserMessage = isFromUser;
+    
+    // For RTL (Arabic): user messages on left, other messages on right
+    // For LTR (English/French): user messages on right, other messages on left
+    final alignment = isRTL 
+        ? (isUserMessage ? Alignment.centerLeft : Alignment.centerRight)
+        : (isUserMessage ? Alignment.bottomRight : Alignment.centerLeft);
+    
+    final mainAxisAlignment = isRTL
+        ? (isUserMessage ? MainAxisAlignment.start : MainAxisAlignment.end)
+        : (isUserMessage ? MainAxisAlignment.end : MainAxisAlignment.start);
+    
     return Align(
-      alignment: isFromUser ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: alignment,
       child: Row(
-        mainAxisAlignment: isFromUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: mainAxisAlignment,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Avatar for attachments from other user (left side)
-          if (!isFromUser) ...[
+          // Avatar for attachments from other user
+          if (!isUserMessage) ...[
             GestureDetector(
               onTap: () => _navigateToUserProfile(widget.otherUser),
               child: ClipRRect(
@@ -1625,8 +1750,8 @@ class _UniversalChatPageState extends State<UniversalChatPage>
             child: _buildUniversalAttachment(attachmentData, isFromUser, message),
           ),
           
-          // Spacing for attachments from current user (right side)
-          if (isFromUser) const SizedBox(width: 40),
+          // Spacing for attachments from current user - moved very close to right edge
+          if (isUserMessage) const SizedBox(width: 4),
         ],
       ),
     );
@@ -2193,7 +2318,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Sharing product',
+                    AppLocalizations.of(context)!.sharingProduct,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -2595,7 +2720,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Meeting Confirmed',
+                  AppLocalizations.of(context)!.meetingConfirmed,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.green.shade700,
@@ -2724,14 +2849,14 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        'Schedule Meeting',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade800,
-                        ),
-                      ),
+                      child:                 Text(
+                  AppLocalizations.of(context)!.scheduleMeeting,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
                     ),
                     
                     // Action buttons
@@ -2766,7 +2891,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Mark as Finished',
+                                    AppLocalizations.of(context)!.markAsFinished,
                                     style: TextStyle(
                                       color: Colors.green.shade700,
                                       fontSize: 12,
@@ -2806,7 +2931,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 const SizedBox(height: 16),
                 
                 Text(
-                  'Coordinate a meeting to reunite with your pet! 🐾',
+                  AppLocalizations.of(context)!.coordinateMeeting,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade600,
@@ -2834,7 +2959,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                     const Divider(),
                     const SizedBox(height: 16),
                     Text(
-                      'Propose New Meeting',
+                      AppLocalizations.of(context)!.proposeNewMeeting,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Colors.grey.shade700,
@@ -2887,8 +3012,8 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    place.isEmpty ? 'No location set' : place,
+                  child:                   Text(
+                    place.isEmpty ? AppLocalizations.of(context)!.noLocationSet : place,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
@@ -2926,7 +3051,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 children: [
                   Expanded(
                     child: _buildMeetingActionButton(
-                      'Reject',
+                      AppLocalizations.of(context)!.reject,
                       CupertinoIcons.xmark_circle,
                       Colors.red,
                       () => _rejectMeeting(meeting['id']),
@@ -2935,7 +3060,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildMeetingActionButton(
-                      'Confirm',
+                      AppLocalizations.of(context)!.confirm,
                       CupertinoIcons.checkmark_circle_fill,
                       Colors.green,
                       () => _confirmMeeting(meeting['id']),
@@ -2960,7 +3085,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Waiting for response...',
+                      AppLocalizations.of(context)!.waitingForResponse,
                       style: TextStyle(
                         color: Colors.orange.shade700,
                         fontWeight: FontWeight.w500,
@@ -2986,7 +3111,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Meeting confirmed!',
+                      AppLocalizations.of(context)!.meetingConfirmed,
                       style: TextStyle(
                         color: Colors.green.shade700,
                         fontWeight: FontWeight.w600,
@@ -3014,7 +3139,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Meeting rejected',
+                          AppLocalizations.of(context)!.meetingRejected,
                           style: TextStyle(
                             color: Colors.red.shade700,
                             fontWeight: FontWeight.w500,
@@ -3027,7 +3152,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                   SizedBox(
                     width: double.infinity,
                     child: _buildMeetingActionButton(
-                      'Edit Details',
+                      AppLocalizations.of(context)!.editDetails,
                       CupertinoIcons.pencil,
                       Colors.blue,
                       () => _startEditingMeeting(meeting['id']),
@@ -3048,7 +3173,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
       children: [
         // Place input
         Text(
-          'Meeting Place',
+          AppLocalizations.of(context)!.meetingPlace,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: Colors.grey.shade700,
@@ -3058,7 +3183,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
         TextField(
           controller: _placeController,
           decoration: InputDecoration(
-            hintText: 'Enter meeting location...',
+            hintText: AppLocalizations.of(context)!.enterMeetingLocation,
             prefixIcon: Icon(
               CupertinoIcons.location,
               color: Colors.blue.shade600,
@@ -3079,7 +3204,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
         
         // Date/Time input
         Text(
-          'Meeting Time',
+          AppLocalizations.of(context)!.meetingTime,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: Colors.grey.shade700,
@@ -3106,7 +3231,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                   child: Text(
                     _selectedDateTime != null
                         ? '${_selectedDateTime!.day}/${_selectedDateTime!.month}/${_selectedDateTime!.year} at ${_selectedDateTime!.hour.toString().padLeft(2, '0')}:${_selectedDateTime!.minute.toString().padLeft(2, '0')}'
-                        : 'Select date and time...',
+                        : AppLocalizations.of(context)!.selectDateAndTime,
                     style: TextStyle(
                       color: _selectedDateTime != null 
                           ? Colors.grey.shade800 
@@ -3130,20 +3255,20 @@ class _UniversalChatPageState extends State<UniversalChatPage>
           width: double.infinity,
           child: _editingMeetingId != null
               ? _buildMeetingActionButton(
-                  'Update Meeting',
+                  AppLocalizations.of(context)!.updateMeeting,
                   CupertinoIcons.pencil_circle_fill,
                   Colors.green,
                   _canProposeMeeting() ? _updateMeetingDetails : null,
                 )
               : _hasActiveMeetingProposal(currentUserId)
                   ? _buildMeetingActionButton(
-                      'Waiting for confirmation...',
+                      AppLocalizations.of(context)!.waitingForConfirmation,
                       CupertinoIcons.clock,
                       Colors.orange,
                       null, // Disabled when waiting
                     )
                   : _buildMeetingActionButton(
-                      'Propose Meeting',
+                      AppLocalizations.of(context)!.proposeMeeting,
                       CupertinoIcons.calendar_badge_plus,
                       Colors.blue,
                       _canProposeMeeting() ? _proposeMeeting : null,
@@ -3228,7 +3353,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
               child: KeyboardDismissibleTextField(
                 controller: _messageController,
                 decoration: InputDecoration(
-                  hintText: 'Type a message...',
+                  hintText: AppLocalizations.of(context)!.typeAMessage,
                   hintStyle: TextStyle(
                     color: Colors.grey[500],
                     fontFamily: AppFonts.getLocalizedFontFamily(context),
@@ -3285,13 +3410,33 @@ class _UniversalChatPageState extends State<UniversalChatPage>
     final difference = now.difference(dateTime);
 
     if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
+      return AppLocalizations.of(context)!.daysAgo(difference.inDays);
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return AppLocalizations.of(context)!.hoursAgo(difference.inHours);
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+      return AppLocalizations.of(context)!.minutesAgo(difference.inMinutes);
     } else {
-      return 'Just now';
+      return AppLocalizations.of(context)!.justNow;
+    }
+  }
+
+  String _formatDate(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    if (messageDate == today) {
+      return 'Today';
+    } else if (messageDate == yesterday) {
+      return 'Yesterday';
+    } else {
+      // Format: "Jan 15, 2024" or similar
+      final months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      return '${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year}';
     }
   }
 
@@ -3833,7 +3978,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 
                 // Title
                 Text(
-                  'Pet Identification',
+                  AppLocalizations.of(context)!.petIdentification,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -3844,7 +3989,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 
                 // Content
                 Text(
-                  'Is this $mediaType of your missing pet?',
+                  AppLocalizations.of(context)!.isThisMediaOfPet(mediaType),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -3884,7 +4029,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'No',
+                                AppLocalizations.of(context)!.no,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -3923,7 +4068,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                               ),
                             ],
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
@@ -3933,7 +4078,7 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                               ),
                               SizedBox(width: 6),
                               Text(
-                                'Yes',
+                                AppLocalizations.of(context)!.yes,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -3974,8 +4119,8 @@ class _UniversalChatPageState extends State<UniversalChatPage>
         SnackBar(
           content: Text(
             isConfirmed 
-                ? 'Confirmed: This is your pet' 
-                : 'Confirmed: This is not your pet',
+                ? AppLocalizations.of(context)!.confirmedThisIsPet
+                : AppLocalizations.of(context)!.confirmedThisIsNotPet,
           ),
           backgroundColor: isConfirmed ? Colors.green : Colors.orange,
           duration: const Duration(seconds: 2),
@@ -3991,8 +4136,8 @@ class _UniversalChatPageState extends State<UniversalChatPage>
     } catch (e) {
       print('❌ Error updating pet identification: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to save identification'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.failedToSaveIdentification),
           backgroundColor: Colors.red,
         ),
       );
@@ -4021,16 +4166,16 @@ class _UniversalChatPageState extends State<UniversalChatPage>
                 size: 16,
               ),
               const SizedBox(width: 8),
-              Text(
-                _isUploadingMedia 
-                    ? 'Uploading... ($_uploadProgress/$_totalUploads)'
-                    : 'Media Attachments (${_attachedMedia.length})',
-                style: TextStyle(
-                  color: Colors.blue.shade700,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                              Text(
+                  _isUploadingMedia 
+                      ? AppLocalizations.of(context)!.uploading(_uploadProgress, _totalUploads)
+                      : AppLocalizations.of(context)!.mediaAttachments(_attachedMedia.length),
+                  style: TextStyle(
+                    color: Colors.blue.shade700,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
               const Spacer(),
               GestureDetector(
                 onTap: () {

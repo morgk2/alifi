@@ -658,7 +658,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                     Text(
-                      AppLocalizations.of(context)!.lastSeen,
+                      AppLocalizations.of(context)!.lastSeenLabel,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                     ),
                                         const SizedBox(height: 16),
