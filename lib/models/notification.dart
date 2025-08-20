@@ -12,6 +12,9 @@ enum NotificationType {
   appointmentRequest,
   appointmentUpdate,
   appointmentReminder,
+  petOwnershipRequest,
+  petOwnershipAccepted,
+  petOwnershipRejected,
 }
 
 class AppNotification {

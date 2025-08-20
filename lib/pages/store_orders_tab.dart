@@ -527,6 +527,7 @@ class StoreOrdersTab extends StatelessWidget {
             onConfirm: () {
               Navigator.of(context).pop(true);
             },
+            context: context,
           ),
         );
         break;
@@ -539,6 +540,7 @@ class StoreOrdersTab extends StatelessWidget {
             onConfirm: () {
               Navigator.of(context).pop(true);
             },
+            context: context,
           ),
         );
         break;
@@ -551,6 +553,7 @@ class StoreOrdersTab extends StatelessWidget {
             onConfirm: () {
               Navigator.of(context).pop(true);
             },
+            context: context,
           ),
         );
         break;

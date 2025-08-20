@@ -9,6 +9,7 @@ class ChatMessage {
   final bool isRead;
   final Map<String, dynamic>? productAttachment;
   final bool isOrderAttachment;
+  final Map<String, dynamic>? petIdentification;
 
   ChatMessage({
     required this.id,
@@ -19,6 +20,7 @@ class ChatMessage {
     this.isRead = false,
     this.productAttachment,
     this.isOrderAttachment = false,
+    this.petIdentification,
   });
 
   Map<String, dynamic> toFirestore() {
@@ -30,6 +32,7 @@ class ChatMessage {
       'isRead': isRead,
       'productAttachment': productAttachment,
       'isOrderAttachment': isOrderAttachment,
+      'petIdentification': petIdentification,
     };
   }
 
@@ -44,6 +47,7 @@ class ChatMessage {
       isRead: data['isRead'] ?? false,
       productAttachment: data['productAttachment'],
       isOrderAttachment: data['isOrderAttachment'] ?? false,
+      petIdentification: data['petIdentification'],
     );
   }
 } 

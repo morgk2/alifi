@@ -20,6 +20,9 @@ import '../models/notification.dart';
 import '../models/appointment.dart';
 import '../models/time_slot.dart';
 import '../models/adoption_listing.dart';
+import '../models/pet_ownership_request.dart';
+import '../models/pet_profile.dart';
+import '../models/pet_post.dart';
 import '../services/device_performance.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'storage_service.dart';
@@ -75,6 +78,8 @@ class DatabaseService {
   CollectionReference get _lostPetsCollection => _db.collection('lost_pets');
   CollectionReference get _storeProductsCollection => _db.collection('storeproducts');
   CollectionReference get _giftsCollection => _db.collection('gifts');
+  CollectionReference get _petProfilesCollection => _db.collection('pet_profiles');
+  CollectionReference get _petPostsCollection => _db.collection('pet_posts');
   CollectionReference get _chatMessagesCollection => _db.collection('chatMessages');
   CollectionReference get _ordersCollection => _db.collection('orders');
   CollectionReference get _appointmentsCollection => _db.collection('appointments');
@@ -1282,6 +1287,8 @@ class DatabaseService {
       return Stream.fromFuture(_localStorage.getGuestPets());
     } else {
       try {
+        // Use the old query method for backward compatibility
+        // This ensures existing pets without ownerIds field are still returned
         return _petsCollection
             .where('ownerId', isEqualTo: userId)
             .where('isActive', isEqualTo: true)
@@ -1289,18 +1296,292 @@ class DatabaseService {
             .snapshots()
             .handleError((error) {
               print('🔍 [DatabaseService] Error in getUserPets stream: $error');
-              return [];
+              return const Stream.empty();
             })
-            .map((snapshot) {
-              print('🔍 [DatabaseService] getUserPets received ${snapshot.docs.length} documents');
-              return snapshot.docs.map((doc) {
+            .asyncMap((snapshot) async {
+              print('🔍 [DatabaseService] getUserPets received ${snapshot.docs.length} documents from ownerId query');
+              
+              // Get pets from the primary owner query
+              final pets = <Pet>[];
+              for (final doc in snapshot.docs) {
                 try {
-                  return Pet.fromFirestore(doc);
+                  final pet = Pet.fromFirestore(doc);
+                  pets.add(pet);
                 } catch (e) {
                   print('🔍 [DatabaseService] Error parsing pet document ${doc.id}: $e');
+                }
+              }
+              
+              // Also query for pets where user is in ownerIds (for multi-owner pets)
+              try {
+                final multiOwnerSnapshot = await _petsCollection
+                    .where('ownerIds', arrayContains: userId)
+                    .where('isActive', isEqualTo: true)
+                    .get();
+                
+                print('🔍 [DatabaseService] Found ${multiOwnerSnapshot.docs.length} pets from ownerIds query');
+                
+                // Add pets from multi-owner query, avoiding duplicates
+                final existingIds = pets.map((p) => p.id).toSet();
+                for (final doc in multiOwnerSnapshot.docs) {
+                  if (!existingIds.contains(doc.id)) {
+                    try {
+                      final pet = Pet.fromFirestore(doc);
+                      pets.add(pet);
+                    } catch (e) {
+                      print('🔍 [DatabaseService] Error parsing multi-owner pet document ${doc.id}: $e');
+                          }
+    }
+  }
+
+  // Pet Profile Operations
+  Future<bool> hasPetProfile(String petId) async {
+    try {
+      final doc = await _petProfilesCollection.doc(petId).get();
+      return doc.exists;
+    } catch (e) {
+      print('Error checking pet profile: $e');
+      return false;
+    }
+  }
+
+  Future<void> createPetProfile(String petId) async {
+    try {
+      // Get pet info
+      final petDoc = await _petsCollection.doc(petId).get();
+      if (!petDoc.exists) {
+        throw Exception('Pet not found');
+      }
+      
+      final petData = petDoc.data() as Map<String, dynamic>;
+      final petName = petData['name'] ?? '';
+      
+      // Create profile
+      await _petProfilesCollection.doc(petId).set({
+        'id': petId,
+        'petId': petId,
+        'petName': petName,
+        'profilePictureUrl': petData['photoURL'],
+        'bio': null,
+        'followers': [],
+        'following': [],
+        'followersCount': 0,
+        'followingCount': 0,
+        'postsCount': 0,
+        'isPublic': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error creating pet profile: $e');
+      rethrow;
+    }
+  }
+
+  Future<PetProfile?> getPetProfile(String petId) async {
+    try {
+      final doc = await _petProfilesCollection.doc(petId).get();
+      if (doc.exists) {
+        return PetProfile.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting pet profile: $e');
                   return null;
                 }
-              }).where((pet) => pet != null).cast<Pet>().toList();
+  }
+
+  Future<bool> isFollowingPet(String userId, String petId) async {
+    try {
+      final doc = await _petProfilesCollection.doc(petId).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final followers = List<String>.from(data['followers'] ?? []);
+        return followers.contains(userId);
+      }
+      return false;
+    } catch (e) {
+      print('Error checking pet follow status: $e');
+      return false;
+    }
+  }
+
+  Future<void> followPet(String userId, String petId) async {
+    try {
+      await _db.runTransaction((transaction) async {
+        final petProfileDoc = await transaction.get(_petProfilesCollection.doc(petId));
+        
+        if (!petProfileDoc.exists) {
+          throw Exception('Pet profile not found');
+        }
+        
+        final data = petProfileDoc.data() as Map<String, dynamic>;
+        final followers = List<String>.from(data['followers'] ?? []);
+        
+        if (!followers.contains(userId)) {
+          followers.add(userId);
+          transaction.update(_petProfilesCollection.doc(petId), {
+            'followers': followers,
+            'followersCount': followers.length,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      });
+    } catch (e) {
+      print('Error following pet: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> unfollowPet(String userId, String petId) async {
+    try {
+      await _db.runTransaction((transaction) async {
+        final petProfileDoc = await transaction.get(_petProfilesCollection.doc(petId));
+        
+        if (!petProfileDoc.exists) {
+          throw Exception('Pet profile not found');
+        }
+        
+        final data = petProfileDoc.data() as Map<String, dynamic>;
+        final followers = List<String>.from(data['followers'] ?? []);
+        
+        if (followers.contains(userId)) {
+          followers.remove(userId);
+          transaction.update(_petProfilesCollection.doc(petId), {
+            'followers': followers,
+            'followersCount': followers.length,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      });
+    } catch (e) {
+      print('Error unfollowing pet: $e');
+      rethrow;
+    }
+  }
+
+  // Pet Posts Operations
+  Future<String> createPetPost({
+    required String petId,
+    required String userId,
+    required String imageUrl,
+    String? caption,
+  }) async {
+    try {
+      final docRef = _petPostsCollection.doc();
+      
+      await docRef.set({
+        'petId': petId,
+        'userId': userId,
+        'imageUrl': imageUrl,
+        'caption': caption,
+        'likes': [],
+        'likesCount': 0,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update posts count in pet profile
+      await _petProfilesCollection.doc(petId).update({
+        'postsCount': FieldValue.increment(1),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      return docRef.id;
+    } catch (e) {
+      print('Error creating pet post: $e');
+      rethrow;
+    }
+  }
+
+  Stream<List<PetPost>> getPetPosts(String petId) {
+    return _petPostsCollection
+        .where('petId', isEqualTo: petId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => PetPost.fromFirestore(doc))
+            .toList());
+  }
+
+  Future<void> deletePetPost(String postId, String petId) async {
+    try {
+      await _petPostsCollection.doc(postId).delete();
+      
+      // Update posts count in pet profile
+      await _petProfilesCollection.doc(petId).update({
+        'postsCount': FieldValue.increment(-1),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error deleting pet post: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updatePetPostCaption(String postId, String caption) async {
+    try {
+      await _petPostsCollection.doc(postId).update({
+        'caption': caption.isEmpty ? null : caption,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error updating pet post caption: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<PetProfile>> searchPublicPetProfiles(String query) async {
+    try {
+      final queryLower = query.toLowerCase();
+      
+      // Search by pet name (case insensitive)
+      final nameQuery = await _petProfilesCollection
+          .where('isPublic', isEqualTo: true)
+          .orderBy('petName')
+          .startAt([queryLower])
+          .endAt([queryLower + '\uf8ff'])
+          .limit(20)
+          .get();
+
+      List<PetProfile> results = nameQuery.docs
+          .map((doc) => PetProfile.fromFirestore(doc))
+          .toList();
+
+      // Also search for profiles where the pet name contains the query
+      final allPublicProfiles = await _petProfilesCollection
+          .where('isPublic', isEqualTo: true)
+          .limit(100) // Reasonable limit for client-side filtering
+          .get();
+
+      final containsResults = allPublicProfiles.docs
+          .map((doc) => PetProfile.fromFirestore(doc))
+          .where((profile) => 
+            profile.petName.toLowerCase().contains(queryLower) &&
+            !results.any((existing) => existing.id == profile.id))
+          .toList();
+
+      results.addAll(containsResults);
+
+      // Sort by followers count (most popular first)
+      results.sort((a, b) => b.followersCount.compareTo(a.followersCount));
+
+      return results.take(20).toList();
+    } catch (e) {
+      print('Error searching pet profiles: $e');
+      return [];
+    }
+  }
+} catch (e) {
+                print('🔍 [DatabaseService] Error querying ownerIds (this is expected for databases without multi-owner pets): $e');
+                // This is expected for databases that don't have ownerIds field yet
+              }
+              
+              // Sort by creation date (newest first)
+              pets.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+              
+              print('🔍 [DatabaseService] Returning ${pets.length} total pets');
+              return pets;
             });
       } catch (e) {
         print('🔍 [DatabaseService] Exception in getUserPets: $e');
@@ -1359,6 +1640,7 @@ class DatabaseService {
           gender: '', // Default empty for lost pet reports
           imageUrls: [], // No images for lost pet reports
           ownerId: userId,
+          ownerIds: [userId], // Initialize with current user as sole owner
           createdAt: DateTime.now(),
           lastUpdatedAt: DateTime.now(),
           medicalInfo: {}, // Empty for lost pet reports
@@ -1561,6 +1843,50 @@ class DatabaseService {
     } catch (e) {
       print('Error marking lost pet as found: $e');
       rethrow;
+    }
+  }
+
+  // Get user's active lost pets
+  Future<List<LostPet>> getUsersActiveLostPets(String userId) async {
+    try {
+      final snapshot = await _lostPetsCollection
+          .where('reportedByUserId', isEqualTo: userId)
+          .where('isFound', isEqualTo: false)
+          .get();
+
+      final pets = <LostPet>[];
+      for (final doc in snapshot.docs) {
+        try {
+          final lostPet = await LostPet.fromFirestore(doc, _db);
+          if (lostPet != null) {
+            pets.add(lostPet);
+          }
+        } catch (e) {
+          print('Error converting lost pet doc ${doc.id}: $e');
+        }
+      }
+      return pets;
+    } catch (e) {
+      print('Error getting user\'s active lost pets: $e');
+      return [];
+    }
+  }
+
+  // Check if user has any active missing pets
+  Future<bool> userHasActiveMissingPets(String userId) async {
+    try {
+      print('🔍 [DatabaseService] Checking active missing pets for user: $userId');
+      final snapshot = await _lostPetsCollection
+          .where('reportedByUserId', isEqualTo: userId)
+          .where('isFound', isEqualTo: false)
+          .limit(1)
+          .get();
+      
+      print('🔍 [DatabaseService] Found ${snapshot.docs.length} active missing pets');
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('❌ [DatabaseService] Error checking user\'s active missing pets: $e');
+      return false;
     }
   }
 
@@ -2938,6 +3264,219 @@ class DatabaseService {
     } catch (e) {
       print('Error updating chat message attachment: $e');
       throw e;
+    }
+  }
+
+  /// Update pet identification for a chat message
+  Future<void> updateChatMessagePetIdentification(String messageId, Map<String, dynamic> petIdentification) async {
+    try {
+      print('🐾 [DatabaseService] Updating pet identification for message: $messageId');
+      await _chatMessagesCollection.doc(messageId).update({
+        'petIdentification': petIdentification,
+      });
+      print('✅ [DatabaseService] Pet identification updated successfully');
+    } catch (e) {
+      print('❌ [DatabaseService] Error updating pet identification: $e');
+      throw e;
+    }
+  }
+
+  // Meeting Operations
+  final CollectionReference _meetingsCollection = FirebaseFirestore.instance.collection('meetings');
+
+  /// Create a new meeting proposal
+  Future<String> createMeeting(String proposerId, String receiverId, String place, DateTime scheduledTime) async {
+    try {
+      print('📅 [DatabaseService] Creating meeting proposal');
+      final meetingData = {
+        'proposerId': proposerId,
+        'receiverId': receiverId,
+        'place': place,
+        'scheduledTime': Timestamp.fromDate(scheduledTime),
+        'status': 'proposed',
+        'createdAt': Timestamp.fromDate(DateTime.now()),
+      };
+      
+      final docRef = await _meetingsCollection.add(meetingData);
+      print('✅ [DatabaseService] Meeting created with ID: ${docRef.id}');
+      return docRef.id;
+    } catch (e) {
+      print('❌ [DatabaseService] Error creating meeting: $e');
+      throw e;
+    }
+  }
+
+  /// Update meeting status (confirm/reject)
+  Future<void> updateMeetingStatus(String meetingId, String status, {String? rejectionReason}) async {
+    try {
+      print('📅 [DatabaseService] Updating meeting status: $meetingId -> $status');
+      final updateData = {
+        'status': status,
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      };
+      
+      if (rejectionReason != null) {
+        updateData['rejectionReason'] = rejectionReason;
+      }
+      
+      await _meetingsCollection.doc(meetingId).update(updateData);
+      print('✅ [DatabaseService] Meeting status updated successfully');
+    } catch (e) {
+      print('❌ [DatabaseService] Error updating meeting status: $e');
+      throw e;
+    }
+  }
+
+  /// Mark meeting as completed
+  Future<void> markMeetingAsCompleted(String meetingId) async {
+    try {
+      print('✅ [DatabaseService] Marking meeting as completed: $meetingId');
+      await updateMeetingStatus(meetingId, 'completed');
+    } catch (e) {
+      print('❌ [DatabaseService] Error marking meeting as completed: $e');
+      throw e;
+    }
+  }
+
+  /// Update meeting details (place and time)
+  Future<void> updateMeetingDetails(String meetingId, String place, DateTime scheduledTime) async {
+    try {
+      print('📅 [DatabaseService] Updating meeting details: $meetingId');
+      await _meetingsCollection.doc(meetingId).update({
+        'place': place,
+        'scheduledTime': Timestamp.fromDate(scheduledTime),
+        'status': 'proposed', // Reset to proposed when details are updated
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+      print('✅ [DatabaseService] Meeting details updated successfully');
+    } catch (e) {
+      print('❌ [DatabaseService] Error updating meeting details: $e');
+      throw e;
+    }
+  }
+
+  /// Get meetings for a chat between two users
+  Stream<List<Map<String, dynamic>>> getChatMeetings(String userId1, String userId2) {
+    return _meetingsCollection
+        .where('proposerId', whereIn: [userId1, userId2])
+        .where('receiverId', whereIn: [userId1, userId2])
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return (data['proposerId'] == userId1 && data['receiverId'] == userId2) ||
+                       (data['proposerId'] == userId2 && data['receiverId'] == userId1);
+              })
+              .map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return {
+                  'id': doc.id,
+                  ...data,
+                };
+              })
+              .toList();
+        });
+  }
+
+  // Rescued Pets Operations
+  final CollectionReference _rescuedPetsCollection = FirebaseFirestore.instance.collection('rescued_pets');
+
+  /// Record a pet rescue
+  Future<String> recordPetRescue({
+    required String rescuerId,
+    required String petOwnerId,
+    required String petId,
+    required String petName,
+    required String petBreed,
+    required List<String> petImageUrls,
+    String? meetingId,
+    String? rescueLocation,
+    String? rescueStory,
+  }) async {
+    try {
+      print('📅 [DatabaseService] Recording pet rescue');
+      final rescueData = {
+        'rescuerId': rescuerId,
+        'petOwnerId': petOwnerId,
+        'petId': petId,
+        'petName': petName,
+        'petBreed': petBreed,
+        'petImageUrls': petImageUrls,
+        'rescueDate': Timestamp.fromDate(DateTime.now()),
+        'meetingId': meetingId,
+        'rescueLocation': rescueLocation,
+        'rescueStory': rescueStory,
+      };
+      
+      final docRef = await _rescuedPetsCollection.add(rescueData);
+      
+      // Update rescuer's pets rescued count
+      await _updateUserPetsRescuedCount(rescuerId);
+      
+      print('✅ [DatabaseService] Pet rescue recorded with ID: ${docRef.id}');
+      return docRef.id;
+    } catch (e) {
+      print('❌ [DatabaseService] Error recording pet rescue: $e');
+      throw e;
+    }
+  }
+
+  /// Update user's pets rescued count
+  Future<void> _updateUserPetsRescuedCount(String userId) async {
+    try {
+      final rescuedCount = await _rescuedPetsCollection
+          .where('rescuerId', isEqualTo: userId)
+          .get()
+          .then((snapshot) => snapshot.docs.length);
+      
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({
+        'petsRescuedCount': rescuedCount,
+      });
+      
+      print('✅ [DatabaseService] Updated pets rescued count for $userId: $rescuedCount');
+    } catch (e) {
+      print('❌ [DatabaseService] Error updating pets rescued count: $e');
+    }
+  }
+
+  /// Get rescued pets by rescuer
+  Stream<List<Map<String, dynamic>>> getRescuedPetsByRescuer(String rescuerId) {
+    return _rescuedPetsCollection
+        .where('rescuerId', isEqualTo: rescuerId)
+        .orderBy('rescueDate', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return {
+              'id': doc.id,
+              ...data,
+            };
+          }).toList();
+        });
+  }
+
+  /// Get user's pets rescued count
+  Future<int> getUserPetsRescuedCount(String userId) async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      
+      if (userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        return data['petsRescuedCount'] ?? 0;
+      }
+      return 0;
+    } catch (e) {
+      print('❌ [DatabaseService] Error getting pets rescued count: $e');
+      return 0;
     }
   }
 
@@ -5004,5 +5543,458 @@ class DatabaseService {
       getSubscriptionPlanDetails('alifi affiliated'),
       getSubscriptionPlanDetails('alifi favorite'),
     ];
+  }
+
+  // Pet Ownership Request Operations
+  CollectionReference get _petOwnershipRequestsCollection => _db.collection('pet_ownership_requests');
+  
+  Future<String> createPetOwnershipRequest(PetOwnershipRequest request) async {
+    try {
+      print('🔍 [DatabaseService] Creating pet ownership request: ${request.petName} from ${request.fromUserName} to ${request.toUserName}');
+      final docRef = await _petOwnershipRequestsCollection.add(request.toFirestore());
+      print('✅ [DatabaseService] Pet ownership request created with ID: ${docRef.id}');
+      
+      // Verify the request was created by reading it back
+      final createdDoc = await docRef.get();
+      if (createdDoc.exists) {
+        print('✅ [DatabaseService] Verified request exists in database');
+        final createdRequest = PetOwnershipRequest.fromFirestore(createdDoc);
+        print('🔍 [DatabaseService] Created request details: toUserId=${createdRequest.toUserId}, status=${createdRequest.status}');
+      } else {
+        print('❌ [DatabaseService] Request document not found after creation!');
+      }
+      
+      return docRef.id;
+    } catch (e) {
+      print('❌ [DatabaseService] Error creating pet ownership request: $e');
+      rethrow;
+    }
+  }
+  
+  Stream<List<PetOwnershipRequest>> getUserOwnershipRequests(String userId) {
+    print('🔍 [DatabaseService] Setting up ownership requests stream for userId: $userId');
+    return _petOwnershipRequestsCollection
+        .where('toUserId', isEqualTo: userId)
+        .where('status', isEqualTo: 'pending')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          print('🔍 [DatabaseService] getUserOwnershipRequests received ${snapshot.docs.length} documents');
+          return snapshot.docs.map((doc) {
+            try {
+              final request = PetOwnershipRequest.fromFirestore(doc);
+              print('🔍 [DatabaseService] Parsed request: ${request.petName} from ${request.fromUserName}');
+              return request;
+            } catch (e) {
+              print('❌ [DatabaseService] Error parsing ownership request ${doc.id}: $e');
+              return null;
+            }
+          }).where((request) => request != null).cast<PetOwnershipRequest>().toList();
+        });
+  }
+  
+  Future<void> respondToPetOwnershipRequest(
+    String requestId,
+    String response, // 'accepted' or 'rejected'
+  ) async {
+    try {
+      final requestDoc = await _petOwnershipRequestsCollection.doc(requestId).get();
+      if (!requestDoc.exists) {
+        throw Exception('Request not found');
+      }
+      
+      final request = PetOwnershipRequest.fromFirestore(requestDoc);
+      
+      // Update request status
+      await _petOwnershipRequestsCollection.doc(requestId).update({
+        'status': response,
+        'respondedAt': Timestamp.fromDate(DateTime.now()),
+      });
+      
+      if (response == 'accepted') {
+        // Add user to pet's ownerIds
+        final petDoc = await _petsCollection.doc(request.petId).get();
+        if (petDoc.exists) {
+          final petData = petDoc.data() as Map<String, dynamic>;
+          final currentOwnerIds = List<String>.from(petData['ownerIds'] ?? [petData['ownerId']]);
+          
+          if (!currentOwnerIds.contains(request.toUserId)) {
+            currentOwnerIds.add(request.toUserId);
+            await _petsCollection.doc(request.petId).update({
+              'ownerIds': currentOwnerIds,
+            });
+          }
+        }
+        
+        // Send notification to requester
+        await sendNotification(
+          userId: request.fromUserId,
+          senderId: request.toUserId,
+          senderName: request.toUserName,
+          title: 'Pet Ownership Request Accepted',
+          body: '${request.toUserName} accepted your request to co-own ${request.petName}',
+          type: 'pet_ownership_accepted',
+          data: {
+            'petId': request.petId,
+            'petName': request.petName,
+            'acceptedBy': request.toUserName,
+          },
+          relatedId: request.petId,
+        );
+      } else {
+        // Send notification to requester about rejection
+        await sendNotification(
+          userId: request.fromUserId,
+          senderId: request.toUserId,
+          senderName: request.toUserName,
+          title: 'Pet Ownership Request Declined',
+          body: '${request.toUserName} declined your request to co-own ${request.petName}',
+          type: 'pet_ownership_rejected',
+          data: {
+            'petId': request.petId,
+            'petName': request.petName,
+            'rejectedBy': request.toUserName,
+          },
+          relatedId: request.petId,
+        );
+      }
+      
+      print('✅ [DatabaseService] Pet ownership request $response');
+    } catch (e) {
+      print('❌ [DatabaseService] Error responding to pet ownership request: $e');
+      rethrow;
+    }
+  }
+  
+  Future<void> sendNotification({
+    required String userId,
+    required String senderId,
+    required String senderName,
+    required String title,
+    required String body,
+    required String type,
+    Map<String, dynamic>? data,
+    String? relatedId,
+  }) async {
+    try {
+      // Convert string type to NotificationType enum
+      NotificationType notificationType;
+      switch (type) {
+        case 'pet_ownership_request':
+          notificationType = NotificationType.petOwnershipRequest;
+          break;
+        case 'pet_ownership_accepted':
+          notificationType = NotificationType.petOwnershipAccepted;
+          break;
+        case 'pet_ownership_rejected':
+          notificationType = NotificationType.petOwnershipRejected;
+          break;
+        default:
+          notificationType = NotificationType.chatMessage;
+      }
+
+      final notification = AppNotification(
+        id: '', // Will be set by Firestore
+        recipientId: userId,
+        senderId: senderId,
+        senderName: senderName,
+        type: notificationType,
+        title: title,
+        body: body,
+        data: data,
+        isRead: false,
+        createdAt: DateTime.now(),
+        relatedId: relatedId,
+      );
+
+      final notificationService = NotificationService();
+      await notificationService.sendNotification(notification);
+      print('✅ [DatabaseService] Notification sent to user: $userId');
+    } catch (e) {
+      print('❌ [DatabaseService] Error sending notification: $e');
+      rethrow;
+    }
+  }
+
+  // Migration function to add ownerIds to existing pets
+  Future<void> migratePetsToMultiOwner() async {
+    try {
+      print('🔄 [DatabaseService] Starting pet multi-owner migration...');
+      
+      // Get all pets that don't have ownerIds field
+      final querySnapshot = await _petsCollection
+          .where('ownerIds', isNull: true)
+          .get();
+      
+      int updated = 0;
+      int total = querySnapshot.docs.length;
+      
+      print('🔍 [DatabaseService] Found $total pets to migrate');
+      
+      for (final doc in querySnapshot.docs) {
+        try {
+          final data = doc.data() as Map<String, dynamic>;
+          final ownerId = data['ownerId'] as String?;
+          
+          if (ownerId != null && ownerId.isNotEmpty) {
+            // Add ownerIds field with the current ownerId
+            await doc.reference.update({
+              'ownerIds': [ownerId],
+            });
+            updated++;
+            
+            if (updated % 10 == 0) {
+              print('🔄 [DatabaseService] Migrated $updated/$total pets...');
+            }
+          }
+        } catch (e) {
+          print('❌ [DatabaseService] Error migrating pet ${doc.id}: $e');
+        }
+      }
+      
+      print('✅ [DatabaseService] Pet migration completed: $updated/$total pets updated');
+    } catch (e) {
+      print('❌ [DatabaseService] Pet migration failed: $e');
+      rethrow;
+    }
+  }
+
+  // Pet Profile Operations
+  Future<bool> hasPetProfile(String petId) async {
+    try {
+      final doc = await _petProfilesCollection.doc(petId).get();
+      return doc.exists;
+    } catch (e) {
+      print('Error checking pet profile: $e');
+      return false;
+    }
+  }
+
+  Future<void> createPetProfile(String petId) async {
+    try {
+      // Get pet info
+      final petDoc = await _petsCollection.doc(petId).get();
+      if (!petDoc.exists) {
+        throw Exception('Pet not found');
+      }
+      
+      final petData = petDoc.data() as Map<String, dynamic>;
+      final petName = petData['name'] ?? '';
+      
+      // Create profile
+      await _petProfilesCollection.doc(petId).set({
+        'id': petId,
+        'petId': petId,
+        'petName': petName,
+        'profilePictureUrl': petData['photoURL'],
+        'bio': null,
+        'followers': [],
+        'following': [],
+        'followersCount': 0,
+        'followingCount': 0,
+        'postsCount': 0,
+        'isPublic': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error creating pet profile: $e');
+      rethrow;
+    }
+  }
+
+  Future<PetProfile?> getPetProfile(String petId) async {
+    try {
+      final doc = await _petProfilesCollection.doc(petId).get();
+      if (doc.exists) {
+        return PetProfile.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting pet profile: $e');
+      return null;
+    }
+  }
+
+  Future<bool> isFollowingPet(String userId, String petId) async {
+    try {
+      final doc = await _petProfilesCollection.doc(petId).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final followers = List<String>.from(data['followers'] ?? []);
+        return followers.contains(userId);
+      }
+      return false;
+    } catch (e) {
+      print('Error checking pet follow status: $e');
+      return false;
+    }
+  }
+
+  Future<void> followPet(String userId, String petId) async {
+    try {
+      await _db.runTransaction((transaction) async {
+        final petProfileDoc = await transaction.get(_petProfilesCollection.doc(petId));
+        
+        if (!petProfileDoc.exists) {
+          throw Exception('Pet profile not found');
+        }
+        
+        final data = petProfileDoc.data() as Map<String, dynamic>;
+        final followers = List<String>.from(data['followers'] ?? []);
+        
+        if (!followers.contains(userId)) {
+          followers.add(userId);
+          transaction.update(_petProfilesCollection.doc(petId), {
+            'followers': followers,
+            'followersCount': followers.length,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      });
+    } catch (e) {
+      print('Error following pet: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> unfollowPet(String userId, String petId) async {
+    try {
+      await _db.runTransaction((transaction) async {
+        final petProfileDoc = await transaction.get(_petProfilesCollection.doc(petId));
+        
+        if (!petProfileDoc.exists) {
+          throw Exception('Pet profile not found');
+        }
+        
+        final data = petProfileDoc.data() as Map<String, dynamic>;
+        final followers = List<String>.from(data['followers'] ?? []);
+        
+        if (followers.contains(userId)) {
+          followers.remove(userId);
+          transaction.update(_petProfilesCollection.doc(petId), {
+            'followers': followers,
+            'followersCount': followers.length,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      });
+    } catch (e) {
+      print('Error unfollowing pet: $e');
+      rethrow;
+    }
+  }
+
+  // Pet Posts Operations
+  Future<String> createPetPost({
+    required String petId,
+    required String userId,
+    required String imageUrl,
+    String? caption,
+  }) async {
+    try {
+      final docRef = _petPostsCollection.doc();
+      
+      await docRef.set({
+        'petId': petId,
+        'userId': userId,
+        'imageUrl': imageUrl,
+        'caption': caption,
+        'likes': [],
+        'likesCount': 0,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update posts count in pet profile
+      await _petProfilesCollection.doc(petId).update({
+        'postsCount': FieldValue.increment(1),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      return docRef.id;
+    } catch (e) {
+      print('Error creating pet post: $e');
+      rethrow;
+    }
+  }
+
+  Stream<List<PetPost>> getPetPosts(String petId) {
+    return _petPostsCollection
+        .where('petId', isEqualTo: petId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => PetPost.fromFirestore(doc))
+            .toList());
+  }
+
+  Future<void> deletePetPost(String postId, String petId) async {
+    try {
+      await _petPostsCollection.doc(postId).delete();
+      
+      // Update posts count in pet profile
+      await _petProfilesCollection.doc(petId).update({
+        'postsCount': FieldValue.increment(-1),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error deleting pet post: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updatePetPostCaption(String postId, String caption) async {
+    try {
+      await _petPostsCollection.doc(postId).update({
+        'caption': caption.isEmpty ? null : caption,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error updating pet post caption: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<PetProfile>> searchPublicPetProfiles(String query) async {
+    try {
+      final queryLower = query.toLowerCase();
+      
+      // Search by pet name (case insensitive)
+      final nameQuery = await _petProfilesCollection
+          .where('isPublic', isEqualTo: true)
+          .orderBy('petName')
+          .startAt([queryLower])
+          .endAt([queryLower + '\uf8ff'])
+          .limit(20)
+          .get();
+
+      List<PetProfile> results = nameQuery.docs
+          .map((doc) => PetProfile.fromFirestore(doc))
+          .toList();
+
+      // Also search for profiles where the pet name contains the query
+      final allPublicProfiles = await _petProfilesCollection
+          .where('isPublic', isEqualTo: true)
+          .limit(100) // Reasonable limit for client-side filtering
+          .get();
+
+      final containsResults = allPublicProfiles.docs
+          .map((doc) => PetProfile.fromFirestore(doc))
+          .where((profile) => 
+            profile.petName.toLowerCase().contains(queryLower) &&
+            !results.any((existing) => existing.id == profile.id))
+          .toList();
+
+      results.addAll(containsResults);
+
+      // Sort by followers count (most popular first)
+      results.sort((a, b) => b.followersCount.compareTo(a.followersCount));
+
+      return results.take(20).toList();
+    } catch (e) {
+      print('Error searching pet profiles: $e');
+      return [];
+    }
   }
 } 

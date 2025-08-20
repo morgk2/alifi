@@ -1433,11 +1433,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           height: 48, // Increased hitbox height
                           margin: const EdgeInsets.only(left: 8),
                           alignment: Alignment.center,
-                          child: Image.asset(
-                            'assets/images/notification_icon.png',
+                          child: SizedBox(
                             width: 32,
                             height: 32,
-                            fit: BoxFit.contain,
+                            child: Image.asset(
+                              'assets/images/notification_icon.png',
+                              width: 32,
+                              height: 32,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
                       );

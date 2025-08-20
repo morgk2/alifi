@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'pet_search_page.dart';
 
 class MyPetsPage extends StatefulWidget {
   const MyPetsPage({super.key});
@@ -250,7 +251,13 @@ class _MyPetsPageState extends State<MyPetsPage> {
                     ],
                   ),
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const PetSearchPage(),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.search, size: 24),
                   ),
                 ],
@@ -636,3 +643,4 @@ class _MyPetsPageState extends State<MyPetsPage> {
     );
   }
 } 
+

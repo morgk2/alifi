@@ -406,7 +406,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
           items: AppointmentType.values.map((type) {
             return DropdownMenuItem<AppointmentType>(
               value: type,
-              child: Text(type.typeDisplayName),
+              child: Text(type.typeDisplayName(context)),
             );
           }).toList(),
           onChanged: (type) {
@@ -451,59 +451,103 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.white,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Image.asset(
-          'assets/images/back_icon.png',
-          width: 24,
-          height: 24,
-          color: Colors.black,
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(16),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+          minHeight: MediaQuery.of(context).size.height * 0.5,
+          maxWidth: MediaQuery.of(context).size.width * 0.95,
         ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
-        title: Text(
-          AppLocalizations.of(context)!.bookAppointment,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        centerTitle: false,
-      ),
-      body: _isLoading && _userPets.isEmpty
-          ? const Center(child: SpinningLoader())
-          : _userPets.isEmpty && !_isLoading
-              ? _buildEmptyState()
-              : Column(
-                  children: [
-                    _buildVetHeader(),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          children: [
-                            _buildPetSelector(),
-                            const SizedBox(height: 24),
-                            _buildAppointmentTypeSelector(),
-                            const SizedBox(height: 24),
-                            _buildDateSelector(),
-                            const SizedBox(height: 24),
-                            _buildTimeSlotSelector(),
-                            const SizedBox(height: 24),
-                            _buildReasonField(),
-                          ],
-                        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+                ),
+              ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        color: Colors.black,
+                        size: 20,
                       ),
                     ),
-                    _buildBottomActions(),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context)!.bookAppointment,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Expanded(
+              child: _isLoading && _userPets.isEmpty
+                  ? const Center(child: SpinningLoader())
+                  : _userPets.isEmpty && !_isLoading
+                      ? _buildEmptyState()
+                      : Column(
+                          children: [
+                            _buildVetHeader(),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  children: [
+                                    _buildPetSelector(),
+                                    const SizedBox(height: 24),
+                                    _buildAppointmentTypeSelector(),
+                                    const SizedBox(height: 24),
+                                    _buildDateSelector(),
+                                    const SizedBox(height: 24),
+                                    _buildTimeSlotSelector(),
+                                    const SizedBox(height: 24),
+                                    _buildReasonField(),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            _buildBottomActions(),
+                          ],
+                        ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -543,7 +587,7 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Dr. ${widget.vetUser.displayName ?? AppLocalizations.of(context)!.veterinarian}',
+                  '${AppLocalizations.of(context)!.dr} ${widget.vetUser.displayName ?? AppLocalizations.of(context)!.veterinarian}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -682,20 +726,20 @@ class _AppointmentBookingDialogState extends State<AppointmentBookingDialog> {
 
 // Extension to add typeDisplayName to AppointmentType
 extension AppointmentTypeExtension on AppointmentType {
-  String get typeDisplayName {
+  String typeDisplayName(BuildContext context) {
     switch (this) {
       case AppointmentType.checkup:
-        return 'Check-up';
+        return AppLocalizations.of(context)!.checkUp;
       case AppointmentType.vaccination:
-        return 'Vaccination';
+        return AppLocalizations.of(context)!.vaccination;
       case AppointmentType.surgery:
-        return 'Surgery';
+        return AppLocalizations.of(context)!.surgery;
       case AppointmentType.consultation:
-        return 'Consultation';
+        return AppLocalizations.of(context)!.consultation;
       case AppointmentType.emergency:
-        return 'Emergency';
+        return AppLocalizations.of(context)!.emergency;
       case AppointmentType.followUp:
-        return 'Follow-up';
+        return AppLocalizations.of(context)!.followUp;
     }
   }
 }

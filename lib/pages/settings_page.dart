@@ -585,8 +585,8 @@ class _SettingsPageState extends State<SettingsPage> {
                             const SizedBox(width: 8),
                                                          Text(
                                _isLoadingSubscription 
-                                 ? 'Loading...'
-                                 : _subscriptionData?['plan'] ?? 'No Subscription',
+                                 ? AppLocalizations.of(context)!.loading
+                                 : _subscriptionData?['plan'] ?? AppLocalizations.of(context)!.noSubscription,
                                style: TextStyle(
                                  fontSize: 12,
                                  fontWeight: FontWeight.w600,
@@ -685,11 +685,11 @@ class _SettingsPageState extends State<SettingsPage> {
   String _getAccountTypeLabel(String accountType) {
     switch (accountType) {
       case 'vet':
-        return 'Veterinarian';
+        return AppLocalizations.of(context)!.veterinarian;
       case 'store':
-        return 'Store Owner';
+        return AppLocalizations.of(context)!.storeOwner;
       default:
-        return 'User';
+        return AppLocalizations.of(context)!.user;
     }
   }
 
@@ -701,7 +701,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (currentUser == null) {
         CustomSnackBarHelper.showError(
           context,
-          'No user logged in',
+          AppLocalizations.of(context)!.noUserLoggedIn,
         );
         return;
       }
@@ -754,7 +754,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         CustomSnackBarHelper.showSuccess(
           context,
-          'Test appointment created! ID: ${docRef.id}\nTime: ${appointmentTime.hour}:${appointmentTime.minute.toString().padLeft(2, '0')}',
+          AppLocalizations.of(context)!.testAppointmentCreated(
+            docRef.id,
+            '${appointmentTime.hour}:${appointmentTime.minute.toString().padLeft(2, '0')}',
+          ),
           duration: const Duration(seconds: 5),
         );
         
@@ -766,7 +769,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         CustomSnackBarHelper.showError(
           context,
-          'Error creating test appointment: $e',
+          AppLocalizations.of(context)!.errorCreatingTestAppointment(e.toString()),
         );
       }
     }
@@ -887,7 +890,7 @@ void _showCurrencyDialog(BuildContext context) {
         borderRadius: BorderRadius.circular(16),
       ),
       title: Text(
-        'Select Currency',
+        AppLocalizations.of(context)!.selectCurrency,
         style: TextStyle(
           fontFamily: context.titleFont,
           fontWeight: FontWeight.w600,
@@ -900,7 +903,7 @@ void _showCurrencyDialog(BuildContext context) {
           _CurrencyOption(
             currency: Currency.USD,
             symbol: '\$',
-            name: 'USD',
+            name: AppLocalizations.of(context)!.usd,
             onTap: () {
               final currencyService = Provider.of<CurrencyService>(context, listen: false);
               currencyService.changeCurrency(Currency.USD);
@@ -911,7 +914,7 @@ void _showCurrencyDialog(BuildContext context) {
           _CurrencyOption(
             currency: Currency.DZD,
             symbol: '£',
-            name: 'DZD',
+            name: AppLocalizations.of(context)!.dzd,
             onTap: () {
               final currencyService = Provider.of<CurrencyService>(context, listen: false);
               currencyService.changeCurrency(Currency.DZD);

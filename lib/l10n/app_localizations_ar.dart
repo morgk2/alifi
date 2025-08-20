@@ -9,10 +9,10 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get continueWithFacebook => 'تسجيل الدخول عبر فيسبوك';
+  String get continueWithFacebook => 'المتابعة مع فيسبوك';
 
   @override
-  String get continueWithGoogle => 'تسجيل الدخول عبر جوجل';
+  String get continueWithGoogle => 'المتابعة مع جوجل';
 
   @override
   String get continueWithApple => 'تسجيل الدخول عبر أبل';
@@ -36,7 +36,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get privacyPolicy => 'سياسة الخصوصية';
 
   @override
-  String get aiPetAssistant => 'مساعد الحيوانات الذكي';
+  String get aiPetAssistant => 'مساعد الحيوانات الأليفة الذكي';
 
   @override
   String get typeYourMessage => 'اكتب رسالتك...';
@@ -116,13 +116,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proceed => 'متابعة';
 
   @override
-  String get enterCustomAmount => 'أدخل مبلغ مخصص';
+  String get enterCustomAmount => 'أدخل المبلغ المخصص';
 
   @override
   String get locationServicesDisabled => 'خدمات الموقع معطلة';
 
   @override
-  String get pleaseEnableLocationServices => 'يرجى تفعيل خدمات الموقع أو إدخال موقعك يدوياً.';
+  String get pleaseEnableLocationServices => 'يرجى تفعيل خدمات الموقع';
 
   @override
   String get enterManually => 'إدخال يدوي';
@@ -233,22 +233,34 @@ class AppLocalizationsAr extends AppLocalizations {
   String get debugInfo => 'معلومات التصحيح';
 
   @override
-  String get authServiceInitialized => 'تم تهيئة خدمة المصادقة';
+  String authServiceInitialized(Object status) {
+    return 'خدمة المصادقة مهيأة: $status';
+  }
 
   @override
-  String get authServiceLoading => 'جاري تحميل خدمة المصادقة';
+  String authServiceLoading(Object status) {
+    return 'خدمة المصادقة تحمل: $status';
+  }
 
   @override
-  String get authServiceAuthenticated => 'تم المصادقة في خدمة المصادقة';
+  String authServiceAuthenticated(Object status) {
+    return 'خدمة المصادقة مصادق عليها: $status';
+  }
 
   @override
-  String get authServiceUser => 'مستخدم خدمة المصادقة';
+  String authServiceUser(Object email) {
+    return 'مستخدم خدمة المصادقة: $email';
+  }
 
   @override
-  String get firebaseUser => 'مستخدم Firebase';
+  String firebaseUser(Object email) {
+    return 'مستخدم Firebase: $email';
+  }
 
   @override
-  String get guestMode => 'وضع الضيف';
+  String guestMode(Object status) {
+    return 'وضع الضيف: $status';
+  }
 
   @override
   String get forceSignOut => 'إجبار تسجيل الخروج';
@@ -262,12 +274,12 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String error(Object error) {
-    return 'خطأ';
+  String error(Object error, Object errorMessage) {
+    return 'خطأ: $errorMessage';
   }
 
   @override
-  String get lastSeen => 'آخر ظهور';
+  String get lastSeen => 'آخر مرة شوهد';
 
   @override
   String physicalPetIdFor(Object petName) {
@@ -497,16 +509,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String testAppointmentCreated(Object id, Object time) {
-    return 'تم إنشاء موعد تجريبي! المعرف: $id\nالوقت: $time';
+    return 'تم إنشاء موعد اختبار! المعرف: $id\nالوقت: $time';
   }
 
   @override
   String errorCreatingTestAppointment(Object error) {
-    return 'خطأ في إنشاء الموعد التجريبي: $error';
+    return 'خطأ في إنشاء موعد الاختبار: $error';
   }
 
   @override
-  String get noUserLoggedIn => 'لا يوجد مستخدم مسجل دخول';
+  String get noUserLoggedIn => 'لا يوجد مستخدم مسجل الدخول';
 
   @override
   String get todaysVetAppointment => 'موعد الطبيب البيطري اليوم';
@@ -562,7 +574,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get pleaseFillRequiredFields => 'يرجى ملء جميع الحقول المطلوبة';
+  String get pleaseFillRequiredFields => 'يرجى ملء جميع الحقول المطلوبة (الصورة، الاسم، والوصف)';
 
   @override
   String get appointmentRequestSent => 'تم إرسال طلب الموعد بنجاح!';
@@ -772,7 +784,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get searchForUsersToGift => 'البحث عن المستخدمين لإعطاء هدية.';
 
   @override
-  String get noUsersFound => 'لم يتم العثور على مستخدمين.';
+  String get noUsersFound => 'لم يتم العثور على مستخدمين';
 
   @override
   String get noName => 'لا يوجد اسم';
@@ -813,10 +825,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get typeToSearchForUsers => 'اكتب للبحث عن المستخدمين';
 
   @override
-  String get select => 'اختر';
+  String get select => 'اختيار';
 
   @override
-  String get checkUp => 'فحص';
+  String get checkUp => 'فحص عام';
 
   @override
   String get vaccination => 'تطعيم';
@@ -834,7 +846,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get followUp => 'متابعة';
 
   @override
-  String get addPet => 'إضافة حيوان أليف';
+  String get addPet => 'إضافة حيوان';
 
   @override
   String get bird => 'طائر';
@@ -1029,7 +1041,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get guineaPig => 'خنزير غينيا';
 
   @override
-  String get ferret => 'ابن مقرض';
+  String get ferret => 'فيريت';
 
   @override
   String get turtle => 'سلحفاة';
@@ -1047,10 +1059,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get hedgehog => 'قنفذ';
 
   @override
-  String get chinchilla => 'شنشيلا';
+  String get chinchilla => 'شنشيلة';
 
   @override
-  String get gerbil => 'جربوع';
+  String get gerbil => 'جرذ صحراوي';
 
   @override
   String get duck => 'بطة';
@@ -1114,6 +1126,24 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get whenDisabledTabBarWillHaveSolidWhiteBackground => 'عند التعطيل، سيكون لشريط التبويب خلفية بيضاء صلبة بدلاً من تأثير الضبابية الزجاجي.';
+
+  @override
+  String get useLiquidGlassEffectForTabBar => 'استخدام تأثير الزجاج السائل لشريط التبويب';
+
+  @override
+  String get enableLiquidGlassEffectOnNavigationBar => 'تفعيل تأثير الزجاج السائل على شريط التنقل';
+
+  @override
+  String get whenDisabledLiquidGlassTabBarWillNotDistortBackground => 'عند التعطيل، لن يقوم شريط التبويب بتشويه محتوى الخلفية. يعمل بشكل منفصل عن تأثير الضبابية.';
+
+  @override
+  String get useSolidColorForTabBar => 'استخدام لون صلب لشريط التبويب';
+
+  @override
+  String get enableSolidColorOnNavigationBar => 'تفعيل خلفية لون صلب على شريط التنقل';
+
+  @override
+  String get whenDisabledSolidColorTabBarWillHaveEffect => 'عند التعطيل، سيستخدم شريط التبويب أحد التأثيرات البصرية الأخرى. يمكن تفعيل تأثير واحد فقط في كل مرة.';
 
   @override
   String get customizeAppAppearanceAndInterface => 'تخصيص مظهر التطبيق والواجهة';
@@ -1447,7 +1477,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get addToCart => 'أضف إلى السلة';
 
   @override
-  String get addToWishlist => 'أضف إلى قائمة الرغبات';
+  String get addToWishlist => 'أضف إلى المفضلة';
 
   @override
   String get removeFromWishlist => 'إزالة من المفضلة';
@@ -1495,7 +1525,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get messages => 'الرسائل';
 
   @override
-  String get orders => 'طلبات';
+  String get orders => 'الطلبات';
 
   @override
   String get pleaseLogIn => 'يرجى تسجيل الدخول.';
@@ -1633,7 +1663,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shippingAddress => 'عنوان الشحن';
 
   @override
-  String get paymentMethod => 'طريقة الدفع';
+  String paymentMethod(Object method) {
+    return 'طريقة الدفع: $method';
+  }
 
   @override
   String get orderItems => 'عناصر الطلب';
@@ -1686,7 +1718,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get enterAmountInDZD => 'أدخل المبلغ بالدينار الجزائري';
 
   @override
-  String get payVia => 'ادفع عبر :';
+  String get payVia => 'ادفع عبر';
 
   @override
   String get discussion => 'مناقشة';
@@ -1807,7 +1839,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get revenueAmount => 'مبلغ الإيرادات';
 
   @override
-  String get enterAmount => 'أدخل المبلغ (مثال: 150)';
+  String get enterAmount => 'أدخل المبلغ (مثل 150)';
 
   @override
   String revenueAddedSuccessfully(Object amount) {
@@ -1916,7 +1948,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get emergencyContact => 'جهة اتصال الطوارئ';
 
   @override
-  String get affiliateDisclosureText => 'هذا المنتج متاح من خلال شراكتنا مع AliExpress. عند الشراء من خلال هذه الروابط، تساعد في دعم تطبيقنا دون أي تكلفة إضافية عليك. شكراً لمساعدتك في الحفاظ على هذا التطبيق!';
+  String get affiliateDisclosureText => 'هذا المنتج متاح من خلال شراكتنا التابعة مع علي إكسبرس. عند الشراء من خلال هذه الروابط، تساعد في دعم تطبيقنا دون أي تكلفة إضافية عليك. شكراً لمساعدتك في الحفاظ على هذا التطبيق!';
 
   @override
   String get customerReviews => 'تقييمات العملاء';
@@ -2100,16 +2132,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get myOrders => 'طلباتي';
 
   @override
-  String get startDiscussion => 'ابدأ مناقشة';
+  String get startDiscussion => 'Start a discussion';
 
   @override
   String sendMessageToStore(Object storeName) {
-    return 'أرسل رسالة إلى $storeName';
+    return 'Send a message to $storeName';
   }
 
   @override
   String failedToSendMessage(Object error) {
-    return 'فشل في إرسال الرسالة: $error';
+    return 'Failed to send message: $error';
   }
 
   @override
@@ -2280,13 +2312,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get helpUsUnderstandWhatsHappening => 'Help us understand what\'s happening';
 
   @override
-  String get unknownUser => 'Unknown User';
+  String get unknownUser => 'مستخدم غير معروف';
 
   @override
   String get whyAreYouReportingThisAccount => 'Why are you reporting this account?';
 
   @override
-  String get submitReport => 'Submit Report';
+  String get submitReport => 'إرسال التقرير';
 
   @override
   String get spamOrUnwantedContent => 'Spam or unwanted content';
@@ -2384,14 +2416,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String weveRaised(Object amount) {
-    return 'لقد جمعنا $amount دينار جزائري!';
+    return 'We\'ve raised $amount DZD!';
   }
 
   @override
   String get goal => 'Goal';
 
   @override
-  String get contribute => 'تبرع';
+  String get contribute => 'Contribute';
 
   @override
   String get hiAskMeAboutAnyPetAdvice => 'Hi! ask me about any pet advice,\nand I\'ll do my best to help you, and\nyour little one!';
@@ -2412,7 +2444,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get errorLoadingProducts => 'Error loading products';
 
   @override
-  String get noProductsAvailable => 'No products available';
+  String get noProductsAvailable => 'لا توجد منتجات متاحة';
 
   @override
   String get loadingCombinedProducts => 'Loading combined products...';
@@ -2487,74 +2519,74 @@ class AppLocalizationsAr extends AppLocalizations {
   String get ago => 'ago';
 
   @override
-  String get totalAppointments => 'إجمالي المواعيد';
+  String get totalAppointments => 'Total Appointments';
 
   @override
-  String get newPatients => 'مرضى جدد';
+  String get newPatients => 'New Patients';
 
   @override
-  String get emergencyCases => 'حالات الطوارئ';
+  String get emergencyCases => 'Emergency Cases';
 
   @override
-  String get noAppointmentsYet => 'لا توجد مواعيد بعد';
+  String get noAppointmentsYet => 'No appointments yet';
 
   @override
-  String get completed => 'مكتمل';
+  String get completed => 'Completed';
 
   @override
-  String get complete => 'إكمال';
+  String get complete => 'Complete';
 
   @override
   String howMuchDidYouEarnFromAppointment(Object petName) {
-    return 'كم ربحت من موعد $petName؟';
+    return 'How much did you earn from $petName\'s appointment?';
   }
 
   @override
-  String get pleaseEnterAValidAmount => 'يرجى إدخال مبلغ صحيح';
+  String get pleaseEnterAValidAmount => 'Please enter a valid amount';
 
   @override
   String revenueOfAddedSuccessfully(Object amount) {
-    return 'تم إضافة إيرادات $amount بنجاح!';
+    return 'Revenue of $amount added successfully!';
   }
 
   @override
-  String get markComplete => 'تحديد كمكتمل';
+  String get markComplete => 'Mark Complete';
 
   @override
   String appointmentStartedFor(Object petName) {
-    return 'تم بدء الموعد لـ $petName';
+    return 'Appointment started for $petName';
   }
 
   @override
   String errorCompletingAppointment(Object error) {
-    return 'خطأ في إكمال الموعد: $error';
+    return 'Error completing appointment: $error';
   }
 
   @override
-  String get salesAnalytics => 'تحليلات المبيعات';
+  String get salesAnalytics => 'Sales Analytics';
 
   @override
-  String get youHaveNoProductsYet => 'ليس لديك منتجات بعد.';
+  String get youHaveNoProductsYet => 'You have no products yet.';
 
   @override
-  String get contributeWith => 'تبرع بـ :';
+  String get contributeWith => 'Contribute with :';
 
   @override
-  String get shippingFeeApplies => 'تطبق رسوم الشحن';
+  String get shippingFeeApplies => 'Shipping fee applies';
 
   @override
   String deliveryInDays(Object days) {
-    return 'التوصيل خلال $days أيام';
+    return 'Delivery in $days days';
   }
 
   @override
-  String get storeNotFound => 'لم يتم العثور على المتجر';
+  String get storeNotFound => 'Store not found';
 
   @override
-  String get buyAsAGift => 'اشتر كهدية';
+  String get buyAsAGift => 'Buy as a Gift';
 
   @override
-  String get affiliateDisclosure => 'إفصاح الشراكة';
+  String get affiliateDisclosure => 'Affiliate Disclosure';
 
   @override
   String get youMayBeInterestedToo => 'قد تكون مهتماً أيضاً بـ';
@@ -2590,7 +2622,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get petsBreed => 'سلالة الحيوان';
 
   @override
-  String get selectPetType => 'اختر نوع الحيوان';
+  String get selectPetType => 'اختر نوع الحيوان الأليف';
 
   @override
   String get dog => 'كلب';
@@ -2822,7 +2854,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get zipCode => 'الرمز البريدي';
 
   @override
-  String get submitRequest => 'تقديم الطلب';
+  String get submitRequest => 'إرسال الطلب';
 
   @override
   String get pleaseFillAllFields => 'يرجى ملء جميع الحقول';
@@ -2948,10 +2980,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get pleaseEnterTitle => 'يرجى إدخال عنوان للقائمة';
 
   @override
-  String get pleaseEnterDescription => 'يرجى إدخال وصف للقائمة';
+  String get pleaseEnterDescription => 'يرجى إدخال وصف';
 
   @override
-  String get pleaseEnterLocation => 'يرجى إدخال موقع للقائمة';
+  String get pleaseEnterLocation => 'يرجى إدخال موقع';
 
   @override
   String petPostedForAdoptionSuccessfully(Object petName) {
@@ -2967,7 +2999,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get offerForAdoption => 'عرض للتبني';
 
   @override
-  String get deletePet => 'حذف الحيوان';
+  String get deletePet => 'حذف الحيوان الأليف';
 
   @override
   String areYouSureDeletePet(Object petName) {
@@ -2981,7 +3013,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String failedToDeletePet(Object error) {
-    return 'فشل في حذف الحيوان: $error';
+    return 'فشل في حذف الحيوان الأليف: $error';
   }
 
   @override
@@ -2991,7 +3023,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noListingsFound => 'لم يتم العثور على قوائم';
 
   @override
-  String get editListing => 'تعديل القائمة';
+  String get editListing => 'تعديل الإعلان';
 
   @override
   String get deleteListing => 'حذف القائمة';
@@ -3550,40 +3582,786 @@ class AppLocalizationsAr extends AppLocalizations {
   String get addSocialMedia => 'Add Social Media';
 
   @override
-  String get tiktok => 'TikTok';
+  String get tiktok => 'تيك توك';
 
   @override
-  String get facebook => 'Facebook';
+  String get facebook => 'فيسبوك';
 
   @override
-  String get instagram => 'Instagram';
+  String get instagram => 'إنستغرام';
 
   @override
-  String get enterTikTokUsername => 'Enter TikTok username';
+  String get enterTikTokUsername => 'أدخل اسم مستخدم تيك توك';
 
   @override
-  String get enterFacebookUsername => 'Enter Facebook username';
+  String get enterFacebookUsername => 'أدخل اسم مستخدم فيسبوك';
 
   @override
-  String get enterInstagramUsername => 'Enter Instagram username';
+  String get enterInstagramUsername => 'أدخل اسم مستخدم إنستغرام';
 
   @override
-  String get socialMediaAdded => 'Social media account added successfully!';
+  String get socialMediaAdded => 'تم إضافة حساب وسائل التواصل الاجتماعي بنجاح!';
 
   @override
-  String get socialMediaUpdated => 'Social media account updated successfully!';
+  String get socialMediaUpdated => 'تم تحديث حساب وسائل التواصل الاجتماعي بنجاح!';
 
   @override
-  String get socialMediaRemoved => 'Social media account removed successfully!';
+  String get socialMediaRemoved => 'تم إزالة حساب وسائل التواصل الاجتماعي بنجاح!';
 
   @override
   String errorUpdatingSocialMedia(Object error) {
-    return 'Error updating social media: $error';
+    return 'خطأ في تحديث وسائل التواصل الاجتماعي: $error';
   }
 
   @override
-  String get removeSocialMedia => 'Remove Social Media';
+  String get removeSocialMedia => 'إزالة وسائل التواصل الاجتماعي';
 
   @override
-  String get areYouSureRemoveSocialMedia => 'Are you sure you want to remove this social media account?';
+  String get areYouSureRemoveSocialMedia => 'هل أنت متأكد من إزالة حساب وسائل التواصل الاجتماعي هذا؟';
+
+  @override
+  String get petOwners => 'مالكو الحيوانات الأليفة';
+
+  @override
+  String get addPetOwner => 'إضافة مالك للحيوان الأليف';
+
+  @override
+  String searchForUsersToAddAsOwners(Object petName) {
+    return 'البحث عن مستخدمين لإضافتهم كملاك لـ $petName';
+  }
+
+  @override
+  String get petOwnershipRequests => 'طلبات ملكية الحيوانات الأليفة';
+
+  @override
+  String pendingRequests(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ات',
+      one: '',
+    );
+    return '$count طلب معلق$_temp0';
+  }
+
+  @override
+  String moreRequests(Object count) {
+    return '+ $count طلبات أخرى';
+  }
+
+  @override
+  String wantsToCoOwn(Object petName, Object userName) {
+    return '$userName يريد المشاركة في ملكية $petName';
+  }
+
+  @override
+  String get decline => 'رفض';
+
+  @override
+  String get requestAccepted => 'تم قبول الطلب';
+
+  @override
+  String get requestDeclined => 'تم رفض الطلب';
+
+  @override
+  String ownershipRequestSent(Object userName) {
+    return 'تم إرسال طلب الملكية إلى $userName';
+  }
+
+  @override
+  String get errorSendingRequest => 'خطأ في إرسال الطلب';
+
+  @override
+  String get petOwnershipRequest => 'طلب ملكية الحيوان';
+
+  @override
+  String get petOwnershipRequestAccepted => 'تم قبول طلب ملكية الحيوان الأليف';
+
+  @override
+  String get petOwnershipRequestDeclined => 'تم رفض طلب ملكية الحيوان الأليف';
+
+  @override
+  String wantsToAddYouAsOwner(Object petName, Object userName) {
+    return '$userName يريد إضافتك كمالك لـ $petName';
+  }
+
+  @override
+  String get checkMyPetsPageForRequests => 'تحقق من صفحة حيواناتي الأليفة للطلبات';
+
+  @override
+  String get createPetProfile => 'إنشاء ملف الحيوان الأليف';
+
+  @override
+  String get petProfileNotFound => 'لم يتم العثور على ملف الحيوان الأليف';
+
+  @override
+  String get errorCreatingPetProfile => 'خطأ في إنشاء ملف الحيوان الأليف';
+
+  @override
+  String get searchForPetProfiles => 'البحث عن ملفات الحيوانات الأليفة...';
+
+  @override
+  String get searchForPetProfilesTitle => 'البحث عن ملفات الحيوانات الأليفة';
+
+  @override
+  String get findAndFollowPublicPetAccounts => 'ابحث واتبع حسابات الحيوانات الأليفة العامة\nمن جميع أنحاء المجتمع';
+
+  @override
+  String get noPetProfilesFound => 'لم يتم العثور على ملفات الحيوانات الأليفة';
+
+  @override
+  String get writeCaptionForPhoto => 'اكتب تعليقاً على هذه الصورة...';
+
+  @override
+  String get addCaptionToPhoto => 'أضف تعليقاً على هذه الصورة';
+
+  @override
+  String get noCaption => 'لا يوجد تعليق';
+
+  @override
+  String get captionUpdatedSuccessfully => 'تم تحديث التعليق بنجاح!';
+
+  @override
+  String failedToUpdateCaption(Object error) {
+    return 'فشل في تحديث التعليق: $error';
+  }
+
+  @override
+  String get maxCaptionLength => 'الحد الأقصى 200 حرف';
+
+  @override
+  String get searchingPetProfiles => 'البحث في ملفات الحيوانات الأليفة...';
+
+  @override
+  String noResultsFoundForPetProfiles(Object query) {
+    return 'لم يتم العثور على نتائج لـ \"$query\"';
+  }
+
+  @override
+  String errorSearchingPetProfiles(Object error) {
+    return 'خطأ في البحث عن ملفات الحيوانات الأليفة: $error';
+  }
+
+  @override
+  String get authDebugInfo => 'معلومات تصحيح المصادقة';
+
+  @override
+  String get maximumPhotosAllowed => 'الحد الأقصى 4 صور مسموح';
+
+  @override
+  String get photoAddedSuccessfully => 'تم إضافة الصورة بنجاح!';
+
+  @override
+  String failedToAddPhoto(Object error) {
+    return 'فشل في إضافة الصورة: $error';
+  }
+
+  @override
+  String get reportAsLost => 'الإبلاغ كأنه مفقود';
+
+  @override
+  String get youMustBeLoggedInToReportLostPet => 'يجب أن تكون مسجل الدخول للإبلاغ عن حيوان أليف مفقود';
+
+  @override
+  String get pleaseSignInToReportMissingPet => 'يرجى تسجيل الدخول للإبلاغ عن حيوان مفقود';
+
+  @override
+  String get selectPetToReportMissing => 'اختر حيوان أليف للإبلاغ عن فقدانه';
+
+  @override
+  String get report => 'إبلاغ';
+
+  @override
+  String get lb => 'رطل';
+
+  @override
+  String get petName => 'اسم الحيوان الأليف';
+
+  @override
+  String get birthday => 'تاريخ الميلاد';
+
+  @override
+  String get borderColor => 'لون الحدود:';
+
+  @override
+  String get pickAColor => 'اختر لوناً';
+
+  @override
+  String get glassDistortionEffectForTabBar => 'تأثير تشويه الزجاج لشريط التبويب';
+
+  @override
+  String get enableCustomGlassDistortionEffect => 'تفعيل تأثير تشويه الزجاج المخصص الذي ينحني المحتوى للمظهر الواقعي للزجاج';
+
+  @override
+  String get customGlassDistortionShaderDescription => 'مظلل تشويه الزجاج المخصص الذي ينحني ويشوه المحتوى داخل شريط التنقل لمحاكاة انكسار الزجاج الواقعي. ينشئ مظهراً زجاجياً أصيلاً مع تشوهات موجية خفيفة.';
+
+  @override
+  String get tapSaveLocationToFinish => 'انقر على \"حفظ الموقع\" للإنهاء';
+
+  @override
+  String get orderPlacedSuccessfully => 'تم تقديم الطلب بنجاح!';
+
+  @override
+  String get selectAProductToOrder => 'اختر منتجاً للطلب';
+
+  @override
+  String get order => 'الطلب';
+
+  @override
+  String storeProducts(Object storeName) {
+    return 'منتجات $storeName';
+  }
+
+  @override
+  String iWouldLikeToOrder(Object price, Object productName) {
+    return 'أود طلب: $productName - $price';
+  }
+
+  @override
+  String get product => 'المنتج';
+
+  @override
+  String get trySearchingWithDifferentNameOrEmail => 'جرب البحث باسم أو بريد إلكتروني مختلف';
+
+  @override
+  String get startTypingToSearchForUsers => 'ابدأ الكتابة للبحث عن المستخدمين';
+
+  @override
+  String get sendRequest => 'إرسال الطلب';
+
+  @override
+  String ownershipRequestSentTo(Object userName) {
+    return 'تم إرسال طلب الملكية إلى $userName';
+  }
+
+  @override
+  String get viewAnExample => 'عرض مثال';
+
+  @override
+  String get requestAPetId => 'طلب هوية حيوان أليف';
+
+  @override
+  String get shippingInformation => 'معلومات الشحن';
+
+  @override
+  String get pleaseEnterYourFullName => 'يرجى إدخال اسمك الكامل';
+
+  @override
+  String get pleaseEnterYourPhoneNumber => 'يرجى إدخال رقم هاتفك';
+
+  @override
+  String get pleaseEnterYourAddress => 'يرجى إدخال عنوانك';
+
+  @override
+  String get pleaseEnterYourZipCode => 'يرجى إدخال الرمز البريدي';
+
+  @override
+  String get errorLoadingPetIdImage => 'خطأ في تحميل صورة هوية الحيوان الأليف';
+
+  @override
+  String get tapImageToViewFullScreen => 'انقر على الصورة لعرضها بالشاشة الكاملة';
+
+  @override
+  String get sharePetId => 'مشاركة هوية الحيوان الأليف';
+
+  @override
+  String get physicalPetIdRequestSubmittedSuccessfully => 'تم تقديم طلب هوية الحيوان الأليف المادية بنجاح! سيتم الاتصال بك للدفع.';
+
+  @override
+  String errorRequestingPhysicalPetId(Object error) {
+    return 'خطأ في طلب هوية الحيوان الأليف المادية: $error';
+  }
+
+  @override
+  String get welcomeToAlifi => 'مرحباً بك في أليفي! تحكم شروط الخدمة هذه (\"الشروط\") استخدامك لتطبيق أليفي المحمول والموقع الإلكتروني (\"التطبيق\")، الذي تشغله أليفي المحدودة (\"نحن\" أو \"لنا\").';
+
+  @override
+  String get alifiLtdValuesYourPrivacy => 'تعتز أليفي المحدودة (\"نحن\" أو \"لنا\") بخصوصيتك. تصف سياسة الخصوصية هذه كيفية جمع واستخدام وكشف وحماية معلوماتك الشخصية عند استخدام تطبيق أليفي المحمول والموقع الإلكتروني (يُشار إليهما معاً باسم \"التطبيق\").';
+
+  @override
+  String get petAdoptionsForRehomingAnimals => 'تبني الحيوانات الأليفة لإعادة توطين الحيوانات';
+
+  @override
+  String get missingPetAnnouncements => 'إعلانات الحيوانات المفقودة';
+
+  @override
+  String get provideAccurateAndCompleteInformation => 'تقديم معلومات دقيقة وكاملة';
+
+  @override
+  String get keepYourLoginCredentialsSecure => 'الحفاظ على بيانات اعتماد تسجيل الدخول آمنة';
+
+  @override
+  String get notifyUsImmediatelyOfUnauthorizedAccess => 'إخطارنا فوراً بأي وصول غير مصرح أو نشاط مشبوه';
+
+  @override
+  String get youAreLufi => 'أنت لوفي، مساعد رعاية الحيوانات المحترف والمستشار البيطري. مهمتك الأساسية هي تقديم إرشادات دقيقة قائمة على الأدلة حول صحة الحيوانات وسلوكها وتغذيتها وتدريبها والرعاية العامة.';
+
+  @override
+  String get thisProfileWillBePublicAndVisible => 'سيكون هذا الملف الشخصي عاماً ومرئياً للمستخدمين الآخرين';
+
+  @override
+  String get createProfile => 'إنشاء ملف شخصي';
+
+  @override
+  String get unknownProduct => 'منتج غير معروف';
+
+  @override
+  String get nullValue => 'فارغ';
+
+  @override
+  String get letsGetYouStarted => 'دعنا نبدأ!';
+
+  @override
+  String get signUpAsVetOrStore => 'سجل كطبيب بيطري أو متجر';
+
+  @override
+  String get signUpAsVet => 'سجل كطبيب بيطري';
+
+  @override
+  String get signUpAsStore => 'سجل كمتجر';
+
+  @override
+  String get failedToStartApp => 'فشل في بدء التطبيق';
+
+  @override
+  String get deleteVaccine => 'حذف اللقاح';
+
+  @override
+  String get deleteVaccineConfirmation => 'هل أنت متأكد من أنك تريد حذف هذا اللقاح؟';
+
+  @override
+  String get undo => 'تراجع';
+
+  @override
+  String get deleteIllness => 'حذف المرض';
+
+  @override
+  String get deleteIllnessConfirmation => 'هل أنت متأكد من أنك تريد حذف هذا المرض؟';
+
+  @override
+  String get storeOwner => 'مالك المتجر';
+
+  @override
+  String get addPetForAdoption => 'إضافة حيوان للتبني';
+
+  @override
+  String get back => 'رجوع';
+
+  @override
+  String get saveListing => 'حفظ الإعلان';
+
+  @override
+  String get continueText => 'متابعة';
+
+  @override
+  String get basicInformation => 'المعلومات الأساسية';
+
+  @override
+  String get tellUsAboutPetForAdoption => 'أخبرنا عن الحيوان الذي تريد وضعه للتبني';
+
+  @override
+  String get enterPetName => 'أدخل اسم الحيوان';
+
+  @override
+  String get pleaseEnterName => 'يرجى إدخال اسم';
+
+  @override
+  String get helpPotentialAdopters => 'ساعد المتبنين المحتملين على فهم الحيوان بشكل أفضل';
+
+  @override
+  String get enterBreed => 'أدخل السلالة';
+
+  @override
+  String get unit => 'الوحدة';
+
+  @override
+  String get petPhoto => 'صورة الحيوان';
+
+  @override
+  String get clearPhotoHelpsAdopters => 'الصورة الواضحة تساعد المتبنين المحتملين على التواصل مع الحيوان';
+
+  @override
+  String get tapToAddPhoto => 'انقر لإضافة صورة';
+
+  @override
+  String get petDocumentation => 'وثائق الحيوان';
+
+  @override
+  String get helpAdoptersUnderstandBackground => 'ساعد المتبنين المحتملين على فهم خلفية الحيوان';
+
+  @override
+  String get vaccinated => 'مطعم';
+
+  @override
+  String get microchipped => 'مزود بشريحة إلكترونية';
+
+  @override
+  String get houseTrained => 'مدرب على المنزل';
+
+  @override
+  String get goodWithKids => 'جيد مع الأطفال';
+
+  @override
+  String get goodWithDogs => 'جيد مع الكلاب';
+
+  @override
+  String get goodWithCats => 'جيد مع القطط';
+
+  @override
+  String get yourPhoneNumber => 'رقم هاتفك';
+
+  @override
+  String get pleaseEnterContactNumber => 'يرجى إدخال رقم اتصال';
+
+  @override
+  String get enterLocationManually => 'أدخل الموقع يدوياً';
+
+  @override
+  String get manualLocation => 'الموقع اليدوي';
+
+  @override
+  String get locationPermissionNotGranted => 'لم يتم منح إذن الموقع';
+
+  @override
+  String get dr => 'د.';
+
+  @override
+  String get neuteredSpayed => 'مخصي/مستأصل';
+
+  @override
+  String get healthIssuesOptional => 'مشاكل صحية (اختياري)';
+
+  @override
+  String get healthIssuesPlaceholder => 'أي حالات صحية أو احتياجات خاصة...';
+
+  @override
+  String get additionalRequirementsOptional => 'متطلبات إضافية (اختياري)';
+
+  @override
+  String get requirementsPlaceholder => 'أي متطلبات محددة للمتبنين المحتملين...';
+
+  @override
+  String get howCanAdoptersReachYou => 'كيف يمكن للمتبنين المحتملين الوصول إليك؟';
+
+  @override
+  String get autoDetectedLocation => 'الموقع المكتشف تلقائياً';
+
+  @override
+  String get enterCityStateOrAddress => 'أدخل مدينتك أو ولايتك أو عنوانك';
+
+  @override
+  String get editPet => 'تعديل الحيوان';
+
+  @override
+  String get pleaseEnterPetName => 'يرجى إدخال اسم الحيوان';
+
+  @override
+  String get addPhotoOfYourPet => 'أضف صورة لحيوانك';
+
+  @override
+  String get chooseColorForPetProfile => 'اختر لوناً لملف الحيوان الشخصي';
+
+  @override
+  String get found => 'تم العثور عليه';
+
+  @override
+  String get markAsFound => 'تحديد كموجود؟';
+
+  @override
+  String get markAsFoundConfirmation => 'هل أنت متأكد من أنك تريد تحديد هذا الحيوان كموجود؟';
+
+  @override
+  String get trySearchingWithDifferentName => 'جرب البحث باسم أو بريد إلكتروني مختلف';
+
+  @override
+  String get startTypingToSearch => 'ابدأ الكتابة للبحث عن المستخدمين';
+
+  @override
+  String get placeOrder => 'تقديم الطلب';
+
+  @override
+  String get confirmOrder => 'تأكيد الطلب';
+
+  @override
+  String get shipOrder => 'شحن الطلب';
+
+  @override
+  String get deliverOrder => 'توصيل الطلب';
+
+  @override
+  String get ship => 'شحن';
+
+  @override
+  String get deliver => 'توصيل';
+
+  @override
+  String areYouSureYouWantToOrder(Object price, Object productName, Object quantity) {
+    return 'هل أنت متأكد من أنك تريد طلب $quantity x \"$productName\" مقابل $price؟';
+  }
+
+  @override
+  String confirmThatYouWillFulfill(Object productName) {
+    return 'تأكيد أنك ستقوم بتنفيذ الطلب لـ \"$productName\"؟';
+  }
+
+  @override
+  String markOrderAsShipped(Object productName) {
+    return 'تحديد الطلب لـ \"$productName\" كشحون؟';
+  }
+
+  @override
+  String markOrderAsDelivered(Object productName) {
+    return 'تحديد الطلب لـ \"$productName\" كموصول؟';
+  }
+
+  @override
+  String areYouSureYouWantToCancel(Object productName) {
+    return 'هل أنت متأكد من أنك تريد إلغاء الطلب لـ \"$productName\"؟';
+  }
+
+  @override
+  String get enterPetNameRequired => 'أدخل اسم حيوانك الأليف (مطلوب)';
+
+  @override
+  String get describePetFeatures => 'صف حيوانك الأليف - الحجم، اللون، الميزات المميزة... (مطلوب)';
+
+  @override
+  String get addContactNumber => 'إضافة رقم الاتصال';
+
+  @override
+  String get enterContactNumber => 'أدخل رقم الاتصال';
+
+  @override
+  String get add => 'إضافة';
+
+  @override
+  String get remove => 'إزالة';
+
+  @override
+  String get rewardOptional => 'المكافأة (اختياري)';
+
+  @override
+  String get enterRewardAmount => 'أدخل مبلغ المكافأة';
+
+  @override
+  String get missingPetReportSubmitted => 'تم إرسال تقرير الحيوان الأليف المفقود';
+
+  @override
+  String get hopeYouFindPetSoon => 'نأمل أن تجد حيوانك الأليف قريباً! سيتم إخطار المجتمع.';
+
+  @override
+  String get couldNotGetLocation => 'تعذر الحصول على الموقع الحالي. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get failedToReportLostPet => 'فشل في الإبلاغ عن الحيوان الأليف المفقود. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get noLostPetReportFound => 'لم يتم العثور على تقرير حيوان أليف مفقود لهذا الحيوان.';
+
+  @override
+  String greatNewsMarkAsFound(Object petName) {
+    return 'أخبار رائعة! هل أنت متأكد من أنك تريد تحديد $petName كموجود؟ سيتم تحديث تقرير الحيوان الأليف المفقود.';
+  }
+
+  @override
+  String petMarkedAsFound(Object petName) {
+    return 'تم تحديد $petName كموجود!';
+  }
+
+  @override
+  String failedToMarkAsFound(Object error) {
+    return 'فشل في التحديد كموجود: $error';
+  }
+
+  @override
+  String get myPetsPatients => 'حيواناتي الأليفة (المرضى)';
+
+  @override
+  String get selectProductToOrder => 'اختر منتج للطلب';
+
+  @override
+  String get checkout => 'الدفع';
+
+  @override
+  String get deliveryAddress => 'عنوان التوصيل';
+
+  @override
+  String get manageAddresses => 'إدارة العناوين';
+
+  @override
+  String get addAddress => 'إضافة عنوان';
+
+  @override
+  String get youDontHaveAnyAddressesToShipTo => 'ليس لديك أي عناوين للشحن إليها';
+
+  @override
+  String get couponCode => 'رمز القسيمة';
+
+  @override
+  String get enterCouponCode => 'أدخل رمز القسيمة';
+
+  @override
+  String get apply => 'تطبيق';
+
+  @override
+  String get couponFunctionalityComingSoon => 'وظيفة القسيمة قريباً!';
+
+  @override
+  String get orderSummary => 'ملخص الطلب';
+
+  @override
+  String subtotal(Object quantity) {
+    return 'المجموع الفرعي (${quantity}x)';
+  }
+
+  @override
+  String get shipping => 'الشحن';
+
+  @override
+  String get tax => 'الضريبة';
+
+  @override
+  String get appFee => 'رسوم التطبيق';
+
+  @override
+  String get total => 'المجموع';
+
+  @override
+  String get addAddressToContinue => 'أضف عنوان للمتابعة';
+
+  @override
+  String get completePayment => 'إكمال الدفع';
+
+  @override
+  String get choosePaymentMethod => 'اختر طريقة الدفع';
+
+  @override
+  String get cibEpayment => 'الدفع الإلكتروني CIB';
+
+  @override
+  String get paySecurelyWithYourCibCard => 'ادفع بأمان ببطاقة CIB الخاصة بك';
+
+  @override
+  String get edahabia => 'العهدية';
+
+  @override
+  String get payWithYourEdahabiaCard => 'ادفع ببطاقة العهدية الخاصة بك';
+
+  @override
+  String get poweredBy => 'مدعوم بواسطة';
+
+  @override
+  String get paymentOnDelivery => 'الدفع عند التوصيل';
+
+  @override
+  String get payWhenYourOrderArrives => 'ادفع عند وصول طلبك';
+
+  @override
+  String get totalAmount => 'المبلغ الإجمالي';
+
+  @override
+  String get selectPaymentMethod => 'اختر طريقة الدفع';
+
+  @override
+  String get completeSecurePayment => 'إكمال الدفع الآمن';
+
+  @override
+  String get processingPayment => 'جاري معالجة الدفع...';
+
+  @override
+  String get pleaseSelectAPaymentMethod => 'يرجى اختيار طريقة دفع.';
+
+  @override
+  String paymentComingSoon(Object methodName) {
+    return 'دفع $methodName قريباً!';
+  }
+
+  @override
+  String errorCreatingPayment(Object error) {
+    return 'خطأ في إنشاء الدفع: $error';
+  }
+
+  @override
+  String get paymentWasCancelled => 'تم إلغاء الدفع';
+
+  @override
+  String get processingPaymentTitle => 'معالجة الدفع';
+
+  @override
+  String get pleaseWaitWhileWeVerifyYourPayment => 'يرجى الانتظار بينما نتحقق من دفعتك';
+
+  @override
+  String get verifyingPaymentStatus => 'جاري التحقق من حالة الدفع...';
+
+  @override
+  String get verifyingPayment => 'التحقق من الدفع';
+
+  @override
+  String get checkingPaymentStatusManually => 'التحقق من حالة الدفع يدوياً';
+
+  @override
+  String get paymentVerificationTimeout => 'انتهت مهلة التحقق من الدفع. يرجى التحقق من حالة دفعتك يدوياً.';
+
+  @override
+  String get paymentFailed => 'فشل الدفع';
+
+  @override
+  String errorProcessingOrder(Object error) {
+    return 'خطأ في معالجة الطلب: $error';
+  }
+
+  @override
+  String paymentForProductPlusAppFee(Object productName) {
+    return 'الدفع مقابل $productName + رسوم التطبيق';
+  }
+
+  @override
+  String get paymentMethodCashOnDelivery => 'طريقة الدفع: نقداً عند التوصيل | الحالة: انتظار الدفع';
+
+  @override
+  String helloIJustPlacedAnOrder(Object orderId, Object productName) {
+    return 'مرحباً! لقد قدمت طلباً لـ $productName. الدفع عند التوصيل. رقم الطلب: $orderId';
+  }
+
+  @override
+  String get paymentSuccessful => 'تم الدفع بنجاح!';
+
+  @override
+  String amount(Object amount) {
+    return 'المبلغ: $amount';
+  }
+
+  @override
+  String orderId(Object orderId) {
+    return 'رقم الطلب: $orderId';
+  }
+
+  @override
+  String get paymentProcessedSuccessfully => 'تم معالجة دفعتك بنجاح. ستتلقى بريد إلكتروني للتأكيد قريباً.';
+
+  @override
+  String get continue => 'متابعة';
+
+  @override
+  String get paymentFailedTitle => 'فشل الدفع';
+
+  @override
+  String get paymentCouldNotBeProcessed => 'تعذر معالجة دفعتك. يرجى التحقق من تفاصيل الدفع والمحاولة مرة أخرى.';
+
+  @override
+  String get goBack => 'العودة';
+
+  @override
+  String get orderConfirmed => 'تم تأكيد الطلب!';
+
+  @override
+  String yourOrderOfHasBeenConfirmed(Object amount) {
+    return 'تم تأكيد طلبك البالغ $amount.';
+  }
+
+  @override
+  String get yourOrderHasBeenConfirmed => 'تم تأكيد طلبك! ستدفع عند توصيل المنتج إلى عنوانك.';
+
+  @override
+  String get backToHome => 'العودة إلى الرئيسية';
 }

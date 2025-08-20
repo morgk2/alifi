@@ -36,7 +36,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacyPolicy => 'Privacy Policy';
 
   @override
-  String get aiPetAssistant => 'AI Pet Assistant';
+  String get aiPetAssistant => 'AI pet assistant';
 
   @override
   String get typeYourMessage => 'Type your message...';
@@ -122,7 +122,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationServicesDisabled => 'Location Services Disabled';
 
   @override
-  String get pleaseEnableLocationServices => 'Please enable location services or enter your location manually.';
+  String get pleaseEnableLocationServices => 'Please enable location services';
 
   @override
   String get enterManually => 'Enter Manually';
@@ -233,22 +233,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get debugInfo => 'Debug Info';
 
   @override
-  String get authServiceInitialized => 'AuthService initialized';
+  String authServiceInitialized(Object status) {
+    return 'AuthService initialized: $status';
+  }
 
   @override
-  String get authServiceLoading => 'AuthService loading';
+  String authServiceLoading(Object status) {
+    return 'AuthService loading: $status';
+  }
 
   @override
-  String get authServiceAuthenticated => 'AuthService authenticated';
+  String authServiceAuthenticated(Object status) {
+    return 'AuthService authenticated: $status';
+  }
 
   @override
-  String get authServiceUser => 'AuthService user';
+  String authServiceUser(Object email) {
+    return 'AuthService user: $email';
+  }
 
   @override
-  String get firebaseUser => 'Firebase user';
+  String firebaseUser(Object email) {
+    return 'Firebase user: $email';
+  }
 
   @override
-  String get guestMode => 'Guest mode';
+  String guestMode(Object status) {
+    return 'Guest mode: $status';
+  }
 
   @override
   String get forceSignOut => 'Force Sign Out';
@@ -262,8 +274,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String error(Object error) {
-    return 'Error: $error';
+  String error(Object error, Object errorMessage) {
+    return 'Error: $errorMessage';
   }
 
   @override
@@ -291,7 +303,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get vet => 'Vets';
+  String get vet => 'vet';
 
   @override
   String get vetsNearMe => 'Vets Near Me';
@@ -562,7 +574,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get pleaseFillRequiredFields => 'Please fill in all required fields';
+  String get pleaseFillRequiredFields => 'Please fill in all required fields (photo, name, and description)';
 
   @override
   String get appointmentRequestSent => 'Appointment request sent successfully!';
@@ -772,7 +784,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchForUsersToGift => 'Search for users to gift.';
 
   @override
-  String get noUsersFound => 'No users found.';
+  String get noUsersFound => 'No users found';
 
   @override
   String get noName => 'No Name';
@@ -1114,6 +1126,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get whenDisabledTabBarWillHaveSolidWhiteBackground => 'When disabled, the tab bar will have a solid white background instead of the glass-like blur effect.';
+
+  @override
+  String get useLiquidGlassEffectForTabBar => 'Use liquid glass effect for Tab bar';
+
+  @override
+  String get enableLiquidGlassEffectOnNavigationBar => 'Enable liquid glass effect on the navigation bar';
+
+  @override
+  String get whenDisabledLiquidGlassTabBarWillNotDistortBackground => 'When disabled, the tab bar will not distort the background content. Works separately from the blur effect.';
+
+  @override
+  String get useSolidColorForTabBar => 'Use solid color for Tab bar';
+
+  @override
+  String get enableSolidColorOnNavigationBar => 'Enable solid color background on the navigation bar';
+
+  @override
+  String get whenDisabledSolidColorTabBarWillHaveEffect => 'When disabled, the tab bar will use one of the other visual effects. Only one effect can be active at a time.';
 
   @override
   String get customizeAppAppearanceAndInterface => 'Customize app appearance and interface';
@@ -1633,7 +1663,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shippingAddress => 'Shipping Address';
 
   @override
-  String get paymentMethod => 'Payment Method';
+  String paymentMethod(Object method) {
+    return 'Payment Method: $method';
+  }
 
   @override
   String get orderItems => 'Order Items';
@@ -2056,7 +2088,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unknownError => 'An unknown error occurred';
 
   @override
-  String get tryAgain => 'Try again';
+  String get tryAgain => 'Try Again';
 
   @override
   String get loading => 'Loading...';
@@ -2948,10 +2980,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pleaseEnterTitle => 'Please enter a title for the listing';
 
   @override
-  String get pleaseEnterDescription => 'Please enter a description for the listing';
+  String get pleaseEnterDescription => 'Please enter a description';
 
   @override
-  String get pleaseEnterLocation => 'Please enter a location for the listing';
+  String get pleaseEnterLocation => 'Please enter a location';
 
   @override
   String petPostedForAdoptionSuccessfully(Object petName) {
@@ -3586,4 +3618,750 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get areYouSureRemoveSocialMedia => 'Are you sure you want to remove this social media account?';
+
+  @override
+  String get petOwners => 'Pet Owners';
+
+  @override
+  String get addPetOwner => 'Add Pet Owner';
+
+  @override
+  String searchForUsersToAddAsOwners(Object petName) {
+    return 'Search for users to add as owners of $petName';
+  }
+
+  @override
+  String get petOwnershipRequests => 'Pet Ownership Requests';
+
+  @override
+  String pendingRequests(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 's',
+      one: '',
+    );
+    return '$count pending request$_temp0';
+  }
+
+  @override
+  String moreRequests(Object count) {
+    return '+ $count more requests';
+  }
+
+  @override
+  String wantsToCoOwn(Object petName, Object userName) {
+    return '$userName wants to co-own $petName';
+  }
+
+  @override
+  String get decline => 'Decline';
+
+  @override
+  String get requestAccepted => 'Request accepted';
+
+  @override
+  String get requestDeclined => 'Request declined';
+
+  @override
+  String ownershipRequestSent(Object userName) {
+    return 'Ownership request sent to $userName';
+  }
+
+  @override
+  String get errorSendingRequest => 'Error sending request';
+
+  @override
+  String get petOwnershipRequest => 'Pet Ownership Request';
+
+  @override
+  String get petOwnershipRequestAccepted => 'Pet Ownership Request Accepted';
+
+  @override
+  String get petOwnershipRequestDeclined => 'Pet Ownership Request Declined';
+
+  @override
+  String wantsToAddYouAsOwner(Object petName, Object userName) {
+    return '$userName wants to add you as an owner of $petName';
+  }
+
+  @override
+  String get checkMyPetsPageForRequests => 'Check your My Pets page for ownership requests';
+
+  @override
+  String get createPetProfile => 'Create Pet Profile';
+
+  @override
+  String get petProfileNotFound => 'Pet profile not found';
+
+  @override
+  String get errorCreatingPetProfile => 'Error creating pet profile';
+
+  @override
+  String get searchForPetProfiles => 'Search for pet profiles...';
+
+  @override
+  String get searchForPetProfilesTitle => 'Search for Pet Profiles';
+
+  @override
+  String get findAndFollowPublicPetAccounts => 'Find and follow public pet accounts\nfrom around the community';
+
+  @override
+  String get noPetProfilesFound => 'No pet profiles found';
+
+  @override
+  String get writeCaptionForPhoto => 'Write a caption for this photo...';
+
+  @override
+  String get addCaptionToPhoto => 'Add a caption to this photo';
+
+  @override
+  String get noCaption => 'No caption';
+
+  @override
+  String get captionUpdatedSuccessfully => 'Caption updated successfully!';
+
+  @override
+  String failedToUpdateCaption(Object error) {
+    return 'Failed to update caption: $error';
+  }
+
+  @override
+  String get maxCaptionLength => 'Maximum 200 characters';
+
+  @override
+  String get searchingPetProfiles => 'Searching pet profiles...';
+
+  @override
+  String noResultsFoundForPetProfiles(Object query) {
+    return 'No results found for \"$query\"';
+  }
+
+  @override
+  String errorSearchingPetProfiles(Object error) {
+    return 'Error searching pet profiles: $error';
+  }
+
+  @override
+  String get authDebugInfo => 'Auth Debug Info';
+
+  @override
+  String get maximumPhotosAllowed => 'Maximum of 4 photos allowed';
+
+  @override
+  String get photoAddedSuccessfully => 'Photo added successfully!';
+
+  @override
+  String failedToAddPhoto(Object error) {
+    return 'Failed to add photo: $error';
+  }
+
+  @override
+  String get reportAsLost => 'Report as Lost';
+
+  @override
+  String get youMustBeLoggedInToReportLostPet => 'You must be logged in to report a lost pet';
+
+  @override
+  String get pleaseSignInToReportMissingPet => 'Please sign in to report a missing pet';
+
+  @override
+  String get selectPetToReportMissing => 'Select a pet to report missing';
+
+  @override
+  String get report => 'Report';
+
+  @override
+  String get lb => 'lb';
+
+  @override
+  String get petName => 'Pet Name';
+
+  @override
+  String get birthday => 'Birthday';
+
+  @override
+  String get borderColor => 'Border Color:';
+
+  @override
+  String get pickAColor => 'Pick a color';
+
+  @override
+  String get glassDistortionEffectForTabBar => 'Glass Distortion Effect for Tab bar';
+
+  @override
+  String get enableCustomGlassDistortionEffect => 'Enable custom glass distortion effect that bends content for realistic glass appearance';
+
+  @override
+  String get customGlassDistortionShaderDescription => 'Custom glass distortion shader that subtly bends and warps content inside the navigation bar to simulate realistic glass refraction. Creates an authentic glass-like appearance with subtle wave distortions.';
+
+  @override
+  String get tapSaveLocationToFinish => 'Tap \"Save Location\" to finish';
+
+  @override
+  String get orderPlacedSuccessfully => 'Order placed successfully!';
+
+  @override
+  String get selectAProductToOrder => 'Select a product to order';
+
+  @override
+  String get order => 'Order';
+
+  @override
+  String storeProducts(Object storeName) {
+    return '$storeName\'s Products';
+  }
+
+  @override
+  String iWouldLikeToOrder(Object price, Object productName) {
+    return 'I\'d like to order: $productName - \$$price';
+  }
+
+  @override
+  String get product => 'Product';
+
+  @override
+  String get trySearchingWithDifferentNameOrEmail => 'Try searching with a different name or email';
+
+  @override
+  String get startTypingToSearchForUsers => 'Start typing to search for users';
+
+  @override
+  String get sendRequest => 'Send Request';
+
+  @override
+  String ownershipRequestSentTo(Object userName) {
+    return 'Ownership request sent to $userName';
+  }
+
+  @override
+  String get viewAnExample => 'View an example';
+
+  @override
+  String get requestAPetId => 'Request a pet ID';
+
+  @override
+  String get shippingInformation => 'Shipping Information';
+
+  @override
+  String get pleaseEnterYourFullName => 'Please enter your full name';
+
+  @override
+  String get pleaseEnterYourPhoneNumber => 'Please enter your phone number';
+
+  @override
+  String get pleaseEnterYourAddress => 'Please enter your address';
+
+  @override
+  String get pleaseEnterYourZipCode => 'Please enter your zip code';
+
+  @override
+  String get errorLoadingPetIdImage => 'Error loading pet ID image';
+
+  @override
+  String get tapImageToViewFullScreen => 'Tap the image to view in full screen';
+
+  @override
+  String get sharePetId => 'Share Pet ID';
+
+  @override
+  String get physicalPetIdRequestSubmittedSuccessfully => 'Physical pet ID request submitted successfully! You will be contacted for payment.';
+
+  @override
+  String errorRequestingPhysicalPetId(Object error) {
+    return 'Error requesting physical pet ID: $error';
+  }
+
+  @override
+  String get welcomeToAlifi => 'Welcome to ALIFI! These Terms of Service (\"Terms\") govern your use of the ALIFI mobile application and website (the \"App\"), operated by ALIFI LTD (\"we,\" \"us,\" or \"our\").';
+
+  @override
+  String get alifiLtdValuesYourPrivacy => 'ALIFI LTD (\"we,\" \"us,\" or \"our\") values your privacy. This Privacy Policy describes how we collect, use, disclose, and protect your personal information when you use the ALIFI mobile application and website (collectively, the \"App\").';
+
+  @override
+  String get petAdoptionsForRehomingAnimals => 'Pet Adoptions for rehoming animals';
+
+  @override
+  String get missingPetAnnouncements => 'Missing Pet Announcements';
+
+  @override
+  String get provideAccurateAndCompleteInformation => 'Provide accurate and complete information';
+
+  @override
+  String get keepYourLoginCredentialsSecure => 'Keep your login credentials secure';
+
+  @override
+  String get notifyUsImmediatelyOfUnauthorizedAccess => 'Notify us immediately of any unauthorized access or suspicious activity';
+
+  @override
+  String get youAreLufi => 'You are Lufi, a professional pet care assistant and veterinary advisor. Your primary mission is to provide accurate, evidence-based guidance on pet health, behavior, nutrition, training, and general care.';
+
+  @override
+  String get thisProfileWillBePublicAndVisible => 'This profile will be public and visible to other users';
+
+  @override
+  String get createProfile => 'Create Profile';
+
+  @override
+  String get unknownProduct => 'Unknown Product';
+
+  @override
+  String get nullValue => 'null';
+
+  @override
+  String get letsGetYouStarted => 'Let\'s get you started!';
+
+  @override
+  String get signUpAsVetOrStore => 'sign up as a vet or a store';
+
+  @override
+  String get signUpAsVet => 'Sign up as a vet';
+
+  @override
+  String get signUpAsStore => 'Sign up as a store';
+
+  @override
+  String get failedToStartApp => 'Failed to start the app';
+
+  @override
+  String get deleteVaccine => 'Delete Vaccine';
+
+  @override
+  String get deleteVaccineConfirmation => 'Are you sure you want to delete this vaccine?';
+
+  @override
+  String get undo => 'Undo';
+
+  @override
+  String get deleteIllness => 'Delete Illness';
+
+  @override
+  String get deleteIllnessConfirmation => 'Are you sure you want to delete this illness?';
+
+  @override
+  String get storeOwner => 'Store Owner';
+
+  @override
+  String get addPetForAdoption => 'Add Pet for Adoption';
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get saveListing => 'Save Listing';
+
+  @override
+  String get continueText => 'Continue';
+
+  @override
+  String get basicInformation => 'Basic Information';
+
+  @override
+  String get tellUsAboutPetForAdoption => 'Tell us about the pet you want to put up for adoption';
+
+  @override
+  String get enterPetName => 'Enter pet name';
+
+  @override
+  String get pleaseEnterName => 'Please enter a name';
+
+  @override
+  String get helpPotentialAdopters => 'Help potential adopters understand the pet better';
+
+  @override
+  String get enterBreed => 'Enter the breed';
+
+  @override
+  String get unit => 'Unit';
+
+  @override
+  String get petPhoto => 'Pet Photo';
+
+  @override
+  String get clearPhotoHelpsAdopters => 'A clear photo helps potential adopters connect with the pet';
+
+  @override
+  String get tapToAddPhoto => 'Tap to add photo';
+
+  @override
+  String get petDocumentation => 'Pet Documentation';
+
+  @override
+  String get helpAdoptersUnderstandBackground => 'Help potential adopters understand the pet\'s background';
+
+  @override
+  String get vaccinated => 'Vaccinated';
+
+  @override
+  String get microchipped => 'Microchipped';
+
+  @override
+  String get houseTrained => 'House Trained';
+
+  @override
+  String get goodWithKids => 'Good with Kids';
+
+  @override
+  String get goodWithDogs => 'Good with Dogs';
+
+  @override
+  String get goodWithCats => 'Good with Cats';
+
+  @override
+  String get yourPhoneNumber => 'Your phone number';
+
+  @override
+  String get pleaseEnterContactNumber => 'Please enter a contact number';
+
+  @override
+  String get enterLocationManually => 'Enter location manually';
+
+  @override
+  String get manualLocation => 'Manual Location';
+
+  @override
+  String get locationPermissionNotGranted => 'Location permission not granted';
+
+  @override
+  String get dr => 'Dr.';
+
+  @override
+  String get neuteredSpayed => 'Neutered/Spayed';
+
+  @override
+  String get healthIssuesOptional => 'Health Issues (Optional)';
+
+  @override
+  String get healthIssuesPlaceholder => 'Any health conditions or special needs...';
+
+  @override
+  String get additionalRequirementsOptional => 'Additional Requirements (Optional)';
+
+  @override
+  String get requirementsPlaceholder => 'Any specific requirements for potential adopters...';
+
+  @override
+  String get howCanAdoptersReachYou => 'How can potential adopters reach you?';
+
+  @override
+  String get autoDetectedLocation => 'Auto-detected Location';
+
+  @override
+  String get enterCityStateOrAddress => 'Enter your city, state, or address';
+
+  @override
+  String get editPet => 'Edit Pet';
+
+  @override
+  String get pleaseEnterPetName => 'Please enter a pet name';
+
+  @override
+  String get addPhotoOfYourPet => 'Add a photo of your pet';
+
+  @override
+  String get chooseColorForPetProfile => 'Choose a color for your pet\'s profile';
+
+  @override
+  String get found => 'FOUND';
+
+  @override
+  String get markAsFound => 'Mark as Found?';
+
+  @override
+  String get markAsFoundConfirmation => 'Are you sure you want to mark this pet as found?';
+
+  @override
+  String get trySearchingWithDifferentName => 'Try searching with a different name or email';
+
+  @override
+  String get startTypingToSearch => 'Start typing to search for users';
+
+  @override
+  String get placeOrder => 'Place Order';
+
+  @override
+  String get confirmOrder => 'Confirm Order';
+
+  @override
+  String get shipOrder => 'Ship Order';
+
+  @override
+  String get deliverOrder => 'Deliver Order';
+
+  @override
+  String get ship => 'Ship';
+
+  @override
+  String get deliver => 'Deliver';
+
+  @override
+  String areYouSureYouWantToOrder(Object price, Object productName, Object quantity) {
+    return 'Are you sure you want to order $quantity x \"$productName\" for $price?';
+  }
+
+  @override
+  String confirmThatYouWillFulfill(Object productName) {
+    return 'Confirm that you will fulfill the order for \"$productName\"?';
+  }
+
+  @override
+  String markOrderAsShipped(Object productName) {
+    return 'Mark the order for \"$productName\" as shipped?';
+  }
+
+  @override
+  String markOrderAsDelivered(Object productName) {
+    return 'Mark the order for \"$productName\" as delivered?';
+  }
+
+  @override
+  String areYouSureYouWantToCancel(Object productName) {
+    return 'Are you sure you want to cancel the order for \"$productName\"?';
+  }
+
+  @override
+  String get enterPetNameRequired => 'Enter your pet\'s name (Required)';
+
+  @override
+  String get describePetFeatures => 'Describe your pet - size, color, distinctive features... (Required)';
+
+  @override
+  String get addContactNumber => 'Add Contact Number';
+
+  @override
+  String get enterContactNumber => 'Enter contact number';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
+  String get rewardOptional => 'Reward (Optional)';
+
+  @override
+  String get enterRewardAmount => 'Enter reward amount';
+
+  @override
+  String get missingPetReportSubmitted => 'Missing Pet Report Submitted';
+
+  @override
+  String get hopeYouFindPetSoon => 'We hope you find your pet soon! The community will be notified.';
+
+  @override
+  String get couldNotGetLocation => 'Could not get current location. Please try again.';
+
+  @override
+  String get failedToReportLostPet => 'Failed to report lost pet. Please try again.';
+
+  @override
+  String get noLostPetReportFound => 'No lost pet report found for this pet.';
+
+  @override
+  String greatNewsMarkAsFound(Object petName) {
+    return 'Great news! Are you sure you want to mark $petName as found? This will update the lost pet report.';
+  }
+
+  @override
+  String petMarkedAsFound(Object petName) {
+    return '$petName has been marked as found!';
+  }
+
+  @override
+  String failedToMarkAsFound(Object error) {
+    return 'Failed to mark as found: $error';
+  }
+
+  @override
+  String get myPetsPatients => 'My Pets (Patients)';
+
+  @override
+  String get selectProductToOrder => 'Select a product to order';
+
+  @override
+  String get checkout => 'Checkout';
+
+  @override
+  String get deliveryAddress => 'Delivery Address';
+
+  @override
+  String get manageAddresses => 'Manage Addresses';
+
+  @override
+  String get addAddress => 'Add Address';
+
+  @override
+  String get youDontHaveAnyAddressesToShipTo => 'You don\'t have any addresses to ship to';
+
+  @override
+  String get couponCode => 'Coupon Code';
+
+  @override
+  String get enterCouponCode => 'Enter coupon code';
+
+  @override
+  String get apply => 'Apply';
+
+  @override
+  String get couponFunctionalityComingSoon => 'Coupon functionality coming soon!';
+
+  @override
+  String get orderSummary => 'Order Summary';
+
+  @override
+  String subtotal(Object quantity) {
+    return 'Subtotal (${quantity}x)';
+  }
+
+  @override
+  String get shipping => 'Shipping';
+
+  @override
+  String get tax => 'Tax';
+
+  @override
+  String get appFee => 'App Fee';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get addAddressToContinue => 'Add Address to Continue';
+
+  @override
+  String get completePayment => 'Complete Payment';
+
+  @override
+  String get choosePaymentMethod => 'Choose Payment Method';
+
+  @override
+  String get cibEpayment => 'CIB e-payment';
+
+  @override
+  String get paySecurelyWithYourCibCard => 'Pay securely with your CIB card';
+
+  @override
+  String get edahabia => 'EDAHABIA';
+
+  @override
+  String get payWithYourEdahabiaCard => 'Pay with your EDAHABIA card';
+
+  @override
+  String get poweredBy => 'Powered by';
+
+  @override
+  String get paymentOnDelivery => 'Payment on Delivery';
+
+  @override
+  String get payWhenYourOrderArrives => 'Pay when your order arrives';
+
+  @override
+  String get totalAmount => 'Total Amount';
+
+  @override
+  String get selectPaymentMethod => 'Select Payment Method';
+
+  @override
+  String get completeSecurePayment => 'Complete Secure Payment';
+
+  @override
+  String get processingPayment => 'Processing Payment...';
+
+  @override
+  String get pleaseSelectAPaymentMethod => 'Please select a payment method.';
+
+  @override
+  String paymentComingSoon(Object methodName) {
+    return '$methodName payment coming soon!';
+  }
+
+  @override
+  String errorCreatingPayment(Object error) {
+    return 'Error creating payment: $error';
+  }
+
+  @override
+  String get paymentWasCancelled => 'Payment was cancelled';
+
+  @override
+  String get processingPaymentTitle => 'Processing Payment';
+
+  @override
+  String get pleaseWaitWhileWeVerifyYourPayment => 'Please wait while we verify your payment';
+
+  @override
+  String get verifyingPaymentStatus => 'Verifying payment status...';
+
+  @override
+  String get verifyingPayment => 'Verifying Payment';
+
+  @override
+  String get checkingPaymentStatusManually => 'Checking payment status manually';
+
+  @override
+  String get paymentVerificationTimeout => 'Payment verification timeout. Please check your payment status manually.';
+
+  @override
+  String get paymentFailed => 'Payment failed';
+
+  @override
+  String errorProcessingOrder(Object error) {
+    return 'Error processing order: $error';
+  }
+
+  @override
+  String paymentForProductPlusAppFee(Object productName) {
+    return 'Payment for $productName + App Fee';
+  }
+
+  @override
+  String get paymentMethodCashOnDelivery => 'Payment Method: Cash on Delivery | Status: Pending Payment';
+
+  @override
+  String helloIJustPlacedAnOrder(Object orderId, Object productName) {
+    return 'Hello! I just placed an order for $productName. Payment on delivery. Order ID: $orderId';
+  }
+
+  @override
+  String get paymentSuccessful => 'Payment Successful!';
+
+  @override
+  String amount(Object amount) {
+    return 'Amount: $amount';
+  }
+
+  @override
+  String orderId(Object orderId) {
+    return 'Order ID: $orderId';
+  }
+
+  @override
+  String get paymentProcessedSuccessfully => 'Your payment has been processed successfully. You will receive a confirmation email shortly.';
+
+  @override
+  String get continue => 'Continue';
+
+  @override
+  String get paymentFailedTitle => 'Payment Failed';
+
+  @override
+  String get paymentCouldNotBeProcessed => 'Your payment could not be processed. Please check your payment details and try again.';
+
+  @override
+  String get goBack => 'Go Back';
+
+  @override
+  String get orderConfirmed => 'Order Confirmed!';
+
+  @override
+  String yourOrderOfHasBeenConfirmed(Object amount) {
+    return 'Your order of $amount has been confirmed.';
+  }
+
+  @override
+  String get yourOrderHasBeenConfirmed => 'Your order has been confirmed! You will pay when the product is delivered to your address.';
+
+  @override
+  String get backToHome => 'Back to Home';
 }

@@ -177,6 +177,18 @@ class NotificationCard extends StatelessWidget {
         iconData = CupertinoIcons.alarm;
         iconColor = Colors.green;
         break;
+      case NotificationType.petOwnershipRequest:
+        iconData = CupertinoIcons.person_add_solid;
+        iconColor = Colors.orange;
+        break;
+      case NotificationType.petOwnershipAccepted:
+        iconData = CupertinoIcons.checkmark_circle_fill;
+        iconColor = Colors.green;
+        break;
+      case NotificationType.petOwnershipRejected:
+        iconData = CupertinoIcons.xmark_circle_fill;
+        iconColor = Colors.red;
+        break;
     }
 
     return Container(

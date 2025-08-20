@@ -696,6 +696,60 @@ class PlacesService {
     return _cachedStoreLocations?.values.map((data) => data.toPlaceResult()).toList() ?? [];
   }
 
+  /// Get vets within specific bounds (viewport-based loading)
+  Future<List<Map<String, dynamic>>> getVetsInBounds(
+    LatLng southWest,
+    LatLng northEast, {
+    int maxResults = 200,
+  }) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    final results = <Map<String, dynamic>>[];
+    if (_cachedVetLocations == null) return results;
+
+    for (final locationData in _cachedVetLocations!.values) {
+      if (_isLocationInBounds(locationData.location, southWest, northEast)) {
+        results.add(locationData.toPlaceResult());
+        if (results.length >= maxResults) break;
+      }
+    }
+
+    return results;
+  }
+
+  /// Get stores within specific bounds (viewport-based loading)
+  Future<List<Map<String, dynamic>>> getStoresInBounds(
+    LatLng southWest,
+    LatLng northEast, {
+    int maxResults = 200,
+  }) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    final results = <Map<String, dynamic>>[];
+    if (_cachedStoreLocations == null) return results;
+
+    for (final locationData in _cachedStoreLocations!.values) {
+      if (_isLocationInBounds(locationData.location, southWest, northEast)) {
+        results.add(locationData.toPlaceResult());
+        if (results.length >= maxResults) break;
+      }
+    }
+
+    return results;
+  }
+
+  /// Check if location is within bounds
+  bool _isLocationInBounds(LatLng location, LatLng southWest, LatLng northEast) {
+    return location.latitude >= southWest.latitude &&
+           location.latitude <= northEast.latitude &&
+           location.longitude >= southWest.longitude &&
+           location.longitude <= northEast.longitude;
+  }
+
   static Future<void> _startBackgroundSync() async {
     try {
       print('Starting background Firestore sync...');

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/order.dart' as store_order;
+import '../l10n/app_localizations.dart';
 
 class OrderActionDialog extends StatelessWidget {
   final String title;
   final String message;
   final String confirmText;
-  final String cancelText;
+  final String? cancelText;
   final Color confirmColor;
   final VoidCallback? onConfirm;
   final VoidCallback? onCancel;
@@ -15,7 +16,7 @@ class OrderActionDialog extends StatelessWidget {
     required this.title,
     required this.message,
     required this.confirmText,
-    this.cancelText = 'Cancel',
+    this.cancelText,
     this.confirmColor = Colors.blue,
     this.onConfirm,
     this.onCancel,
@@ -115,7 +116,7 @@ class OrderActionDialog extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       child: Text(
-                        cancelText,
+                        cancelText ?? AppLocalizations.of(context)!.cancel,
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w500,
@@ -189,12 +190,13 @@ class OrderActionDialog extends StatelessWidget {
     required double price,
     required int quantity,
     required VoidCallback onConfirm,
+    required BuildContext context,
   }) {
     final totalPrice = price * quantity;
     return OrderActionDialog(
-      title: 'Place Order',
-      message: 'Are you sure you want to order $quantity x "$productName" for \$${totalPrice.toStringAsFixed(2)}?',
-      confirmText: 'Place Order',
+      title: AppLocalizations.of(context)!.placeOrder,
+      message: AppLocalizations.of(context)!.areYouSureYouWantToOrder(quantity, productName, totalPrice.toStringAsFixed(2)),
+      confirmText: AppLocalizations.of(context)!.placeOrder,
       confirmColor: Colors.green,
       onConfirm: onConfirm,
     );
@@ -203,11 +205,12 @@ class OrderActionDialog extends StatelessWidget {
   static OrderActionDialog confirmOrder({
     required String productName,
     required VoidCallback onConfirm,
+    required BuildContext context,
   }) {
     return OrderActionDialog(
-      title: 'Confirm Order',
-      message: 'Confirm that you will fulfill the order for "$productName"?',
-      confirmText: 'Confirm',
+      title: AppLocalizations.of(context)!.confirmOrder,
+      message: AppLocalizations.of(context)!.confirmThatYouWillFulfill(productName),
+      confirmText: AppLocalizations.of(context)!.confirm,
       confirmColor: Colors.blue,
       onConfirm: onConfirm,
     );
@@ -216,11 +219,12 @@ class OrderActionDialog extends StatelessWidget {
   static OrderActionDialog shipOrder({
     required String productName,
     required VoidCallback onConfirm,
+    required BuildContext context,
   }) {
     return OrderActionDialog(
-      title: 'Ship Order',
-      message: 'Mark the order for "$productName" as shipped?',
-      confirmText: 'Ship',
+      title: AppLocalizations.of(context)!.shipOrder,
+      message: AppLocalizations.of(context)!.markOrderAsShipped(productName),
+      confirmText: AppLocalizations.of(context)!.ship,
       confirmColor: Colors.orange,
       onConfirm: onConfirm,
     );
@@ -229,11 +233,12 @@ class OrderActionDialog extends StatelessWidget {
   static OrderActionDialog deliverOrder({
     required String productName,
     required VoidCallback onConfirm,
+    required BuildContext context,
   }) {
     return OrderActionDialog(
-      title: 'Deliver Order',
-      message: 'Mark the order for "$productName" as delivered?',
-      confirmText: 'Deliver',
+      title: AppLocalizations.of(context)!.deliverOrder,
+      message: AppLocalizations.of(context)!.markOrderAsDelivered(productName),
+      confirmText: AppLocalizations.of(context)!.deliver,
       confirmColor: Colors.green,
       onConfirm: onConfirm,
     );
@@ -242,11 +247,12 @@ class OrderActionDialog extends StatelessWidget {
   static OrderActionDialog cancelOrder({
     required String productName,
     required VoidCallback onConfirm,
+    required BuildContext context,
   }) {
     return OrderActionDialog(
-      title: 'Cancel Order',
-      message: 'Are you sure you want to cancel the order for "$productName"?',
-      confirmText: 'Cancel Order',
+      title: AppLocalizations.of(context)!.cancelOrder,
+      message: AppLocalizations.of(context)!.areYouSureYouWantToCancel(productName),
+      confirmText: AppLocalizations.of(context)!.cancelOrder,
       confirmColor: Colors.red,
       onConfirm: onConfirm,
     );

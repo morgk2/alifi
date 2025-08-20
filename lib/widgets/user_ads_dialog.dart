@@ -97,10 +97,17 @@ class _UserAdsDialogState extends State<UserAdsDialog> {
       insetPadding: const EdgeInsets.all(16),
       child: Container(
         width: double.infinity,
-        height: MediaQuery.of(context).size.height * 0.8,
+        height: MediaQuery.of(context).size.height * 0.85,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -116,77 +123,87 @@ class _UserAdsDialogState extends State<UserAdsDialog> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      child: Row(
+      child: Column(
         children: [
+          // Handle bar
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 36,
+            height: 4,
             decoration: BoxDecoration(
-              color: _serviceColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              widget.serviceType == ServiceAdType.training
-                  ? CupertinoIcons.person_2_alt
-                  : CupertinoIcons.scissors_alt,
-              color: _serviceColor,
-              size: 20,
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'My $_serviceTitle',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                    fontFamily: AppFonts.getTitleFontFamily(context),
-                  ),
+          
+          const SizedBox(height: 20),
+          
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Manage your service advertisements',
-                  style: TextStyle(
-                    fontSize: 13,
+                child: Icon(
+                  widget.serviceType == ServiceAdType.training
+                      ? CupertinoIcons.person_2_alt
+                      : CupertinoIcons.scissors_alt,
+                  color: Colors.orange,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My $_serviceTitle',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                        fontFamily: AppFonts.getTitleFontFamily(context),
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Manage your service advertisements',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey[600],
+                        fontFamily: AppFonts.getLocalizedFontFamily(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    CupertinoIcons.xmark,
+                    size: 20,
                     color: Colors.grey[600],
-                    fontFamily: AppFonts.getLocalizedFontFamily(context),
                   ),
                 ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                shape: BoxShape.circle,
               ),
-              child: Icon(
-                CupertinoIcons.xmark,
-                size: 18,
-                color: Colors.grey[600],
-              ),
-            ),
+            ],
           ),
         ],
       ),
@@ -331,22 +348,26 @@ class _UserAdsDialogState extends State<UserAdsDialog> {
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
+              child: CupertinoButton(
                 onPressed: () => _createNewAd(),
-                icon: Icon(CupertinoIcons.add_circled, size: 20),
-                label: Text('Create Ad'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _serviceColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  textStyle: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: AppFonts.getLocalizedFontFamily(context),
-                  ),
+                color: Colors.orange,
+                borderRadius: BorderRadius.circular(16),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(CupertinoIcons.add_circled, size: 20, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Create Ad',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: AppFonts.getLocalizedFontFamily(context),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -529,109 +550,159 @@ class _UserAdsDialogState extends State<UserAdsDialog> {
     showCupertinoModalPopup(
       context: context,
       builder: (BuildContext context) {
-        return CupertinoActionSheet(
-          title: Text(
-            ad.serviceName,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              fontFamily: AppFonts.getLocalizedFontFamily(context),
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
             ),
           ),
-          actions: [
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.pop(context);
-                _editAd(ad);
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    CupertinoIcons.pencil,
-                    color: Colors.blue,
-                    size: 20,
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 8, bottom: 16),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Edit Ad',
+                ),
+                
+                // Title
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Text(
+                    ad.serviceName,
                     style: TextStyle(
-                      color: Colors.blue,
-                      fontSize: 16,
+                      fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      fontFamily: AppFonts.getLocalizedFontFamily(context),
+                      color: Colors.black,
+                      fontFamily: AppFonts.getTitleFontFamily(context),
+                      decoration: TextDecoration.none,
+                    ),
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Actions
+                _buildAdActionButton(
+                  icon: CupertinoIcons.pencil,
+                  title: 'Edit Ad',
+                  color: Colors.orange,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _editAd(ad);
+                  },
+                ),
+                
+                _buildAdActionButton(
+                  icon: ad.isActive ? CupertinoIcons.pause : CupertinoIcons.play,
+                  title: ad.isActive ? 'Deactivate' : 'Activate',
+                  color: Colors.orange,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _toggleAdStatus(ad);
+                  },
+                ),
+                
+                _buildAdActionButton(
+                  icon: CupertinoIcons.delete,
+                  title: 'Delete Ad',
+                  color: Colors.red,
+                  isDestructive: true,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _confirmDeleteAd(ad);
+                  },
+                ),
+                
+                // Cancel button
+                Container(
+                  margin: const EdgeInsets.all(20),
+                  width: double.infinity,
+                  child: CupertinoButton(
+                    onPressed: () => Navigator.pop(context),
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 17,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: AppFonts.getLocalizedFontFamily(context),
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.pop(context);
-                _toggleAdStatus(ad);
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    ad.isActive ? CupertinoIcons.pause : CupertinoIcons.play,
-                    color: Colors.orange,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    ad.isActive ? 'Deactivate' : 'Activate',
-                    style: TextStyle(
-                      color: Colors.orange,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: AppFonts.getLocalizedFontFamily(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.pop(context);
-                _confirmDeleteAd(ad);
-              },
-              isDestructiveAction: true,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    CupertinoIcons.delete,
-                    color: Colors.red,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Delete Ad',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: AppFonts.getLocalizedFontFamily(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          cancelButton: CupertinoActionSheetAction(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                fontFamily: AppFonts.getLocalizedFontFamily(context),
-              ),
+                ),
+              ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildAdActionButton({
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onPressed,
+    bool isDestructive = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      width: double.infinity,
+      child: CupertinoButton(
+        onPressed: onPressed,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: isDestructive ? Colors.red : Colors.black,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: AppFonts.getLocalizedFontFamily(context),
+                ),
+              ),
+            ),
+            Icon(
+              CupertinoIcons.chevron_right,
+              color: Colors.grey[400],
+              size: 16,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -698,42 +769,59 @@ class _UserAdsDialogState extends State<UserAdsDialog> {
   void _confirmDeleteAd(ServiceAd ad) {
     showCupertinoDialog(
       context: context,
+      barrierDismissible: true,
       builder: (BuildContext context) {
         return CupertinoAlertDialog(
           title: Text(
             'Delete Ad',
             style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
               fontFamily: AppFonts.getTitleFontFamily(context),
+              decoration: TextDecoration.none,
             ),
           ),
-          content: Text(
-            'Are you sure you want to delete "${ad.serviceName}"? This action cannot be undone and will also remove the associated photo.',
-            style: TextStyle(
-              fontFamily: AppFonts.getLocalizedFontFamily(context),
+          content: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Are you sure you want to delete "${ad.serviceName}"? This action cannot be undone and will also remove the associated photo.',
+              style: TextStyle(
+                fontSize: 15,
+                color: Colors.grey[700],
+                height: 1.4,
+                fontFamily: AppFonts.getLocalizedFontFamily(context),
+              ),
             ),
           ),
           actions: [
             CupertinoDialogAction(
+              onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'Cancel',
                 style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[700],
                   fontFamily: AppFonts.getLocalizedFontFamily(context),
                 ),
               ),
-              onPressed: () => Navigator.of(context).pop(),
             ),
             CupertinoDialogAction(
               isDestructiveAction: true,
-              child: Text(
-                'Delete',
-                style: TextStyle(
-                  fontFamily: AppFonts.getLocalizedFontFamily(context),
-                ),
-              ),
               onPressed: () {
                 Navigator.of(context).pop();
                 _deleteAd(ad);
               },
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                  fontFamily: AppFonts.getLocalizedFontFamily(context),
+                ),
+              ),
             ),
           ],
         );

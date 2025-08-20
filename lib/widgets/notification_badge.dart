@@ -38,8 +38,8 @@ class NotificationBadge extends StatelessWidget {
               child,
               if (unreadCount > 0)
                 Positioned(
-                  right: -3,
-                  top: -3,
+                  right: 4,
+                  top: 4,
                   child: unreadCount < 10
                       ? Container(
                           width: 16,

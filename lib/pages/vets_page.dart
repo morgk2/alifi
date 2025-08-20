@@ -4,18 +4,12 @@ import 'package:latlong2/latlong.dart' as latlong;
 import '../models/user.dart';
 import '../services/database_service.dart';
 import '../services/places_service.dart';
-import '../services/auth_service.dart';
 import '../services/navigation_service.dart';
-import '../widgets/spinning_loader.dart';
 import '../widgets/verification_badge.dart';
-import '../widgets/skeleton_loader.dart';
 import '../widgets/vet_card_skeleton.dart';
 import '../l10n/app_localizations.dart';
-import 'package:provider/provider.dart';
 import 'user_profile_page.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../services/geocoding_service.dart';
 import 'package:latlong2/latlong.dart' show Distance, LengthUnit;
 import 'map_page.dart';
@@ -40,7 +34,6 @@ class _VetsPageState extends State<VetsPage> with TickerProviderStateMixin {
   bool _isLoadingNearby = false;
   bool _isLoadingRecommended = false;
   bool _isLoadingTop = false;
-  bool _isLoadingLocation = false;
   
   latlong.LatLng? _userLocation;
   String? _userLocationName;
@@ -55,10 +48,12 @@ class _VetsPageState extends State<VetsPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _fadeAnimation = Tween<double>(begin: 1.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
     
+    // Start the fade animation immediately so skeletons are visible
+    _fadeController.forward();
     _initializeData();
   }
 
@@ -69,18 +64,28 @@ class _VetsPageState extends State<VetsPage> with TickerProviderStateMixin {
   }
 
   Future<void> _initializeData() async {
-    await _getUserLocation();
-    await Future.wait([
+    // Set all loading states to true at the beginning
+    setState(() {
+      _isLoadingNearby = true;
+      _isLoadingRecommended = true;
+      _isLoadingTop = true;
+    });
+    
+    // Ensure minimum loading time so skeletons are visible
+    final loadingFuture = Future.wait([
+      _getUserLocation(),
       _loadNearbyVets(),
       _loadRecommendedVets(),
       _loadTopVets(),
     ]);
-    _fadeController.forward();
+    
+    final minimumLoadingTime = Future.delayed(const Duration(milliseconds: 800));
+    
+    await Future.wait([loadingFuture, minimumLoadingTime]);
+    // Fade animation is already started in initState, no need to call forward() again
   }
 
   Future<void> _getUserLocation() async {
-    setState(() => _isLoadingLocation = true);
-    
     try {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
@@ -89,7 +94,6 @@ class _VetsPageState extends State<VetsPage> with TickerProviderStateMixin {
       if (mounted) {
         setState(() {
           _userLocation = latlong.LatLng(position.latitude, position.longitude);
-          _isLoadingLocation = false;
         });
         
         // Get location name using reverse geocoding
@@ -97,9 +101,6 @@ class _VetsPageState extends State<VetsPage> with TickerProviderStateMixin {
       }
     } catch (e) {
       print('Error getting user location: $e');
-      if (mounted) {
-        setState(() => _isLoadingLocation = false);
-      }
     }
   }
 
@@ -130,7 +131,10 @@ class _VetsPageState extends State<VetsPage> with TickerProviderStateMixin {
   }
 
   Future<void> _loadNearbyVets() async {
-    setState(() => _isLoadingNearby = true);
+    // Only set loading state if not already loading
+    if (!_isLoadingNearby) {
+      setState(() => _isLoadingNearby = true);
+    }
     
     try {
       if (_userLocation != null) {
@@ -214,7 +218,10 @@ class _VetsPageState extends State<VetsPage> with TickerProviderStateMixin {
   }
 
   Future<void> _loadRecommendedVets() async {
-    setState(() => _isLoadingRecommended = true);
+    // Only set loading state if not already loading
+    if (!_isLoadingRecommended) {
+      setState(() => _isLoadingRecommended = true);
+    }
     
     try {
       // Get vets with alifi favorite or affiliated subscription
@@ -238,7 +245,10 @@ class _VetsPageState extends State<VetsPage> with TickerProviderStateMixin {
   }
 
   Future<void> _loadTopVets() async {
-    setState(() => _isLoadingTop = true);
+    // Only set loading state if not already loading
+    if (!_isLoadingTop) {
+      setState(() => _isLoadingTop = true);
+    }
     
     try {
       // Get top vets by follower count (max 7 cards)
@@ -1283,32 +1293,6 @@ class _VetsPageState extends State<VetsPage> with TickerProviderStateMixin {
         ),
       ),
     );
-  }
-
-  Color _getSubscriptionColor(String plan) {
-    switch (plan.toLowerCase()) {
-      case 'alifi favorite':
-        return Colors.amber;
-      case 'alifi affiliated':
-        return Colors.blue;
-      case 'alifi verified':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getSubscriptionLabel(String plan) {
-    switch (plan.toLowerCase()) {
-      case 'alifi favorite':
-        return 'Favorite';
-      case 'alifi affiliated':
-        return 'Affiliated';
-      case 'alifi verified':
-        return 'Verified';
-      default:
-        return plan;
-    }
   }
 
   Widget _buildStatItem({

@@ -10,7 +10,7 @@ import '../models/service_ad.dart';
 import '../services/service_ad_service.dart';
 import '../widgets/service_ad_card.dart';
 import '../widgets/location_filter_dialog.dart';
-import '../widgets/service_skeleton_loader.dart';
+import '../widgets/trainer_skeleton_loader.dart';
 import '../widgets/user_ads_dialog.dart';
 import 'post_service_ad_page.dart';
 
@@ -37,6 +37,10 @@ class _TrainerServicePageState extends State<TrainerServicePage> {
   @override
   void initState() {
     super.initState();
+    // Ensure loading state is properly set from the start
+    setState(() {
+      _isLoading = true;
+    });
     _initializeData();
   }
 
@@ -145,80 +149,91 @@ class _TrainerServicePageState extends State<TrainerServicePage> {
     showCupertinoModalPopup(
       context: context,
       builder: (BuildContext context) {
-        return CupertinoActionSheet(
-          title: Text(
-            'Location Options',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              fontFamily: AppFonts.getLocalizedFontFamily(context),
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
             ),
           ),
-          actions: [
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.pop(context);
-                _showLocationFilterDialog();
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    CupertinoIcons.location,
-                    color: Colors.blue,
-                    size: 20,
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 8, bottom: 16),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Change Location Filter',
+                ),
+                
+                // Title
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Text(
+                    'Location Options',
                     style: TextStyle(
-                      color: Colors.blue,
-                      fontSize: 16,
+                      fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      fontFamily: AppFonts.getLocalizedFontFamily(context),
+                      color: Colors.black,
+                      fontFamily: AppFonts.getTitleFontFamily(context),
+                      decoration: TextDecoration.none,
                     ),
                   ),
-                ],
-              ),
-            ),
-            if (_filterLocation != null)
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _clearLocationFilter();
-                },
-                isDestructiveAction: true,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      CupertinoIcons.clear,
-                      color: Colors.red,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Clear Filter',
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Actions
+                _buildActionSheetButton(
+                  icon: CupertinoIcons.location,
+                  title: 'Change Location Filter',
+                  color: Colors.orange,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showLocationFilterDialog();
+                  },
+                ),
+                
+                if (_filterLocation != null)
+                  _buildActionSheetButton(
+                    icon: CupertinoIcons.clear,
+                    title: 'Clear Filter',
+                    color: Colors.red,
+                    isDestructive: true,
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _clearLocationFilter();
+                    },
+                  ),
+                
+                // Cancel button
+                Container(
+                  margin: const EdgeInsets.all(20),
+                  width: double.infinity,
+                  child: CupertinoButton(
+                    onPressed: () => Navigator.pop(context),
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      'Cancel',
                       style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
+                        fontSize: 17,
+                        fontWeight: FontWeight.w500,
                         fontFamily: AppFonts.getLocalizedFontFamily(context),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-          ],
-          cancelButton: CupertinoActionSheetAction(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                fontFamily: AppFonts.getLocalizedFontFamily(context),
-              ),
+              ],
             ),
           ),
         );
@@ -254,6 +269,58 @@ class _TrainerServicePageState extends State<TrainerServicePage> {
     _refreshAds();
   }
 
+  Widget _buildActionSheetButton({
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onPressed,
+    bool isDestructive = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      width: double.infinity,
+      child: CupertinoButton(
+        onPressed: onPressed,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: isDestructive ? Colors.red : Colors.black,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: AppFonts.getLocalizedFontFamily(context),
+                ),
+              ),
+            ),
+            Icon(
+              CupertinoIcons.chevron_right,
+              color: Colors.grey[400],
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _getDisplayLocationName() {
     if (_filterLocation != null) {
       return _filterLocationName ?? 'Custom location';
@@ -265,52 +332,79 @@ class _TrainerServicePageState extends State<TrainerServicePage> {
     showCupertinoModalPopup(
       context: context,
       builder: (BuildContext context) {
-        return CupertinoActionSheet(
-          title: Text(
-            'Post Training Ad',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-                                   fontFamily: AppFonts.getLocalizedFontFamily(context),
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
             ),
           ),
-          actions: [
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.pop(context);
-                _postTrainingAd();
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    CupertinoIcons.add_circled,
-                    color: Colors.blue,
-                    size: 20,
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 8, bottom: 16),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Post an Ad',
+                ),
+                
+                // Title
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Text(
+                    'Post Training Ad',
                     style: TextStyle(
-                      color: Colors.blue,
-                      fontSize: 16,
+                      fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      fontFamily: AppFonts.getLocalizedFontFamily(context),
+                      color: Colors.black,
+                      fontFamily: AppFonts.getTitleFontFamily(context),
+                      decoration: TextDecoration.none,
                     ),
                   ),
-                ],
-              ),
-            ),
-          ],
-          cancelButton: CupertinoActionSheetAction(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                fontFamily: AppFonts.getLocalizedFontFamily(context),
-              ),
+                ),
+                
+                const SizedBox(height: 8),
+                
+                // Post Ad Action
+                _buildActionSheetButton(
+                  icon: CupertinoIcons.add_circled,
+                  title: 'Post an Ad',
+                  color: Colors.orange,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _postTrainingAd();
+                  },
+                ),
+                
+                // Cancel button
+                Container(
+                  margin: const EdgeInsets.all(20),
+                  width: double.infinity,
+                  child: CupertinoButton(
+                    onPressed: () => Navigator.pop(context),
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(16),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 17,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: AppFonts.getLocalizedFontFamily(context),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -439,10 +533,7 @@ class _TrainerServicePageState extends State<TrainerServicePage> {
     if (_isLoading) {
       return [
         SliverToBoxAdapter(
-          child: ServiceSkeletonLoader(
-            serviceColor: Colors.blue,
-            itemCount: 4,
-          ),
+          child: TrainerSkeletonLoader(),
         ),
       ];
     }

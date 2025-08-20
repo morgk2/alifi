@@ -13,6 +13,7 @@ import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../services/geocoding_service.dart';
 import 'package:latlong2/latlong.dart' as latlong;
+import '../l10n/app_localizations.dart';
 
 class AddAdoptionListingDialog extends StatefulWidget {
   final AdoptionListing? listing;
@@ -436,7 +437,7 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      widget.listing != null ? 'Edit Listing' : 'Add Pet for Adoption',
+                      widget.listing != null ? AppLocalizations.of(context)!.editListing : AppLocalizations.of(context)!.addPetForAdoption,
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
@@ -503,9 +504,9 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
                         onPressed: _isSaving ? null : _previousStep,
                         color: Colors.grey.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(25),
-                        child: const Text(
-                          'Back',
-                          style: TextStyle(color: Colors.black),
+                        child: Text(
+                          AppLocalizations.of(context)!.back,
+                          style: const TextStyle(color: Colors.black),
                         ),
                       ),
                     ),
@@ -518,7 +519,7 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
                       child: _isSaving
                           ? const CupertinoActivityIndicator(color: Colors.white)
                           : Text(
-                              _currentStep == _totalSteps - 1 ? 'Save Listing' : 'Continue',
+                              _currentStep == _totalSteps - 1 ? AppLocalizations.of(context)!.saveListing : AppLocalizations.of(context)!.continueText,
                               style: const TextStyle(color: Colors.white),
                             ),
                     ),
@@ -555,18 +556,18 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Basic Information',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.basicInformation,
+            style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: Colors.black,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Tell us about the pet you want to put up for adoption',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.tellUsAboutPetForAdoption,
+            style: const TextStyle(
               fontSize: 16,
               color: Colors.grey,
             ),
@@ -575,11 +576,11 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
           
           _buildModernTextField(
             controller: _titleController,
-            label: 'Pet Name',
-            placeholder: 'Enter the pet\'s name',
+            label: AppLocalizations.of(context)!.petName,
+            placeholder: AppLocalizations.of(context)!.enterPetName,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter a name';
+                return AppLocalizations.of(context)!.pleaseEnterName;
               }
               return null;
             },
@@ -588,12 +589,12 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
           
           _buildModernTextField(
             controller: _descriptionController,
-            label: 'Description',
+            label: AppLocalizations.of(context)!.description,
             placeholder: 'Tell us about the pet\'s personality, behavior, and story...',
             maxLines: 4,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter a description';
+                return AppLocalizations.of(context)!.pleaseEnterDescription;
               }
               return null;
             },
@@ -609,18 +610,18 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Pet Details',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.petDetails,
+            style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: Colors.black,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Help potential adopters understand the pet better',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.helpPotentialAdopters,
+            style: const TextStyle(
               fontSize: 16,
               color: Colors.grey,
             ),
@@ -628,7 +629,7 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
           const SizedBox(height: 32),
           
           _buildModernDropdown(
-            label: 'Pet Type',
+            label: AppLocalizations.of(context)!.petType,
             value: _selectedPetType,
             items: _petTypes,
             onChanged: (value) {
@@ -641,8 +642,8 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
           
           _buildModernTextField(
             controller: TextEditingController(text: _selectedBreed),
-            label: 'Breed',
-            placeholder: 'Enter the breed',
+            label: AppLocalizations.of(context)!.breed,
+            placeholder: AppLocalizations.of(context)!.enterBreed,
             onChanged: (value) {
               _selectedBreed = value;
             },
@@ -654,8 +655,8 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
                Expanded(
                  child: _buildModernTextField(
                    controller: TextEditingController(text: _selectedAge.toString()),
-                   label: 'Age',
-                   placeholder: 'Age',
+                   label: AppLocalizations.of(context)!.age,
+                   placeholder: AppLocalizations.of(context)!.age,
                    keyboardType: TextInputType.number,
                    onChanged: (value) {
                      _selectedAge = int.tryParse(value) ?? 1;
@@ -665,7 +666,7 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
                const SizedBox(width: 16),
                Expanded(
                  child: _buildModernDropdown(
-                   label: 'Unit',
+                   label: AppLocalizations.of(context)!.unit,
                    value: _selectedAgeUnit,
                    items: _ageUnits,
                    onChanged: (value) {
@@ -680,7 +681,7 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
           const SizedBox(height: 20),
           
           _buildModernDropdown(
-            label: 'Gender',
+            label: AppLocalizations.of(context)!.gender,
             value: _selectedGender,
             items: _genders,
             onChanged: (value) {
@@ -691,9 +692,9 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
           ),
           const SizedBox(height: 20),
           
-          const Text(
-            'Color',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.color,
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.black,
@@ -745,18 +746,18 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Pet Photo',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.petPhoto,
+            style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: Colors.black,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'A clear photo helps potential adopters connect with the pet',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.clearPhotoHelpsAdopters,
+            style: const TextStyle(
               fontSize: 16,
               color: Colors.grey,
             ),
@@ -805,7 +806,7 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'Tap to add photo',
+                                    AppLocalizations.of(context)!.tapToAddPhoto,
                                     style: TextStyle(
                                       color: Colors.grey.withOpacity(0.7),
                                       fontSize: 16,
@@ -871,55 +872,55 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Pet Documentation',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.petDocumentation,
+            style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: Colors.black,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Help potential adopters understand the pet\'s background',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.helpAdoptersUnderstandBackground,
+            style: const TextStyle(
               fontSize: 16,
               color: Colors.grey,
             ),
           ),
           const SizedBox(height: 32),
           
-          _buildToggleItem('Vaccinated', _isVaccinated, (value) {
+          _buildToggleItem(AppLocalizations.of(context)!.vaccinated, _isVaccinated, (value) {
             setState(() {
               _isVaccinated = value;
             });
           }),
-          _buildToggleItem('Neutered/Spayed', _isNeutered, (value) {
+          _buildToggleItem(AppLocalizations.of(context)!.neuteredSpayed, _isNeutered, (value) {
             setState(() {
               _isNeutered = value;
             });
           }),
-          _buildToggleItem('Microchipped', _isMicrochipped, (value) {
+          _buildToggleItem(AppLocalizations.of(context)!.microchipped, _isMicrochipped, (value) {
             setState(() {
               _isMicrochipped = value;
             });
           }),
-          _buildToggleItem('House Trained', _isHouseTrained, (value) {
+          _buildToggleItem(AppLocalizations.of(context)!.houseTrained, _isHouseTrained, (value) {
             setState(() {
               _isHouseTrained = value;
             });
           }),
-          _buildToggleItem('Good with Kids', _isGoodWithKids, (value) {
+          _buildToggleItem(AppLocalizations.of(context)!.goodWithKids, _isGoodWithKids, (value) {
             setState(() {
               _isGoodWithKids = value;
             });
           }),
-          _buildToggleItem('Good with Dogs', _isGoodWithDogs, (value) {
+          _buildToggleItem(AppLocalizations.of(context)!.goodWithDogs, _isGoodWithDogs, (value) {
             setState(() {
               _isGoodWithDogs = value;
             });
           }),
-          _buildToggleItem('Good with Cats', _isGoodWithCats, (value) {
+          _buildToggleItem(AppLocalizations.of(context)!.goodWithCats, _isGoodWithCats, (value) {
             setState(() {
               _isGoodWithCats = value;
             });
@@ -929,8 +930,8 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
           
           _buildModernTextField(
             controller: _healthIssuesController,
-            label: 'Health Issues (Optional)',
-            placeholder: 'Any health conditions or special needs...',
+            label: AppLocalizations.of(context)!.healthIssuesOptional,
+            placeholder: AppLocalizations.of(context)!.healthIssuesPlaceholder,
             maxLines: 3,
           ),
           
@@ -938,8 +939,8 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
           
           _buildModernTextField(
             controller: _requirementsController,
-            label: 'Additional Requirements (Optional)',
-            placeholder: 'Any specific requirements for potential adopters...',
+            label: AppLocalizations.of(context)!.additionalRequirementsOptional,
+            placeholder: AppLocalizations.of(context)!.requirementsPlaceholder,
             maxLines: 3,
           ),
         ],
@@ -953,18 +954,18 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Contact Information',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.contactInformation,
+            style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: Colors.black,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'How can potential adopters reach you?',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.howCanAdoptersReachYou,
+            style: const TextStyle(
               fontSize: 16,
               color: Colors.grey,
             ),
@@ -973,12 +974,12 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
           
           _buildModernTextField(
             controller: _contactController,
-            label: 'Contact Number',
-            placeholder: 'Your phone number',
+            label: AppLocalizations.of(context)!.contactNumber,
+            placeholder: AppLocalizations.of(context)!.yourPhoneNumber,
             keyboardType: TextInputType.phone,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter a contact number';
+                return AppLocalizations.of(context)!.pleaseEnterContactNumber;
               }
               return null;
             },
@@ -987,9 +988,9 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
                      const SizedBox(height: 24),
            
            // Location Section
-           const Text(
-             'Location',
-             style: TextStyle(
+           Text(
+             AppLocalizations.of(context)!.location,
+             style: const TextStyle(
                fontSize: 16,
                fontWeight: FontWeight.w600,
                color: Colors.black,
@@ -1018,9 +1019,9 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
                      child: Column(
                        crossAxisAlignment: CrossAxisAlignment.start,
                        children: [
-                         const Text(
-                           'Auto-detected Location',
-                           style: TextStyle(
+                         Text(
+                           AppLocalizations.of(context)!.autoDetectedLocation,
+                           style: const TextStyle(
                              fontSize: 14,
                              fontWeight: FontWeight.w600,
                              color: Colors.blue,
@@ -1028,7 +1029,7 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
                          ),
                          const SizedBox(height: 4),
                          Text(
-                           _userAddress.isNotEmpty ? _userAddress : 'Getting your location...',
+                           _userAddress.isNotEmpty ? _userAddress : AppLocalizations.of(context)!.gettingYourLocation,
                            style: const TextStyle(
                              fontSize: 16,
                              color: Colors.black,
@@ -1056,9 +1057,9 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
                  activeColor: Colors.orange,
                ),
                const SizedBox(width: 12),
-               const Text(
-                 'Enter location manually',
-                 style: TextStyle(
+               Text(
+                 AppLocalizations.of(context)!.enterLocationManually,
+                 style: const TextStyle(
                    fontSize: 16,
                    color: Colors.black,
                  ),
@@ -1071,11 +1072,11 @@ class _AddAdoptionListingDialogState extends State<AddAdoptionListingDialog>
              const SizedBox(height: 16),
              _buildModernTextField(
                controller: _manualLocationController,
-               label: 'Manual Location',
-               placeholder: 'Enter your city, state, or address',
+               label: AppLocalizations.of(context)!.manualLocation,
+               placeholder: AppLocalizations.of(context)!.enterCityStateOrAddress,
                validator: (value) {
                  if (_useManualLocation && (value == null || value.isEmpty)) {
-                   return 'Please enter a location';
+                   return AppLocalizations.of(context)!.pleaseEnterLocation;
                  }
                  return null;
                },

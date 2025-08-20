@@ -9,7 +9,8 @@ class Pet {
   final double age;
   final String gender;
   final List<String> imageUrls;
-  final String ownerId;
+  final String ownerId; // Primary owner
+  final List<String> ownerIds; // All owners including primary
   final DateTime createdAt;
   final DateTime lastUpdatedAt;
   final Map<String, dynamic> medicalInfo;
@@ -35,6 +36,7 @@ class Pet {
     required this.gender,
     required this.imageUrls,
     required this.ownerId,
+    required this.ownerIds,
     required this.createdAt,
     required this.lastUpdatedAt,
     required this.medicalInfo,
@@ -59,6 +61,7 @@ class Pet {
       'gender': gender,
       'imageUrls': imageUrls,
       'ownerId': ownerId,
+      'ownerIds': ownerIds,
       'createdAt': Timestamp.fromDate(createdAt),
       'lastUpdatedAt': Timestamp.fromDate(lastUpdatedAt),
       'medicalInfo': medicalInfo,
@@ -149,6 +152,9 @@ class Pet {
         gender: getString(data['gender'], ''),
         imageUrls: getStringList(data['imageUrls']),
         ownerId: getString(data['ownerId'], ''),
+        ownerIds: getStringList(data['ownerIds']).isEmpty 
+            ? [getString(data['ownerId'], '')] // Backward compatibility
+            : getStringList(data['ownerIds']),
         createdAt: getTimestamp(data['createdAt']),
         lastUpdatedAt: getTimestamp(data['lastUpdatedAt']),
         medicalInfo: getMap(data['medicalInfo']),
@@ -181,6 +187,7 @@ class Pet {
     String? gender,
     List<String>? imageUrls,
     String? ownerId,
+    List<String>? ownerIds,
     DateTime? createdAt,
     DateTime? lastUpdatedAt,
     Map<String, dynamic>? medicalInfo,
@@ -204,6 +211,7 @@ class Pet {
       gender: gender ?? this.gender,
       imageUrls: imageUrls ?? this.imageUrls,
       ownerId: ownerId ?? this.ownerId,
+      ownerIds: ownerIds ?? this.ownerIds,
       createdAt: createdAt ?? this.createdAt,
       lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
       medicalInfo: medicalInfo ?? this.medicalInfo,

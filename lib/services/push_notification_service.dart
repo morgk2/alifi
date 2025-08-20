@@ -558,6 +558,12 @@ NotificationType _getNotificationTypeFromString(String type) {
       return NotificationType.follow;
     case 'unfollow':
       return NotificationType.unfollow;
+    case 'petOwnershipRequest':
+      return NotificationType.petOwnershipRequest;
+    case 'petOwnershipAccepted':
+      return NotificationType.petOwnershipAccepted;
+    case 'petOwnershipRejected':
+      return NotificationType.petOwnershipRejected;
     default:
       return NotificationType.chatMessage;
   }

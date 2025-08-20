@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/store_product.dart';
-import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../services/currency_service.dart';
 import '../services/navigation_service.dart';
-import '../widgets/spinning_loader.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'address_management_page.dart';
 import 'payment_page.dart';
+import '../l10n/app_localizations.dart';
 
 class CheckoutPage extends StatefulWidget {
   final StoreProduct product;
@@ -108,9 +107,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Checkout',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.checkout,
+          style: const TextStyle(
             color: Colors.black,
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -300,9 +299,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     children: [
                       const Icon(Icons.location_on, color: Colors.green),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Delivery Address',
-                        style: TextStyle(
+                      Text(
+                        AppLocalizations.of(context)!.deliveryAddress,
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -394,9 +393,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                            borderRadius: BorderRadius.circular(8),
                          ),
                        ),
-                       child: const Text(
-                         'Manage Addresses',
-                         style: TextStyle(color: Colors.white),
+                       child: Text(
+                         AppLocalizations.of(context)!.manageAddresses,
+                         style: const TextStyle(color: Colors.white),
                        ),
                      ),
                    ] else ...[
@@ -406,13 +405,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                          color: Colors.grey[100],
                          borderRadius: BorderRadius.circular(8),
                        ),
-                       child: const Row(
+                       child: Row(
                          children: [
-                           Icon(Icons.info_outline, color: Colors.grey),
-                           SizedBox(width: 8),
+                           const Icon(Icons.info_outline, color: Colors.grey),
+                           const SizedBox(width: 8),
                            Text(
-                             'You don\'t have any addresses to ship to',
-                             style: TextStyle(color: Colors.grey),
+                             AppLocalizations.of(context)!.youDontHaveAnyAddressesToShipTo,
+                             style: const TextStyle(color: Colors.grey),
                            ),
                          ],
                        ),
@@ -426,9 +425,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                            borderRadius: BorderRadius.circular(8),
                          ),
                        ),
-                       child: const Text(
-                         'Add Address',
-                         style: TextStyle(color: Colors.white),
+                       child: Text(
+                         AppLocalizations.of(context)!.addAddress,
+                         style: const TextStyle(color: Colors.white),
                        ),
                      ),
                    ],
@@ -455,9 +454,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Coupon Code',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.couponCode,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -469,7 +468,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                          child: TextField(
                            controller: _couponController,
                            decoration: InputDecoration(
-                             hintText: 'Enter coupon code',
+                             hintText: AppLocalizations.of(context)!.enterCouponCode,
                              border: OutlineInputBorder(
                                borderRadius: BorderRadius.circular(16),
                                borderSide: BorderSide(color: Colors.grey[300]!),
@@ -492,8 +491,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                            onPressed: () {
                              // TODO: Implement coupon validation
                              ScaffoldMessenger.of(context).showSnackBar(
-                               const SnackBar(
-                                 content: Text('Coupon functionality coming soon!'),
+                               SnackBar(
+                                 content: Text(AppLocalizations.of(context)!.couponFunctionalityComingSoon),
                                ),
                              );
                            },
@@ -503,9 +502,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                borderRadius: BorderRadius.circular(16),
                              ),
                            ),
-                           child: const Text(
-                             'Apply',
-                             style: TextStyle(color: Colors.white),
+                           child: Text(
+                             AppLocalizations.of(context)!.apply,
+                             style: const TextStyle(color: Colors.white),
                            ),
                          ),
                        ),
@@ -534,9 +533,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Order Summary',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.orderSummary,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -549,7 +548,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Subtotal (${_quantity}x)'),
+                          Text(AppLocalizations.of(context)!.subtotal(_quantity)),
                           Text(
                             currencyService.formatProductPrice(_quantity * productPriceInDzd, 'DZD'),
                             style: const TextStyle(fontWeight: FontWeight.bold),
@@ -562,14 +561,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                      Row(
                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                      children: [
-                       const Text('Shipping'),
-                       const Text(
-                         'Free',
-                         style: TextStyle(
-                           color: Colors.green,
-                           fontWeight: FontWeight.bold,
+                       Text(AppLocalizations.of(context)!.shipping),
+                                                Text(
+                           AppLocalizations.of(context)!.free,
+                           style: const TextStyle(
+                             color: Colors.green,
+                             fontWeight: FontWeight.bold,
+                           ),
                          ),
-                       ),
                      ],
                    ),
                    const SizedBox(height: 8),
@@ -580,7 +579,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('Tax'),
+                                Text(AppLocalizations.of(context)!.tax),
                                 Text(
                                   currencyService.formatProductPrice(2.0, 'DZD'),
                                   style: const TextStyle(
@@ -593,7 +592,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('App Fee'),
+                                Text(AppLocalizations.of(context)!.appFee),
                                 Text(
                                   currencyService.formatProductPrice(470.0, 'DZD'),
                                   style: const TextStyle(
@@ -611,9 +610,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                    Row(
                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                      children: [
-                       const Text(
-                         'Total',
-                         style: TextStyle(
+                       Text(
+                         AppLocalizations.of(context)!.total,
+                         style: const TextStyle(
                            fontSize: 18,
                            fontWeight: FontWeight.bold,
                          ),
@@ -687,7 +686,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                  elevation: 0,
                ),
                child: Text(
-                 _hasAddresses ? 'Next' : 'Add Address to Continue',
+                 _hasAddresses ? AppLocalizations.of(context)!.next : AppLocalizations.of(context)!.addAddressToContinue,
                  style: TextStyle(
                    fontSize: 16,
                    fontWeight: FontWeight.bold,

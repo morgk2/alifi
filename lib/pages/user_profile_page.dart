@@ -18,6 +18,8 @@ import '../l10n/app_localizations.dart';
 import 'dart:ui';
 import 'dart:async';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../icons.dart';
 
@@ -500,10 +502,209 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
     return _cachedReviewsWidget!;
   }
 
+  Widget? _cachedPetsRescuedWidget;
+  Widget _getCachedPetsRescuedWidget(User user) {
+    _cachedPetsRescuedWidget ??= Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: _buildPetsRescuedView(user),
+    );
+    return _cachedPetsRescuedWidget!;
+  }
+
+  Widget _buildPetsRescuedView(User user) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: DatabaseService().getRescuedPetsByRescuer(user.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Error loading rescued pets: ${snapshot.error}'),
+          );
+        }
+
+        final rescuedPets = snapshot.data ?? [];
+
+        if (rescuedPets.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.volunteer_activism_outlined,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No pets rescued yet',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Rescued pets will appear here',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 0.8,
+          ),
+          itemCount: rescuedPets.length,
+          itemBuilder: (context, index) {
+            final rescuedPet = rescuedPets[index];
+            final rescueDate = (rescuedPet['rescueDate'] as Timestamp?)?.toDate();
+            final petImageUrls = List<String>.from(rescuedPet['petImageUrls'] ?? []);
+            
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Pet image
+                  Expanded(
+                    flex: 3,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                        child: petImageUrls.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: petImageUrls.first,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                placeholder: (context, url) => Container(
+                                  color: Colors.grey.shade200,
+                                  child: Icon(
+                                    Icons.pets,
+                                    size: 40,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: Colors.grey.shade200,
+                                  child: Icon(
+                                    Icons.pets,
+                                    size: 40,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                color: Colors.grey.shade200,
+                                child: Icon(
+                                  Icons.pets,
+                                  size: 40,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                  
+                  // Pet info
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            rescuedPet['petName'] ?? 'Unknown Pet',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            rescuedPet['petBreed'] ?? 'Unknown Breed',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const Spacer(),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.favorite,
+                                size: 14,
+                                color: Colors.red.shade400,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  rescueDate != null
+                                      ? 'Rescued ${rescueDate.day}/${rescueDate.month}/${rescueDate.year}'
+                                      : 'Rescued',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildCustomTabBar(bool isVet, bool isStore) {
     final l10n = AppLocalizations.of(context)!;
     final firstTabText = isVet ? l10n.patients : (isStore ? l10n.products : l10n.pets);
-    final secondTabText = l10n.reviews;
+    final secondTabText = isVet ? l10n.reviews : (isStore ? l10n.reviews : 'Pets Rescued');
     
     // Calculate text widths
     final firstTabWidth = _calculateTextWidth(firstTabText);
@@ -1224,9 +1425,13 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                         'Followers',
                       ),
                       _buildCompactDivider(),
-                      _buildPetsRescuedStat(
-                        (user.petsRescued).toString(),
-                        ),
+                      FutureBuilder<int>(
+                        future: DatabaseService().getUserPetsRescuedCount(user.id),
+                        builder: (context, snapshot) {
+                          final count = snapshot.data ?? user.petsRescued;
+                          return _buildPetsRescuedStat(count.toString());
+                        },
+                      ),
                     ],
                   ),
                   
@@ -1351,7 +1556,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                       controller: _tabController,
                       children: [
                         _getCachedPetsWidget(),
-                        _getCachedReviewsWidget(user),
+                        _getCachedPetsRescuedWidget(user),
                       ],
                     ),
                   ),
@@ -1530,8 +1735,12 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                 l10n.followers,
                           ),
                           _buildCompactDivider(),
-                          _buildPetsRescuedStat(
-                            (user.petsRescued).toString(),
+                          FutureBuilder<int>(
+                            future: DatabaseService().getUserPetsRescuedCount(user.id),
+                            builder: (context, snapshot) {
+                              final count = snapshot.data ?? user.petsRescued;
+                              return _buildPetsRescuedStat(count.toString());
+                            },
                           ),
                               ],
                         ],
@@ -1749,7 +1958,9 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                         : isStore
                             ? _getCachedProductsWidget(user)
                             : _getCachedPetsWidget(),
-                    _getCachedReviewsWidget(user),
+                    isVet || isStore
+                        ? _getCachedReviewsWidget(user)
+                        : _getCachedPetsRescuedWidget(user),
                   ],
                 ),
               ),

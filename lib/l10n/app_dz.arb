@@ -370,6 +370,12 @@
   "useBlurEffectForTabBar": "Use blur effect for Tab bar",
   "enableGlassLikeBlurEffectOnNavigationBar": "Enable glass-like blur effect on the navigation bar",
   "whenDisabledTabBarWillHaveSolidWhiteBackground": "When disabled, the tab bar will have a solid white background instead of the glass-like blur effect.",
+  "useLiquidGlassEffectForTabBar": "Use liquid glass effect for Tab bar",
+  "enableLiquidGlassEffectOnNavigationBar": "Enable liquid glass effect on the navigation bar",
+  "whenDisabledLiquidGlassTabBarWillNotDistortBackground": "When disabled, the tab bar will not distort the background content. Works separately from the blur effect.",
+  "useSolidColorForTabBar": "Use solid color for Tab bar",
+  "enableSolidColorOnNavigationBar": "Enable solid color background on the navigation bar",
+  "whenDisabledSolidColorTabBarWillHaveEffect": "When disabled, the tab bar will use one of the other visual effects. Only one effect can be active at a time.",
   "customizeAppAppearanceAndInterface": "Customize app appearance and interface",
   "editProfile": "Edit Profile",
   "save": "Save",
@@ -1451,5 +1457,56 @@
   "fact2": "Adopted pets are often already trained",
   "fact3": "Adoption fees help support animal care",
   "fact4": "Many adopted pets are healthy and well-behaved",
-  "fact5": "Adoption saves lives and reduces overpopulation"
+  "fact5": "Adoption saves lives and reduces overpopulation",
+  
+  "@petOwnership": {
+    "description": "Strings related to pet ownership"
+  },
+  "petOwners": "Pet Owners",
+  "addPetOwner": "Add Pet Owner",
+  "searchForUsersToAddAsOwners": "Search for users to add as owners of {petName}",
+  "petOwnershipRequests": "Pet Ownership Requests",
+  "pendingRequests": "{count} pending request{count, plural, =1 {} other {s}}",
+  "moreRequests": "+ {count} more requests",
+  "wantsToCoOwn": "{userName} wants to co-own {petName}",
+  "accept": "Accept",
+  "decline": "Decline",
+  "requestAccepted": "Request accepted",
+  "requestDeclined": "Request declined",
+  "ownershipRequestSent": "Ownership request sent to {userName}",
+  "errorSendingRequest": "Error sending request",
+  "petOwnershipRequest": "Pet Ownership Request",
+  "petOwnershipRequestAccepted": "Pet Ownership Request Accepted",
+  "petOwnershipRequestDeclined": "Pet Ownership Request Declined",
+  "wantsToAddYouAsOwner": "{userName} wants to add you as an owner of {petName}",
+  "checkMyPetsPageForRequests": "Check your My Pets page for ownership requests",
+  
+  "@petProfile": {
+    "description": "Pet profile related strings"
+  },
+  "createPetProfile": "Create Pet Profile",
+  "petProfileNotFound": "Pet profile not found",
+  "errorCreatingPetProfile": "Error creating pet profile",
+  "searchForPetProfiles": "Search for pet profiles...",
+  "searchForPetProfilesTitle": "Search for Pet Profiles",
+  "findAndFollowPublicPetAccounts": "Find and follow public pet accounts\nfrom around the community",
+  "noPetProfilesFound": "No pet profiles found",
+  "trySearchingWithDifferentKeywords": "Try searching with different keywords",
+  
+  "@petPosts": {
+    "description": "Pet posts and captions related strings"
+  },
+  "writeCaptionForPhoto": "Write a caption for this photo...",
+  "addCaptionToPhoto": "Add a caption to this photo",
+  "noCaption": "No caption",
+  "captionUpdatedSuccessfully": "Caption updated successfully!",
+  "failedToUpdateCaption": "Failed to update caption: {error}",
+  "maxCaptionLength": "Maximum 200 characters",
+  
+  "@petSearch": {
+    "description": "Pet search related strings"
+  },
+  "searchingPetProfiles": "Searching pet profiles...",
+  "noResultsFoundForPetProfiles": "No results found for \"{query}\"",
+  "errorSearchingPetProfiles": "Error searching pet profiles: {error}"
 }

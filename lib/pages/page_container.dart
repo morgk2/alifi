@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:ui';
 import '../icons.dart';
 import '../utils/navigation_bar_detector.dart';
+import '../widgets/liquid_glass_nav_bar.dart';
 import 'home_page.dart';
 import 'map_page.dart';
 import 'my_pets_page.dart';
@@ -174,12 +175,16 @@ class _PageContainerState extends State<PageContainer> with WidgetsBindingObserv
   Widget _buildBottomNavBar() {
     return Consumer<UserPreferencesService>(
       builder: (context, userPreferences, child) {
-        return _buildBottomNavBarContent(userPreferences.tabBarBlurEnabled);
+        return _buildBottomNavBarContent(
+          userPreferences.tabBarBlurEnabled,
+          userPreferences.tabBarLiquidGlassEnabled,
+          userPreferences.tabBarSolidColorEnabled,
+        );
       },
     );
   }
 
-  Widget _buildBottomNavBarContent(bool blurEnabled) {
+  Widget _buildBottomNavBarContent(bool blurEnabled, bool liquidGlassEnabled, bool solidColorEnabled) {
     final screenWidth = MediaQuery.of(context).size.width;
     const maxNavWidth = 320.0;
     const minNavWidth = 220.0;
@@ -253,6 +258,8 @@ class _PageContainerState extends State<PageContainer> with WidgetsBindingObserv
           children: [
             _buildNavContainer(
               blurEnabled: blurEnabled,
+              liquidGlassEnabled: liquidGlassEnabled,
+              solidColorEnabled: solidColorEnabled,
               width: navWidth,
               height: barHeight,
               child: ClipRRect(
@@ -349,6 +356,8 @@ class _PageContainerState extends State<PageContainer> with WidgetsBindingObserv
               onTap: () => setState(() => _currentIndex = searchPageIndex),
               child: _buildNavContainer(
                 blurEnabled: blurEnabled,
+                liquidGlassEnabled: liquidGlassEnabled,
+                solidColorEnabled: solidColorEnabled,
                 width: searchButtonSize,
                 height: searchButtonSize,
                 isCircular: true,
@@ -377,46 +386,65 @@ class _PageContainerState extends State<PageContainer> with WidgetsBindingObserv
 
   Widget _buildNavContainer({
     required bool blurEnabled,
+    required bool liquidGlassEnabled,
+    required bool solidColorEnabled,
     required double width,
     required double height,
     bool isCircular = false,
     required Widget child,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(32),
-      child: blurEnabled
-          ? BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Container(
-                width: width,
-                height: height,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.45),
-                  borderRadius: isCircular ? null : BorderRadius.circular(32),
-                  shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: child,
-              ),
-            )
-          : Container(
-              width: width,
-              height: height,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: isCircular ? null : BorderRadius.circular(32),
-                shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
-                border: Border.all(color: Colors.grey.shade300, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: child,
+    // Liquid glass effect (highest priority)
+    if (liquidGlassEnabled) {
+      return LiquidGlassNavBar(
+        width: width,
+        height: height,
+        isCircular: isCircular,
+        borderRadius: isCircular ? null : BorderRadius.circular(32),
+        backgroundColor: Colors.white.withOpacity(0.15),
+        border: Border.all(color: Colors.white.withOpacity(0.4), width: 1.5),
+        child: child,
+      );
+    }
+    
+    // Blur effect (medium priority)
+    if (blurEnabled) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            width: width,
+            height: height,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.45),
+              borderRadius: isCircular ? null : BorderRadius.circular(32),
+              shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
+              border: Border.all(color: Colors.white, width: 2),
             ),
+            child: child,
+          ),
+        ),
+      );
+    }
+    
+    // Solid color effect (default/fallback)
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: isCircular ? null : BorderRadius.circular(32),
+        shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
+        border: Border.all(color: Colors.grey.shade300, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 }

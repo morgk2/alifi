@@ -16,7 +16,7 @@ class _TypingIndicatorState extends State<TypingIndicator> with SingleTickerProv
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 500), // Much faster typing animation
     )..repeat();
 
     _animations = List.generate(3, (index) {

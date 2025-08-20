@@ -15,7 +15,7 @@ class VetChatPage extends StatelessWidget {
     return UniversalChatPage(
       otherUser: vetUser,
       chatType: ChatType.vetConsultation,
-      themeColor: Colors.green,
+      themeColor: Colors.blue,
     );
   }
 }

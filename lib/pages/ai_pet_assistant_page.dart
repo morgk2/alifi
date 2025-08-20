@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -30,6 +31,7 @@ class _AIPetAssistantPageState extends State<AIPetAssistantPage>
   late AnimationController _fadeController;
   String _streamingText = '';
   bool _isStreaming = false;
+  Timer? _scrollTimer; // Timer for periodic scrolling during streaming
   
   // Animation controllers for word fade-in
   final List<AnimationController> _wordAnimationControllers = [];
@@ -42,7 +44,7 @@ class _AIPetAssistantPageState extends State<AIPetAssistantPage>
     
     // Initialize animation controllers
     _typingController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 600), // Much faster typing animation
       vsync: this,
     )..repeat();
     
@@ -65,6 +67,9 @@ class _AIPetAssistantPageState extends State<AIPetAssistantPage>
     for (var controller in _wordAnimationControllers) {
       controller.dispose();
     }
+    
+    // Cancel scroll timer
+    _scrollTimer?.cancel();
     
     super.dispose();
   }
@@ -94,13 +99,19 @@ class _AIPetAssistantPageState extends State<AIPetAssistantPage>
     }
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool immediate = false}) {
     if (_scrollController.hasClients) {
+      if (immediate) {
+        // Immediate scroll for streaming animation
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      } else {
+        // Smooth scroll for normal messages
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
+      }
     }
   }
 
@@ -149,6 +160,13 @@ class _AIPetAssistantPageState extends State<AIPetAssistantPage>
       _isStreaming = true;
       _streamingText = '';
     });
+    
+    // Start periodic scrolling during streaming
+    _scrollTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (_isStreaming && mounted) {
+        _scrollToBottom(immediate: true);
+      }
+    });
 
     final words = fullText.split(' ');
     _currentWords.addAll(words);
@@ -156,7 +174,7 @@ class _AIPetAssistantPageState extends State<AIPetAssistantPage>
     // Create animation controllers for each word
     for (int i = 0; i < words.length; i++) {
       final controller = AnimationController(
-        duration: const Duration(milliseconds: 400),
+        duration: const Duration(milliseconds: 200), // Faster word fade-in
         vsync: this,
       );
       final animation = Tween<double>(
@@ -187,15 +205,29 @@ class _AIPetAssistantPageState extends State<AIPetAssistantPage>
         }
       });
       
-      _scrollToBottom();
+      // Auto-scroll during streaming with immediate scroll to follow text
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom(immediate: true);
+      });
       
-      // Wait before next word
-      await Future.delayed(const Duration(milliseconds: 120));
+      // Dynamic delay based on message length - faster for longer messages
+      final baseDelay = _currentWords.length > 50 ? 25 : 
+                       _currentWords.length > 30 ? 35 : 
+                       _currentWords.length > 15 ? 50 : 70;
+      await Future.delayed(Duration(milliseconds: baseDelay));
     }
 
     // Complete the streaming
+    _scrollTimer?.cancel();
+    _scrollTimer = null;
+    
     setState(() {
       _isStreaming = false;
+    });
+    
+    // Final scroll to ensure we're at the bottom
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
     });
 
     // Save the complete message to chat service
@@ -419,11 +451,14 @@ class _AIPetAssistantPageState extends State<AIPetAssistantPage>
             ),
           ),
           
-          // Streaming message bubble with animated words
+          // Streaming message bubble with animated words - expands dynamically
           Flexible(
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200), // Smooth expansion animation
+              curve: Curves.easeOut,
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.75,
+                minWidth: _streamingText.isEmpty ? 50 : 0, // Small minimum width when empty
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -451,6 +486,18 @@ class _AIPetAssistantPageState extends State<AIPetAssistantPage>
   }
   
   Widget _buildAnimatedStreamingText() {
+    // Show only the text that has been streamed so far
+    if (_streamingText.isEmpty) {
+      return const Text(
+        '▊', // Just show cursor when starting
+        style: TextStyle(
+          color: Colors.black87,
+          fontSize: 16,
+          height: 1.4,
+        ),
+      );
+    }
+    
     if (_currentWords.isEmpty) {
       return Text(
         '$_streamingText${_isStreaming ? '▊' : ''}',
@@ -462,8 +509,12 @@ class _AIPetAssistantPageState extends State<AIPetAssistantPage>
       );
     }
     
+    // Only show words that have been streamed (up to current _streamingText length)
+    final streamedWords = _streamingText.split(' ');
+    final wordsToShow = streamedWords.length;
+    
     return Wrap(
-      children: _currentWords.asMap().entries.map((entry) {
+      children: _currentWords.asMap().entries.where((entry) => entry.key < wordsToShow).map((entry) {
         final index = entry.key;
         final word = entry.value;
         
@@ -483,11 +534,11 @@ class _AIPetAssistantPageState extends State<AIPetAssistantPage>
           builder: (context, child) {
             return AnimatedOpacity(
               opacity: _wordFadeAnimations[index].value,
-              duration: const Duration(milliseconds: 200),
+              duration: const Duration(milliseconds: 100), // Faster opacity animation
               child: Transform.translate(
                 offset: Offset(0, (1 - _wordFadeAnimations[index].value) * 10),
                 child: Text(
-                  index == _currentWords.length - 1 && _isStreaming 
+                  index == wordsToShow - 1 && _isStreaming 
                       ? '$word▊' 
                       : '$word ',
                   style: const TextStyle(

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:io';
 import '../utils/app_fonts.dart';
 import '../models/service_ad.dart';
@@ -62,6 +63,7 @@ class _PostServiceAdPageState extends State<PostServiceAdPage> {
   
   // Location
   LatLng _selectedLocation = LatLng(36.7538, 3.0588); // Default to Algiers
+  bool _isLoadingLocation = false;
   
   bool _isLoading = false;
 
@@ -671,7 +673,7 @@ class _PostServiceAdPageState extends State<PostServiceAdPage> {
         
         const SizedBox(height: 16),
         
-        // Map Widget
+        // Map Widget with Current Location Button
         Container(
           height: 200,
           decoration: BoxDecoration(
@@ -680,35 +682,77 @@ class _PostServiceAdPageState extends State<PostServiceAdPage> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-                initialCenter: _selectedLocation,
-                initialZoom: 13.0,
-                onTap: (tapPosition, point) {
-                  setState(() {
-                    _selectedLocation = point;
-                  });
-                },
-              ),
+            child: Stack(
               children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.alifi',
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _selectedLocation,
-                      width: 40,
-                      height: 40,
-                      child: Icon(
-                        CupertinoIcons.location_fill,
-                        color: _serviceColor,
-                        size: 40,
-                      ),
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: _selectedLocation,
+                    initialZoom: 13.0,
+                    onTap: (tapPosition, point) {
+                      setState(() {
+                        _selectedLocation = point;
+                      });
+                    },
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.example.alifi',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: _selectedLocation,
+                          width: 40,
+                          height: 40,
+                          child: Icon(
+                            CupertinoIcons.location_fill,
+                            color: _serviceColor,
+                            size: 40,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
+                ),
+                
+                // Current Location Button
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: CupertinoButton(
+                      padding: const EdgeInsets.all(12),
+                      minSize: 0,
+                      onPressed: _isLoadingLocation ? null : _getCurrentLocation,
+                      child: _isLoadingLocation
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CupertinoActivityIndicator(
+                                color: _serviceColor,
+                                radius: 10,
+                              ),
+                            )
+                          : Icon(
+                              CupertinoIcons.location_solid,
+                              color: _serviceColor,
+                              size: 20,
+                            ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -716,13 +760,25 @@ class _PostServiceAdPageState extends State<PostServiceAdPage> {
         ),
         
         const SizedBox(height: 8),
-        Text(
-          'Tap on the map to set your exact service location',
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 12,
-            fontFamily: context.localizedFont,
-          ),
+        Row(
+          children: [
+            Icon(
+              CupertinoIcons.info_circle,
+              size: 14,
+              color: Colors.grey[500],
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Tap on the map to set your service location, or use the location button to go to your current position',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                  fontFamily: context.localizedFont,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -829,6 +885,136 @@ class _PostServiceAdPageState extends State<PostServiceAdPage> {
           _endTime = time;
         }
       });
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() => _isLoadingLocation = true);
+    
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(CupertinoIcons.location_slash, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('Location services are disabled. Please enable them in settings.')),
+                ],
+              ),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Check location permissions
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    Icon(CupertinoIcons.exclamationmark_triangle, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text('Location permission denied. Please grant permission to use this feature.')),
+                  ],
+                ),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          }
+          return;
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(CupertinoIcons.exclamationmark_triangle, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('Location permission permanently denied. Please enable it in app settings.')),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Get current position
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 10),
+      );
+      
+      if (mounted) {
+        final newLocation = LatLng(position.latitude, position.longitude);
+        
+        setState(() {
+          _selectedLocation = newLocation;
+        });
+        
+        // Animate map to new location
+        _mapController.move(newLocation, 15.0);
+        
+        // Show success feedback
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(CupertinoIcons.location_fill, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text('Location updated to your current position'),
+              ],
+            ),
+            backgroundColor: _serviceColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(CupertinoIcons.exclamationmark_triangle, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Error getting location: ${e.toString()}')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+      }
     }
   }
 

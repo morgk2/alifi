@@ -15,7 +15,7 @@ class ServiceAdChatPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final serviceColor = serviceAd.serviceType == ServiceAdType.training ? Colors.blue : Colors.green;
+    final serviceColor = serviceAd.serviceType == ServiceAdType.training ? Colors.blue : Colors.orange;
     
     return UniversalChatPage(
       otherUser: providerUser,

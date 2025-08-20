@@ -18,7 +18,7 @@ class StoreChatPage extends StatelessWidget {
     return UniversalChatPage(
       otherUser: storeUser,
       chatType: ChatType.storeProduct,
-      themeColor: Colors.orange,
+      themeColor: Colors.green,
       initialProduct: product,
     );
   }

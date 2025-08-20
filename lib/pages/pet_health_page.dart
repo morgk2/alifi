@@ -71,11 +71,11 @@ class _PetHealthPageState extends State<PetHealthPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Vaccine'),
-        content: const Text('Are you sure you want to delete this vaccine?'),
+        title: Text(AppLocalizations.of(context)!.deleteVaccine),
+        content: Text(AppLocalizations.of(context)!.deleteVaccineConfirmation),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppLocalizations.of(context)!.cancel)),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(AppLocalizations.of(context)!.delete)),
         ],
       ),
     );
@@ -90,16 +90,16 @@ class _PetHealthPageState extends State<PetHealthPage> {
       setState(() => _pet = updatedPet);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Vaccine deleted!'),
+          content: Text(AppLocalizations.of(context)!.vaccineDeleted),
           action: SnackBarAction(
-            label: 'Undo',
+            label: AppLocalizations.of(context)!.undo,
             onPressed: _undoDelete,
           ),
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete vaccine: $e')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.failedToDeleteVaccine(e.toString()))),
       );
     }
   }
@@ -111,11 +111,11 @@ class _PetHealthPageState extends State<PetHealthPage> {
       await DatabaseService().updatePet(updatedPet);
       setState(() => _pet = updatedPet);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Illness added!')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.illnessAdded)),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add illness: $e')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.failedToAddIllness(e.toString()))),
       );
     }
   }
@@ -135,11 +135,11 @@ class _PetHealthPageState extends State<PetHealthPage> {
         await DatabaseService().updatePet(updatedPet);
         setState(() => _pet = updatedPet);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Illness updated!')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.illnessUpdated)),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update illness: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.failedToUpdateIllness(e.toString()))),
         );
       }
     }
@@ -149,11 +149,11 @@ class _PetHealthPageState extends State<PetHealthPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Illness'),
-        content: const Text('Are you sure you want to delete this illness?'),
+        title: Text(AppLocalizations.of(context)!.deleteIllness),
+        content: Text(AppLocalizations.of(context)!.deleteIllnessConfirmation),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppLocalizations.of(context)!.cancel)),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(AppLocalizations.of(context)!.delete)),
         ],
       ),
     );
@@ -168,16 +168,16 @@ class _PetHealthPageState extends State<PetHealthPage> {
       setState(() => _pet = updatedPet);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Illness deleted!'),
+          content: Text(AppLocalizations.of(context)!.illnessDeleted),
           action: SnackBarAction(
-            label: 'Undo',
+            label: AppLocalizations.of(context)!.undo,
             onPressed: _undoDelete,
           ),
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete illness: $e')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.failedToDeleteIllness(e.toString()))),
       );
     }
   }
@@ -577,7 +577,7 @@ Future<Map<String, dynamic>?> showAddVaccineOrIllnessDialog({
               const SizedBox(height: 8),
               CupertinoButton.filled(
                 borderRadius: BorderRadius.circular(12),
-                child: const Text('Select', style: TextStyle(fontFamily: 'InterDisplay', fontWeight: FontWeight.w600)),
+                child: Text(AppLocalizations.of(context)!.select, style: const TextStyle(fontFamily: 'InterDisplay', fontWeight: FontWeight.w600)),
                 onPressed: () {
                   selectedDate = tempDate;
                   Navigator.pop(context);
@@ -659,7 +659,7 @@ Future<Map<String, dynamic>?> showAddVaccineOrIllnessDialog({
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'InterDisplay', fontWeight: FontWeight.w500)),
+            child: Text(AppLocalizations.of(context)!.cancel, style: const TextStyle(fontFamily: 'InterDisplay', fontWeight: FontWeight.w500)),
           ),
           CupertinoDialogAction(
             isDefaultAction: true,
@@ -676,7 +676,7 @@ Future<Map<String, dynamic>?> showAddVaccineOrIllnessDialog({
                 'notes': notesController.text.trim(),
               });
             },
-            child: const Text('Save', style: TextStyle(fontFamily: 'InterDisplay', fontWeight: FontWeight.bold)),
+            child: Text(AppLocalizations.of(context)!.save, style: const TextStyle(fontFamily: 'InterDisplay', fontWeight: FontWeight.bold)),
           ),
         ],
       );

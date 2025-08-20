@@ -290,6 +290,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
         // Navigate to appointment details or vet dashboard
         _navigateToAppointment(notification);
         break;
+      case NotificationType.petOwnershipRequest:
+      case NotificationType.petOwnershipAccepted:
+      case NotificationType.petOwnershipRejected:
+        // Navigate to My Pets page to see ownership requests or updates
+        _navigateToPetOwnership(notification);
+        break;
     }
   }
 
@@ -413,6 +419,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
       context,
       AppLocalizations.of(context)!.appointmentNotificationNavigationTbd,
       duration: const Duration(seconds: 2),
+    );
+  }
+
+  void _navigateToPetOwnership(AppNotification notification) {
+    // Navigate back to My Pets page where the ownership requests are shown
+    Navigator.of(context).pop(); // Close notifications page
+    // The My Pets page should already show the ownership request banner
+    CustomSnackBarHelper.showInfo(
+      context,
+      'Check your My Pets page for ownership requests',
+      duration: const Duration(seconds: 3),
     );
   }
 

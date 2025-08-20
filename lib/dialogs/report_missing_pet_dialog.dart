@@ -166,7 +166,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
     } catch (e) {
       print('Error getting location: $e');
       setState(() => _isLoading = false);
-      _showError('Could not get current location. Please try again.');
+      _showError(AppLocalizations.of(context)!.couldNotGetLocation);
     }
   }
 
@@ -258,10 +258,10 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Please fill in all required fields (photo, name, and description)',
-                      style: TextStyle(
+                      AppLocalizations.of(context)!.pleaseFillRequiredFields,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -313,18 +313,18 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                     color: Colors.red,
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Are you sure?',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.areYouSure,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'This will post your missing pet report to the community.',
+                  Text(
+                    AppLocalizations.of(context)!.thisWillPostYourMissingPetReport,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.grey,
                       fontSize: 16,
                     ),
@@ -359,9 +359,9 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: const Text(
-                            'Confirm',
-                            style: TextStyle(fontSize: 16),
+                          child: Text(
+                            AppLocalizations.of(context)!.confirm,
+                            style: const TextStyle(fontSize: 16),
                           ),
                         ),
                       ),
@@ -420,7 +420,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
       _showNotificationBanner(context);
       } catch (e) {
         print('Error reporting lost pet: $e');
-        _showError('Failed to report lost pet. Please try again.');
+        _showError(AppLocalizations.of(context)!.failedToReportLostPet);
       } finally {
         if (mounted) {
           setState(() => _isLoading = false);
@@ -483,9 +483,9 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'Missing Pet Report Submitted',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.missingPetReportSubmitted,
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                             color: Colors.red,
@@ -493,7 +493,7 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'We hope you find your pet soon! The community will be notified.',
+                          AppLocalizations.of(context)!.hopeYouFindPetSoon,
                           style: TextStyle(
                             color: Colors.red[900],
                             fontSize: 14,
@@ -538,9 +538,9 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
-                                    const Text(
-                                      'Select Pet Type',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                                    Text(
+                                      AppLocalizations.of(context)!.selectPetType,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                                       textAlign: TextAlign.center,
                                     ),
                                             const SizedBox(height: 32),
@@ -599,9 +599,9 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                                     child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                    const Text(
-                      'Pet Name',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    Text(
+                      AppLocalizations.of(context)!.petName,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                       ),
                 const SizedBox(height: 16),
                     Container(
@@ -615,17 +615,17 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                       ),
                       child: TextField(
                         controller: _nameController,
-                        decoration: const InputDecoration(
-                          hintText: 'Enter your pet\'s name (Required)',
-                                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        decoration: InputDecoration(
+                          hintText: AppLocalizations.of(context)!.enterPetNameRequired,
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                           border: InputBorder.none,
                         ),
                       ),
                     ),
                 const SizedBox(height: 24),
-                    const Text(
-                      'Description',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    Text(
+                      AppLocalizations.of(context)!.description,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                     ),
                                         const SizedBox(height: 16),
                     Container(
@@ -640,9 +640,9 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                       child: TextField(
                         controller: _descriptionController,
                     maxLines: 6,
-                        decoration: const InputDecoration(
-                                      hintText: 'Describe your pet - size, color, distinctive features... (Required)',
-                                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        decoration: InputDecoration(
+                                      hintText: AppLocalizations.of(context)!.describePetFeatures,
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                           border: InputBorder.none,
                         ),
                       ),
@@ -657,9 +657,9 @@ class _ReportMissingPetDialogState extends State<ReportMissingPetDialog>
                                     child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                    const Text(
-                      'Last seen',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    Text(
+                      AppLocalizations.of(context)!.lastSeen,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                     ),
                                         const SizedBox(height: 16),
                     Row(

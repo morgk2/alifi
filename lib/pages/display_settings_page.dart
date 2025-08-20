@@ -69,12 +69,48 @@ class DisplaySettingsPage extends StatelessWidget {
                       );
                     },
                   ),
+                  const Divider(height: 1, color: Color(0xFFE5E5E5)),
+                  Consumer<UserPreferencesService>(
+                    builder: (context, userPreferences, child) {
+                      return _DisplaySettingsTile(
+                        icon: CupertinoIcons.drop_triangle,
+                        iconColor: Colors.purple, // Always show as available
+                        title: "Glass Distortion Effect for Tab bar", // Updated title
+                        subtitle: "Enable custom glass distortion effect that bends content for realistic glass appearance",
+                        trailing: IOSToggle(
+                          key: ValueKey(userPreferences.tabBarLiquidGlassEnabled),
+                          value: userPreferences.tabBarLiquidGlassEnabled, // Always functional
+                          onChanged: (value) async {
+                            await userPreferences.setTabBarLiquidGlassEnabled(value);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, color: Color(0xFFE5E5E5)),
+                  Consumer<UserPreferencesService>(
+                    builder: (context, userPreferences, child) {
+                      return _DisplaySettingsTile(
+                        icon: CupertinoIcons.rectangle_fill,
+                        iconColor: Colors.green,
+                        title: l10n.useSolidColorForTabBar,
+                        subtitle: l10n.enableSolidColorOnNavigationBar,
+                        trailing: IOSToggle(
+                          key: ValueKey(userPreferences.tabBarSolidColorEnabled),
+                          value: userPreferences.tabBarSolidColorEnabled,
+                          onChanged: (value) async {
+                            await userPreferences.setTabBarSolidColorEnabled(value);
+                          },
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
               
               const SizedBox(height: 24),
               
-              // Info section explaining the setting
+              // Info section explaining the blur effect
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -99,6 +135,78 @@ class DisplaySettingsPage extends StatelessWidget {
                         l10n.whenDisabledTabBarWillHaveSolidWhiteBackground,
                         style: TextStyle(
                           color: Colors.blue.shade700,
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Info section explaining the enhanced glass effect
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.purple.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      CupertinoIcons.info_circle,
+                      color: Colors.purple,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "Custom glass distortion shader that subtly bends and warps content inside the navigation bar to simulate realistic glass refraction. Creates an authentic glass-like appearance with subtle wave distortions.",
+                        style: TextStyle(
+                          color: Colors.purple.shade700,
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Info section explaining the solid color effect
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.green.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      CupertinoIcons.info_circle,
+                      color: Colors.green,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l10n.whenDisabledSolidColorTabBarWillHaveEffect,
+                        style: TextStyle(
+                          color: Colors.green.shade700,
                           fontSize: 14,
                           fontFamily: 'Inter',
                         ),

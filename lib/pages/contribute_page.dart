@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../models/fundraising.dart';
-import '../l10n/app_localizations.dart';
 import '../utils/app_fonts.dart';
 
 class ContributePage extends StatefulWidget {
@@ -17,7 +16,8 @@ class ContributePage extends StatefulWidget {
 }
 
 class _ContributePageState extends State<ContributePage> with TickerProviderStateMixin {
-  double _selectedAmount = 5000; // Default selected amount in DZD
+  double _selectedAmount = 500; // Default selected amount in DZD
+  bool _isCustomAmount = false; // Track if custom amount is selected
   String _selectedPaymentMethod = 'CIB'; // Default to CIB
   final TextEditingController _customAmountController = TextEditingController();
   late AnimationController _animationController;
@@ -57,13 +57,65 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
     }
   }
 
+  Widget _buildCustomAmountCard() {
+    final bool isSelected = _isCustomAmount;
+    
+    return GestureDetector(
+      onTap: _showCustomAmountSheet,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF4CAF50) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[200]!,
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected 
+                ? const Color(0xFF4CAF50).withOpacity(0.3)
+                : Colors.black.withOpacity(0.05),
+              blurRadius: isSelected ? 12 : 6,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Text(
+              isSelected ? _selectedAmount.toInt().toString() : 'Custom',
+              style: TextStyle(
+                fontFamily: AppFonts.getLocalizedFontFamily(context),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : const Color(0xFF2E7D32),
+                decoration: TextDecoration.none,
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(height: 4),
+              const Icon(
+                CupertinoIcons.checkmark_circle_fill,
+                color: Colors.white,
+                size: 16,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildAmountCard(double amount) {
-    final bool isSelected = _selectedAmount == amount;
+    final bool isSelected = _selectedAmount == amount && !_isCustomAmount;
     
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedAmount = amount;
+          _isCustomAmount = false;
         });
       },
       child: AnimatedContainer(
@@ -92,20 +144,14 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _formatAmountDZD(amount),
+                  amount.toInt().toString(),
                   style: TextStyle(
                     fontFamily: AppFonts.getLocalizedFontFamily(context),
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: isSelected ? Colors.white : const Color(0xFF2E7D32),
+                    decoration: TextDecoration.none,
                   ),
-                ),
-                const SizedBox(width: 6),
-                Image.asset(
-                  'assets/images/dzd_symbol.png',
-                  width: 18,
-                  height: 18,
-                  color: isSelected ? Colors.white : const Color(0xFF4CAF50),
                 ),
               ],
             ),
@@ -167,6 +213,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[800],
+                decoration: TextDecoration.none,
               ),
             ),
             if (isSelected) ...[
@@ -184,6 +231,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.none,
                   ),
                 ),
               ),
@@ -222,6 +270,8 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                   fontFamily: AppFonts.getTitleFontFamily(context),
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  decoration: TextDecoration.none,
                 ),
               ),
             ),
@@ -230,10 +280,11 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
               child: CupertinoTextField(
                 controller: _customAmountController,
                 keyboardType: TextInputType.number,
-                placeholder: 'Amount in DZD',
+                placeholder: 'Minimum 300',
                 style: const TextStyle(fontSize: 18),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
+                  color: Colors.white,
                   border: Border.all(color: Colors.grey[300]!),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -251,25 +302,64 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                         'Cancel',
                         style: TextStyle(
                           fontFamily: AppFonts.getLocalizedFontFamily(context),
+                          color: const Color(0xFF4CAF50),
+                          decoration: TextDecoration.none,
                         ),
                       ),
                     ),
                   ),
                   Expanded(
-                    child: CupertinoButton.filled(
+                    child: CupertinoButton(
+                      color: const Color(0xFF4CAF50),
                       onPressed: () {
                         final amount = double.tryParse(_customAmountController.text);
-                        if (amount != null && amount > 0) {
+                        if (amount != null && amount >= 300) {
                           setState(() {
                             _selectedAmount = amount;
+                            _isCustomAmount = true;
                           });
                           Navigator.pop(context);
+                        } else {
+                          // Show error for amounts less than 300
+                          showCupertinoDialog(
+                            context: context,
+                            builder: (context) => CupertinoAlertDialog(
+                              title: Text(
+                                'Invalid Amount',
+                                style: TextStyle(
+                                  fontFamily: AppFonts.getTitleFontFamily(context),
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                              content: Text(
+                                'Minimum amount is 300',
+                                style: TextStyle(
+                                  fontFamily: AppFonts.getLocalizedFontFamily(context),
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                              actions: [
+                                CupertinoDialogAction(
+                                  child: Text(
+                                    'OK',
+                                    style: TextStyle(
+                                      fontFamily: AppFonts.getLocalizedFontFamily(context),
+                                      decoration: TextDecoration.none,
+                                    ),
+                                  ),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ],
+                            ),
+                          );
                         }
                       },
                       child: Text(
                         'Confirm',
                         style: TextStyle(
                           fontFamily: AppFonts.getLocalizedFontFamily(context),
+                          color: Colors.white,
+                          decoration: TextDecoration.none,
                         ),
                       ),
                     ),
@@ -285,7 +375,6 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final double progress = widget.fundraising.currentAmount / widget.fundraising.goalAmount;
     final int percentage = (progress * 100).round();
 
@@ -310,6 +399,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
             fontSize: 18,
             fontWeight: FontWeight.w600,
             color: Colors.black,
+            decoration: TextDecoration.none,
           ),
         ),
       ),
@@ -345,6 +435,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFF2E7D32),
+                          decoration: TextDecoration.none,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -355,6 +446,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                           fontSize: 16,
                           color: Colors.grey[600],
                           height: 1.4,
+                          decoration: TextDecoration.none,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -375,6 +467,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                                         fontSize: 28,
                                         fontWeight: FontWeight.bold,
                                         color: const Color(0xFF4CAF50),
+                                        decoration: TextDecoration.none,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -393,6 +486,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                                     fontFamily: AppFonts.getLocalizedFontFamily(context),
                                     fontSize: 14,
                                     color: Colors.grey[600],
+                                    decoration: TextDecoration.none,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -453,6 +547,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: const Color(0xFF4CAF50),
+                                      decoration: TextDecoration.none,
                                     ),
                                   ),
                                 ),
@@ -475,6 +570,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
+                    decoration: TextDecoration.none,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -487,48 +583,12 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                   crossAxisSpacing: 12,
                   childAspectRatio: 2.2,
                   children: [
+                    _buildAmountCard(300),
+                    _buildAmountCard(500),
+                    _buildAmountCard(1000),
                     _buildAmountCard(2000),
-                    _buildAmountCard(5000),
                     _buildAmountCard(10000),
-                    _buildAmountCard(20000),
-                    _buildAmountCard(50000),
-                    GestureDetector(
-                      onTap: _showCustomAmountSheet,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey[200]!, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 6,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              CupertinoIcons.add_circled,
-                              color: Color(0xFF4CAF50),
-                              size: 24,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Custom',
-                              style: TextStyle(
-                                fontFamily: AppFonts.getLocalizedFontFamily(context),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF4CAF50),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    _buildCustomAmountCard(),
                   ],
                 ),
 
@@ -542,6 +602,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
+                    decoration: TextDecoration.none,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -592,16 +653,18 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                       showCupertinoDialog(
                         context: context,
                         builder: (context) => CupertinoAlertDialog(
-                          title: Text(
+                                                      title: Text(
                             'Contribute',
                             style: TextStyle(
                               fontFamily: AppFonts.getTitleFontFamily(context),
+                              decoration: TextDecoration.none,
                             ),
                           ),
                           content: Text(
-                            'Contributing ${_formatAmountDZD(_selectedAmount)} DZD via $_selectedPaymentMethod',
+                            'Contributing ${_selectedAmount.toInt()} via $_selectedPaymentMethod',
                             style: TextStyle(
                               fontFamily: AppFonts.getLocalizedFontFamily(context),
+                              decoration: TextDecoration.none,
                             ),
                           ),
                           actions: [
@@ -610,6 +673,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                                 'Cancel',
                                 style: TextStyle(
                                   fontFamily: AppFonts.getLocalizedFontFamily(context),
+                                  decoration: TextDecoration.none,
                                 ),
                               ),
                               onPressed: () => Navigator.pop(context),
@@ -620,6 +684,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                                 'Confirm',
                                 style: TextStyle(
                                   fontFamily: AppFonts.getLocalizedFontFamily(context),
+                                  decoration: TextDecoration.none,
                                 ),
                               ),
                               onPressed: () => Navigator.pop(context),
@@ -638,12 +703,13 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          'Contribute ${_formatAmountDZD(_selectedAmount)} DZD',
+                          'Contribute ${_selectedAmount.toInt()}',
                           style: TextStyle(
                             fontFamily: AppFonts.getLocalizedFontFamily(context),
                             color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.none,
                           ),
                         ),
                       ],

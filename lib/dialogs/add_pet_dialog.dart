@@ -420,6 +420,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         gender: _selectedGender,
         imageUrls: [imageUrl], // Use the Supabase URL
         ownerId: authService.currentUser!.id,
+        ownerIds: isEdit ? widget.pet!.ownerIds : [authService.currentUser!.id], // Initialize with current user or preserve existing owners
         createdAt: isEdit ? widget.pet!.createdAt : DateTime.now(),
         lastUpdatedAt: DateTime.now(),
         medicalInfo: {}, // Add medical info in future update
@@ -826,7 +827,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                     children: [
                       Icon(Icons.male, color: _selectedGender == 'Male' ? Colors.white : Colors.blue, size: 22),
                       const SizedBox(width: 8),
-                      const Text('Male'),
+                      Text(AppLocalizations.of(context)!.male),
                     ],
                   ),
                   selected: _selectedGender == 'Male',
@@ -851,7 +852,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                     children: [
                       Icon(Icons.female, color: _selectedGender == 'Female' ? Colors.white : Colors.pink, size: 22),
                       const SizedBox(width: 8),
-                      const Text('Female'),
+                      Text(AppLocalizations.of(context)!.female),
                     ],
                   ),
                   selected: _selectedGender == 'Female',
@@ -871,7 +872,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                 ),
                 const SizedBox(width: 16),
                 ChoiceChip(
-                  label: const Text('Unknown'),
+                  label: Text(AppLocalizations.of(context)!.unknown),
                   selected: _selectedGender == 'Unknown',
                   onSelected: (selected) {
                     setState(() {
@@ -1055,8 +1056,8 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                 controller: _weightController,
                 keyboardType: TextInputType.number,
                     onChanged: _updateWeight,
-                    decoration: const InputDecoration(
-                      hintText: 'Weight',
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context)!.weight,
                       border: InputBorder.none,
                     ),
               ),
@@ -1098,9 +1099,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
       child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-              'Add a photo of your pet',
-          style: TextStyle(
+        Text(
+              AppLocalizations.of(context)!.addPhotoOfYourPet,
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
@@ -1164,9 +1165,9 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                               child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-              'Choose a color for your pet\'s profile',
-          style: TextStyle(
+        Text(
+              AppLocalizations.of(context)!.chooseColorForPetProfile,
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
@@ -1230,7 +1231,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Pick a color'),
+            title: Text(AppLocalizations.of(context)!.pickAColor),
             content: SingleChildScrollView(
               child: ColorPicker(
               pickerColor: _selectedColor,
@@ -1245,7 +1246,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Done'),
+                child: Text(AppLocalizations.of(context)!.done),
               ),
             ],
                             ),
@@ -1445,8 +1446,8 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                               final confirmed = await showDialog<bool>(
                                 context: context,
                                 builder: (context) => AlertDialog(
-                                  title: const Text('Mark as Found?'),
-                                  content: const Text('Are you sure you want to mark this pet as found?'),
+                                  title: Text(AppLocalizations.of(context)!.markAsFound),
+                                  content: Text(AppLocalizations.of(context)!.markAsFoundConfirmation),
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.pop(context, false),
@@ -1454,7 +1455,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                                     ),
                                     TextButton(
                                       onPressed: () => Navigator.pop(context, true),
-                                      child: const Text('Confirm'),
+                                      child: Text(AppLocalizations.of(context)!.confirm),
                                     ),
                                   ],
                                 ),
@@ -1494,7 +1495,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              _isPetLost ? 'LOST' : 'FOUND',
+                              _isPetLost ? AppLocalizations.of(context)!.lost : AppLocalizations.of(context)!.found,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -1581,7 +1582,7 @@ class _AddPetDialogState extends State<AddPetDialog> with SingleTickerProviderSt
           width: 24,
           height: 24,
         ),
-                          label: const Text('Back'),
+                          label: Text(AppLocalizations.of(context)!.back),
                           style: TextButton.styleFrom(
                             foregroundColor: Colors.grey,
                           ),

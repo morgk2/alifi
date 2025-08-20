@@ -6,7 +6,7 @@ import '../services/database_service.dart';
 import '../services/notification_service.dart';
 import '../services/currency_service.dart';
 import '../pages/discussion_chat_page.dart';
-import '../models/store_product.dart';
+
 import '../models/user.dart';
 import '../dialogs/order_action_dialog.dart';
 import '../widgets/product_review_dialog.dart';
@@ -32,7 +32,6 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
       final authService = Provider.of<AuthService>(context, listen: false);
       final user = authService.currentUser;
       if (user != null) {
-        final notificationService = Provider.of<NotificationService>(context, listen: false);
         // Mark all unread orders as read
         _markOrdersAsRead(user.id);
       }
@@ -1245,12 +1244,6 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
       return 'U';
     }
     
-    // Handle non-string case
-    if (displayName is! String) {
-      print('🔍 [UserOrdersPage] _getInitials: displayName is not a String, returning "U"');
-      return 'U';
-    }
-    
     print('🔍 [UserOrdersPage] _getInitials displayName length: ${displayName.length}');
     print('🔍 [UserOrdersPage] _getInitials displayName isEmpty: ${displayName.isEmpty}');
     
@@ -1358,6 +1351,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
         onConfirm: () {
           Navigator.of(context).pop(true);
         },
+        context: context,
       ),
     );
 

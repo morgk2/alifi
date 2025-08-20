@@ -476,7 +476,7 @@ Firebase Status:
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Auth Debug Info'),
+                      title: Text(AppLocalizations.of(context)!.authDebugInfo),
           content: SingleChildScrollView(
             child: SelectableText(debugInfo),
           ),
@@ -489,14 +489,14 @@ Firebase Status:
                 if (!mounted) return;
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Signed out of all services')),
+                  SnackBar(content: Text(AppLocalizations.of(context)!.signedOutOfAllServices)),
                 );
               },
-              child: const Text('Force Sign Out'),
+                              child: Text(AppLocalizations.of(context)!.forceSignOut),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+              child: Text(AppLocalizations.of(context)!.close),
             ),
           ],
         ),
@@ -511,7 +511,7 @@ Firebase Status:
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+              child: Text(AppLocalizations.of(context)!.close),
             ),
           ],
         ),
@@ -744,23 +744,23 @@ class _LoginPageState extends State<LoginPage>
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Debug Info'),
+            title: Text(AppLocalizations.of(context)!.debugInfo),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('AuthService initialized: ${authService.isInitialized}'),
-                Text('AuthService loading: ${authService.isLoadingUser}'),
-                Text('AuthService authenticated: ${authService.isAuthenticated}'),
-                Text('AuthService user: ${authService.currentUser?.email ?? 'null'}'),
-                Text('Firebase user: ${firebaseUser?.email ?? 'null'}'),
-                Text('Guest mode: ${authService.isGuestMode}'),
+                Text(AppLocalizations.of(context)!.authServiceInitialized(authService.isInitialized.toString())),
+                Text(AppLocalizations.of(context)!.authServiceLoading(authService.isLoadingUser.toString())),
+                Text(AppLocalizations.of(context)!.authServiceAuthenticated(authService.isAuthenticated.toString())),
+                Text(AppLocalizations.of(context)!.authServiceUser(authService.currentUser?.email ?? AppLocalizations.of(context)!.nullValue)),
+                Text(AppLocalizations.of(context)!.firebaseUser(firebaseUser?.email ?? AppLocalizations.of(context)!.nullValue)),
+                Text(AppLocalizations.of(context)!.guestMode(authService.isGuestMode.toString())),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
+                child: Text(AppLocalizations.of(context)!.close),
               ),
             ],
           ),
@@ -840,7 +840,7 @@ class _LoginPageState extends State<LoginPage>
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              "Let's get you started!",
+                              AppLocalizations.of(context)!.letsGetYouStarted,
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -850,7 +850,7 @@ class _LoginPageState extends State<LoginPage>
                           ),
                           const SizedBox(height: 32),
                           _SocialButton(
-                            text: 'Continue with Google',
+                            text: AppLocalizations.of(context)!.continueWithGoogle,
                             icon: AppIcons.googleIcon,
                             color: Colors.white,
                             textColor: Colors.black87,
@@ -859,7 +859,7 @@ class _LoginPageState extends State<LoginPage>
                           ),
                           const SizedBox(height: 16),
                           _SocialButton(
-                            text: 'Continue with Facebook',
+                            text: AppLocalizations.of(context)!.continueWithFacebook,
                             icon: AppIcons.facebookIcon,
                             color: Colors.white,
                             textColor: Colors.black87,
@@ -885,11 +885,11 @@ class _LoginPageState extends State<LoginPage>
                                   thickness: 1,
                                 ),
                               ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8.0),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
                                 child: Text(
-                                  'sign up as a vet or a store',
-                                  style: TextStyle(
+                                  AppLocalizations.of(context)!.signUpAsVetOrStore,
+                                  style: const TextStyle(
                                     color: Colors.grey,
                                     fontSize: 14,
                                   ),
@@ -921,9 +921,9 @@ class _LoginPageState extends State<LoginPage>
                                   ),
                                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                 ),
-                                child: const Text(
-                                  'Sign up as a vet',
-                                  style: TextStyle(
+                                child: Text(
+                                  AppLocalizations.of(context)!.signUpAsVet,
+                                  style: const TextStyle(
                                     color: Color(0xFF2196F3),
                                     fontWeight: FontWeight.w500,
                                     fontSize: 16,
@@ -945,8 +945,8 @@ class _LoginPageState extends State<LoginPage>
                                   ),
                                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                 ),
-                                child: const Text(
-                                  'Sign up as a store',
+                                child: Text(
+                                  AppLocalizations.of(context)!.signUpAsStore,
                                   style: TextStyle(
                                     color: Color(0xFF4CAF50),
                                     fontWeight: FontWeight.w500,
@@ -1069,7 +1069,7 @@ class _GeminiChatBoxState extends State<GeminiChatBox> {
         {
           "parts": [
             {
-              "text": "You are a virtual pet dog named Lufi. You are a friendly, helpful pet assistant that detects and responds in the same language the user uses. For example, if they write in French, respond in French. If they write in English, respond in English, etc. Focus on giving clear, practical, and supportive pet care advice while maintaining a warm and approachable tone in the user's preferred language. You may occasionally use gentle pet-like expressions, but prioritize being informative and helpful over being playful."
+              "text": "You are Lufi, a professional pet care assistant and veterinary advisor. Your primary mission is to provide accurate, evidence-based guidance on pet health, behavior, nutrition, training, and general care across all animal species including dogs, cats, birds, rabbits, hamsters, fish, reptiles, and exotic pets.\n\nCORE PRINCIPLES:\n- Maintain a professional, knowledgeable, and compassionate tone at all times\n- Detect and respond ONLY in Arabic, French, or English - never use Spanish or any other languages\n- If the user writes in an unsupported language, politely respond in English asking them to communicate in Arabic, French, or English\n- Provide concise, actionable advice without unnecessary elaboration\n- Base recommendations on established veterinary science and animal behavior research\n- Never use playful expressions like 'arf arf', 'woof woof', or similar pet sounds\n- State your name 'Lufi' only once at the beginning of your first response in a conversation\n- Keep responses informative yet brief, typically 2-4 sentences unless complex medical guidance is needed\n\nEXPERTISE AREAS:\n- Emergency pet health situations and when to seek immediate veterinary care\n- Preventive healthcare including vaccination schedules, parasite control, and regular health monitoring\n- Nutritional guidance for different life stages, breeds, and health conditions\n- Behavioral training techniques using positive reinforcement methods\n- Environmental enrichment and mental stimulation for various species\n- Grooming, hygiene, and general maintenance care\n- Species-specific care requirements and considerations\n- Pet safety, toxin awareness, and hazard prevention\n- End-of-life care and quality of life assessments\n\nCOMMUNICATION GUIDELINES:\n- Always prioritize the animal's welfare and safety in your recommendations\n- Clearly distinguish between general advice and situations requiring professional veterinary intervention\n- Use appropriate medical terminology when necessary but explain complex concepts in accessible language\n- Acknowledge the emotional bond between pets and their owners while maintaining clinical objectivity\n- If asked about serious medical symptoms, always recommend consulting a veterinarian while providing supportive guidance\n- Adapt your communication style to match the user's language proficiency level\n- Avoid repetitive phrases and maintain conversational flow\n- Focus on practical, implementable solutions rather than theoretical discussions\n\nRESTRICTIONS:\n- Never diagnose medical conditions or replace professional veterinary care\n- Do not recommend specific medications or dosages without veterinary supervision\n- Avoid anthropomorphizing animal behavior when providing scientific explanations\n- Do not engage in non-pet-related conversations\n- Maintain professional boundaries while showing empathy for pet-related concerns\n\nYour goal is to be the most trusted, reliable, and professional pet care resource while building confidence in pet owners through clear, actionable guidance delivered in their preferred language."
             },
             {"text": userMessage}
           ]
@@ -1276,9 +1276,9 @@ class _GeminiChatBoxState extends State<GeminiChatBox> {
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
-            const Text(
-                  'AI pet assistant',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            Text(
+                  AppLocalizations.of(context)!.aiPetAssistant,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Expanded(
                   child: AnimatedList(
@@ -1312,10 +1312,10 @@ class _GeminiChatBoxState extends State<GeminiChatBox> {
                         ),
                         child: KeyboardDismissibleTextField(
                           controller: _controller,
-                          decoration: const InputDecoration(
-                            hintText: 'Type your message...',
+                          decoration: InputDecoration(
+                            hintText: AppLocalizations.of(context)!.typeYourMessage,
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                           ),
                           onSubmitted: (_) => _sendMessage(),
                           enabled: !_loading,
@@ -1366,7 +1366,7 @@ class _AnimatedTypingDotsState extends State<_AnimatedTypingDots> with SingleTic
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 600), // Much faster typing animation
     )..repeat();
     _dotAnimations = List.generate(3, (i) {
       // Each dot animates up and down in a wave, with a smooth loop
@@ -1439,18 +1439,18 @@ class LanguageSwitcher extends StatelessWidget {
           localeNotifierState?.changeLocale(newLocale);
         }
       },
-      items: const [
+      items: [
         DropdownMenuItem(
-          value: Locale('en'),
-          child: Text('English'),
+          value: const Locale('en'),
+          child: Text(AppLocalizations.of(context)!.english),
         ),
         DropdownMenuItem(
-          value: Locale('ar'),
-          child: Text('العربية'),
+          value: const Locale('ar'),
+          child: Text(AppLocalizations.of(context)!.arabic),
         ),
         DropdownMenuItem(
-          value: Locale('fr'),
-          child: Text('Français'),
+          value: const Locale('fr'),
+          child: Text(AppLocalizations.of(context)!.french),
         ),
       ],
     );
