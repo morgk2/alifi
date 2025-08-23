@@ -45,6 +45,7 @@ import 'user_orders_page.dart';
 import '../widgets/services_section.dart';
 import '../utils/age_formatter.dart';
 import '../utils/app_fonts.dart';
+import '../widgets/notification_test_widget.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -1019,6 +1020,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 parent: BouncingScrollPhysics(),
               ),
               slivers: [
+                // Temporary notification test widget - remove after testing
+                if (kDebugMode)
+                  SliverToBoxAdapter(
+                    child: NotificationTestWidget(),
+                  ),
                 // Custom refresh indicator
                 SliverToBoxAdapter(
                   child: ValueListenableBuilder<bool>(
@@ -1465,12 +1471,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               ? ClipOval(
                                   child: OptimizedImage(
                                     imageUrl: user.photoURL!,
-                                    width: 32,
-                                    height: 32,
+                                    width: 36,
+                                    height: 36,
                                     fit: BoxFit.cover,
+                                    isCircular: true,
                                     placeholder: Container(
-                                      width: 32,
-                                      height: 32,
+                                      width: 36,
+                                      height: 36,
                                       decoration: const BoxDecoration(
                                         color: Colors.grey,
                                         shape: BoxShape.circle,
@@ -1478,12 +1485,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                       child: const Icon(
                                         Icons.person,
                                         color: Colors.white,
-                                        size: 16,
+                                        size: 18,
                                       ),
                                     ),
                                     errorWidget: Container(
-                                      width: 32,
-                                      height: 32,
+                                      width: 36,
+                                      height: 36,
                                       decoration: const BoxDecoration(
                                         color: Colors.grey,
                                         shape: BoxShape.circle,
@@ -1491,7 +1498,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                       child: const Icon(
                                         Icons.person,
                                         color: Colors.white,
-                                        size: 16,
+                                        size: 18,
                                       ),
                                     ),
                                   ),

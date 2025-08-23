@@ -1508,5 +1508,36 @@
   },
   "searchingPetProfiles": "Searching pet profiles...",
   "noResultsFoundForPetProfiles": "No results found for \"{query}\"",
-  "errorSearchingPetProfiles": "Error searching pet profiles: {error}"
+  "errorSearchingPetProfiles": "Error searching pet profiles: {error}",
+  
+  "@contributePage": {
+    "description": "Contribute page related strings"
+  },
+  "chooseAmount": "Choose Amount",
+  "paymentMethod": "Payment Method",
+  "cibBank": "CIB Bank",
+  "edahabia": "EDAHABIA",
+  "selected": "Selected",
+  "custom": "Custom",
+  "minimumAmount": "Minimum 300",
+  "invalidAmount": "Invalid Amount",
+  "minimumAmountIs": "Minimum amount is 300",
+  "contributingVia": "Contributing {amount} via {method}",
+  "raisedOfGoal": "raised of {goal} DZD goal",
+  "goal": "Goal",
+  "raised": "raised",
+  "contributeAmount": "Contribute {amount}",
+  "enterCustomAmount": "Enter Custom Amount",
+  "minimumAmountPlaceholder": "Minimum 300",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+  "customAmount": "Custom",
+  "minimumAmountMessage": "Minimum amount is 300",
+  "chooseAmount": "Choose Amount",
+  "cibBank": "CIB Bank",
+  "edahabia": "EDAHABIA",
+  "invalidAmount": "Invalid Amount",
+  "contributingAmount": "Contributing {amount} via {method}",
+  "contributeWithAmount": "Contribute {amount}",
+  "raisedOfGoalAmount": "raised of {goal} DZD goal"
 }

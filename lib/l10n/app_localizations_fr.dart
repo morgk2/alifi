@@ -1667,9 +1667,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get shippingAddress => 'Adresse de Livraison';
 
   @override
-  String paymentMethod(Object method) {
-    return 'Méthode de paiement : $method';
-  }
+  String get paymentMethod => 'Méthode de paiement';
 
   @override
   String get orderItems => 'Articles de la Commande';
@@ -1716,7 +1714,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get custom => 'Personnalisé...';
+  String get custom => 'Personnalisé';
 
   @override
   String get enterAmountInDZD => 'Entrez le montant en DZD';
@@ -2892,6 +2890,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get name => 'Nom';
 
   @override
+  String get clearRecentSearches => 'Clear Recent Searches';
+
+  @override
+  String get clearRecentSearchesConfirmation => 'Are you sure you want to clear all recent searches? This action cannot be undone.';
+
+  @override
+  String get recentSearchesCleared => 'Recent searches cleared';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get undo => 'Annuler';
+
+  @override
   String resultsFound(Object count) {
     return '$count résultats trouvés';
   }
@@ -3936,9 +3949,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get deleteVaccineConfirmation => 'Êtes-vous sûr de vouloir supprimer ce vaccin ?';
 
   @override
-  String get undo => 'Annuler';
-
-  @override
   String get deleteIllness => 'Supprimer la maladie';
 
   @override
@@ -4877,4 +4887,61 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get editDetails => 'Modifier les détails';
+
+  @override
+  String get chooseAmount => 'Choisir le montant';
+
+  @override
+  String get cibBank => 'Banque CIB';
+
+  @override
+  String get minimumAmount => 'Minimum 300';
+
+  @override
+  String get invalidAmount => 'Montant invalide';
+
+  @override
+  String get minimumAmountIs => 'Le montant minimum est de 300';
+
+  @override
+  String contributingVia(Object amount, Object method) {
+    return 'Contribution de $amount via $method';
+  }
+
+  @override
+  String raisedOfGoal(Object goal) {
+    return 'collecté sur $goal DZD objectif';
+  }
+
+  @override
+  String get raised => 'collecté';
+
+  @override
+  String contributeAmount(Object amount) {
+    return 'Contribuer $amount';
+  }
+
+  @override
+  String get minimumAmountPlaceholder => 'Minimum 300';
+
+  @override
+  String get customAmount => 'Personnalisé';
+
+  @override
+  String get minimumAmountMessage => 'Le montant minimum est de 300';
+
+  @override
+  String contributingAmount(Object amount, Object method) {
+    return 'Contribution de $amount via $method';
+  }
+
+  @override
+  String contributeWithAmount(Object amount) {
+    return 'Contribuer $amount';
+  }
+
+  @override
+  String raisedOfGoalAmount(Object goal) {
+    return 'collecté sur $goal DZD objectif';
+  }
 }

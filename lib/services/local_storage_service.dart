@@ -208,6 +208,30 @@ class LocalStorageService {
     print('addRecentProfile called (stubbed)');
   }
 
+  Future<void> clearRecentProfiles() async {
+    // This method is no longer directly dependent on SharedPreferences or dart:html
+    // as it is now a conditional export.
+    // If the stub implementation is used, it will do nothing.
+    // If the web implementation is used, it will use SharedPreferences.
+    // If the io implementation is used, it will do nothing.
+    // For now, we'll keep it simple, as the stub doesn't have this functionality.
+    // If the stub were to be updated, it would need to be passed a mock or actual SharedPreferences.
+    // For now, we'll just print a message.
+    print('clearRecentProfiles called (stubbed)');
+  }
+
+  Future<void> removeRecentProfile(String userId) async {
+    // This method is no longer directly dependent on SharedPreferences or dart:html
+    // as it is now a conditional export.
+    // If the stub implementation is used, it will do nothing.
+    // If the web implementation is used, it will use SharedPreferences.
+    // If the io implementation is used, it will do nothing.
+    // For now, we'll keep it simple, as the stub doesn't have this functionality.
+    // If the stub were to be updated, it would need to be passed a mock or actual SharedPreferences.
+    // For now, we'll just print a message.
+    print('removeRecentProfile called (stubbed)');
+  }
+
   // Vet Locations methods
   Future<bool> isVetCacheValid() async {
     final prefs = await SharedPreferences.getInstance();

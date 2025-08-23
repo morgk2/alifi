@@ -394,7 +394,7 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
   Widget _buildSkeletonProductCard(double width) {
     return Container(
       width: width,
-      height: 320,
+      height: 420, // Match the new card height
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -412,7 +412,7 @@ class _CombinedRecommendationsWidgetState extends State<CombinedRecommendationsW
           // Image placeholder
           Container(
             width: double.infinity,
-            height: 150,
+            height: 147, // 35% of 420 height
             decoration: BoxDecoration(
               color: Colors.grey.withOpacity(0.3),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
@@ -585,7 +585,14 @@ class _LazyProductCardState extends State<LazyProductCard> {
       setState(() {
         _isVisible = isNowVisible;
         if (isNowVisible && !_isLoaded) {
-          _isLoaded = true;
+          // Add a small delay to show skeleton loader for better UX
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) {
+              setState(() {
+                _isLoaded = true;
+              });
+            }
+          });
         }
       });
     }
@@ -593,19 +600,23 @@ class _LazyProductCardState extends State<LazyProductCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Use a placeholder for non-visible items to reduce memory usage
+    // Show skeleton loader for non-visible items or when not loaded yet
     if (!_isVisible && !_isLoaded) {
       return Container(
         key: _visibilityKey,
         width: widget.width,
         height: widget.height,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Center(
-          child: Icon(Icons.image, color: Colors.grey),
-        ),
+        child: _buildSkeletonCard(),
+      );
+    }
+
+    // Show skeleton loader while loading, then the actual card
+    if (_isVisible && !_isLoaded) {
+      return Container(
+        key: _visibilityKey,
+        width: widget.width,
+        height: widget.height,
+        child: _buildSkeletonCard(),
       );
     }
 
@@ -617,6 +628,128 @@ class _LazyProductCardState extends State<LazyProductCard> {
         width: widget.width,
         height: widget.height,
         showDetails: widget.showDetails,
+      ),
+    );
+  }
+
+  Widget _buildSkeletonCard() {
+    return Container(
+      width: widget.width,
+      height: widget.height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image placeholder with shimmer
+          Container(
+            width: double.infinity,
+            height: widget.height * 0.35,
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.3),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+            child: const ShimmerLoader(
+              child: SizedBox.expand(),
+            ),
+          ),
+          // Product info section (white background appears first)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title placeholder
+                  ShimmerLoader(
+                    child: SkeletonLoader(
+                      width: double.infinity,
+                      height: 16,
+                      baseColor: Colors.grey.withOpacity(0.2),
+                      highlightColor: Colors.grey.withOpacity(0.1),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Subtitle placeholder
+                  ShimmerLoader(
+                    child: SkeletonLoader(
+                      width: 120,
+                      height: 14,
+                      baseColor: Colors.grey.withOpacity(0.2),
+                      highlightColor: Colors.grey.withOpacity(0.1),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Price placeholder
+                  Row(
+                    children: [
+                      ShimmerLoader(
+                        child: SkeletonLoader(
+                          width: 60,
+                          height: 18,
+                          baseColor: Colors.grey.withOpacity(0.2),
+                          highlightColor: Colors.grey.withOpacity(0.1),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ShimmerLoader(
+                        child: Container(
+                          width: 40,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Rating and orders placeholder
+                  Row(
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      ShimmerLoader(
+                        child: SkeletonLoader(
+                          width: 30,
+                          height: 12,
+                          baseColor: Colors.grey.withOpacity(0.2),
+                          highlightColor: Colors.grey.withOpacity(0.1),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ShimmerLoader(
+                        child: SkeletonLoader(
+                          width: 50,
+                          height: 12,
+                          baseColor: Colors.grey.withOpacity(0.2),
+                          highlightColor: Colors.grey.withOpacity(0.1),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

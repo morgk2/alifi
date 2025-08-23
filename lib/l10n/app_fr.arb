@@ -3645,5 +3645,36 @@
   "failedToRejectMeeting": "Échec du rejet du rendez-vous",
   "failedToUpdateMeetingDetails": "Échec de la mise à jour des détails du rendez-vous",
   "meetingDetailsUpdated": "Détails du rendez-vous mis à jour !",
-  "markAsFinished": "Marquer comme terminé"
+  "markAsFinished": "Marquer comme terminé",
+  
+  "@contributePage": {
+    "description": "Chaînes liées à la page de contribution"
+  },
+  "chooseAmount": "Choisir le montant",
+  "paymentMethod": "Méthode de paiement",
+  "cibBank": "Banque CIB",
+  "edahabia": "EDAHABIA",
+  "selected": "Sélectionné",
+  "custom": "Personnalisé",
+  "minimumAmount": "Minimum 300",
+  "invalidAmount": "Montant invalide",
+  "minimumAmountIs": "Le montant minimum est de 300",
+  "contributingVia": "Contribution de {amount} via {method}",
+  "raisedOfGoal": "collecté sur {goal} DZD objectif",
+  "goal": "Objectif",
+  "raised": "collecté",
+  "contributeAmount": "Contribuer {amount}",
+  "enterCustomAmount": "Entrer un montant personnalisé",
+  "minimumAmountPlaceholder": "Minimum 300",
+  "confirm": "Confirmer",
+  "cancel": "Annuler",
+  "customAmount": "Personnalisé",
+  "minimumAmountMessage": "Le montant minimum est de 300",
+  "chooseAmount": "Choisir le montant",
+  "cibBank": "Banque CIB",
+  "edahabia": "EDAHABIA",
+  "invalidAmount": "Montant invalide",
+  "contributingAmount": "Contribution de {amount} via {method}",
+  "contributeWithAmount": "Contribuer {amount}",
+  "raisedOfGoalAmount": "collecté sur {goal} DZD objectif"
 }

@@ -2545,5 +2545,36 @@
   "failedToRejectMeeting": "فشل في رفض اللقاء",
   "failedToUpdateMeetingDetails": "فشل في تحديث تفاصيل اللقاء",
   "meetingDetailsUpdated": "تم تحديث تفاصيل اللقاء!",
-  "markAsFinished": "وضع علامة كمنتهي"
+  "markAsFinished": "وضع علامة كمنتهي",
+  
+  "@contributePage": {
+    "description": "نصوص صفحة المساهمة"
+  },
+  "chooseAmount": "اختر المبلغ",
+  "paymentMethod": "طريقة الدفع",
+  "cibBank": "بنك CIB",
+  "edahabia": "إيداع",
+  "selected": "محدد",
+  "custom": "مخصص",
+  "minimumAmount": "الحد الأدنى 300",
+  "invalidAmount": "مبلغ غير صحيح",
+  "minimumAmountIs": "الحد الأدنى للمبلغ هو 300",
+  "contributingVia": "المساهمة بمبلغ {amount} عبر {method}",
+  "raisedOfGoal": "تم جمعه من أصل {goal} دينار جزائري هدف",
+  "goal": "الهدف",
+  "raised": "تم جمعه",
+  "contributeAmount": "ساهم بمبلغ {amount}",
+  "enterCustomAmount": "أدخل مبلغ مخصص",
+  "minimumAmountPlaceholder": "الحد الأدنى 300",
+  "confirm": "تأكيد",
+  "cancel": "إلغاء",
+  "customAmount": "مخصص",
+  "minimumAmountMessage": "الحد الأدنى للمبلغ هو 300",
+  "chooseAmount": "اختر المبلغ",
+  "cibBank": "بنك CIB",
+  "edahabia": "إيداع",
+  "invalidAmount": "مبلغ غير صحيح",
+  "contributingAmount": "المساهمة بمبلغ {amount} عبر {method}",
+  "contributeWithAmount": "ساهم بمبلغ {amount}",
+  "raisedOfGoalAmount": "تم جمعه من أصل {goal} دينار جزائري هدف"
 }

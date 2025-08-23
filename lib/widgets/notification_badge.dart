@@ -25,7 +25,7 @@ class NotificationBadge extends StatelessWidget {
     }
 
     return StreamBuilder<int>(
-      stream: NotificationService().getUnreadNotificationsCount(currentUser.id),
+      stream: NotificationService.instance.getUnreadNotificationsCount(currentUser.id),
       builder: (context, snapshot) {
         final unreadCount = snapshot.data ?? 0;
         final String badgeText = unreadCount > 9 ? '9+' : unreadCount.toString();

@@ -116,7 +116,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proceed => 'متابعة';
 
   @override
-  String get enterCustomAmount => 'أدخل المبلغ المخصص';
+  String get enterCustomAmount => 'أدخل مبلغ مخصص';
 
   @override
   String get locationServicesDisabled => 'خدمات الموقع معطلة';
@@ -1073,7 +1073,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get monkey => 'قرد';
 
   @override
-  String get selected => 'مُختار';
+  String get selected => 'محدد';
 
   @override
   String get notSelected => 'غير مُختار';
@@ -1667,9 +1667,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shippingAddress => 'عنوان الشحن';
 
   @override
-  String paymentMethod(Object method) {
-    return 'طريقة الدفع: $method';
-  }
+  String get paymentMethod => 'طريقة الدفع';
 
   @override
   String get orderItems => 'عناصر الطلب';
@@ -1716,7 +1714,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get custom => 'مخصص...';
+  String get custom => 'مخصص';
 
   @override
   String get enterAmountInDZD => 'أدخل المبلغ بالدينار الجزائري';
@@ -2426,7 +2424,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get goal => 'Goal';
+  String get goal => 'الهدف';
 
   @override
   String get contribute => 'Contribute';
@@ -2890,6 +2888,21 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get name => 'الاسم';
+
+  @override
+  String get clearRecentSearches => 'Clear Recent Searches';
+
+  @override
+  String get clearRecentSearchesConfirmation => 'Are you sure you want to clear all recent searches? This action cannot be undone.';
+
+  @override
+  String get recentSearchesCleared => 'Recent searches cleared';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get undo => 'تراجع';
 
   @override
   String resultsFound(Object count) {
@@ -3936,9 +3949,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get deleteVaccineConfirmation => 'هل أنت متأكد من أنك تريد حذف هذا اللقاح؟';
 
   @override
-  String get undo => 'تراجع';
-
-  @override
   String get deleteIllness => 'حذف المرض';
 
   @override
@@ -4246,7 +4256,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get paySecurelyWithYourCibCard => 'ادفع بأمان ببطاقة CIB الخاصة بك';
 
   @override
-  String get edahabia => 'الذهبية';
+  String get edahabia => 'إيداع';
 
   @override
   String get payWithYourEdahabiaCard => 'ادفع ببطاقة الذهبية الخاصة بك';
@@ -4877,4 +4887,61 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get editDetails => 'تعديل التفاصيل';
+
+  @override
+  String get chooseAmount => 'اختر المبلغ';
+
+  @override
+  String get cibBank => 'بنك CIB';
+
+  @override
+  String get minimumAmount => 'الحد الأدنى 300';
+
+  @override
+  String get invalidAmount => 'مبلغ غير صحيح';
+
+  @override
+  String get minimumAmountIs => 'الحد الأدنى للمبلغ هو 300';
+
+  @override
+  String contributingVia(Object amount, Object method) {
+    return 'المساهمة بمبلغ $amount عبر $method';
+  }
+
+  @override
+  String raisedOfGoal(Object goal) {
+    return 'تم جمعه من أصل $goal دينار جزائري هدف';
+  }
+
+  @override
+  String get raised => 'تم جمعه';
+
+  @override
+  String contributeAmount(Object amount) {
+    return 'ساهم بمبلغ $amount';
+  }
+
+  @override
+  String get minimumAmountPlaceholder => 'الحد الأدنى 300';
+
+  @override
+  String get customAmount => 'مخصص';
+
+  @override
+  String get minimumAmountMessage => 'الحد الأدنى للمبلغ هو 300';
+
+  @override
+  String contributingAmount(Object amount, Object method) {
+    return 'المساهمة بمبلغ $amount عبر $method';
+  }
+
+  @override
+  String contributeWithAmount(Object amount) {
+    return 'ساهم بمبلغ $amount';
+  }
+
+  @override
+  String raisedOfGoalAmount(Object goal) {
+    return 'تم جمعه من أصل $goal دينار جزائري هدف';
+  }
 }

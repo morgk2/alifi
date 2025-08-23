@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import '../l10n/app_localizations.dart';
 import '../models/fundraising.dart';
 import '../utils/app_fonts.dart';
 
@@ -85,7 +86,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
         child: Column(
           children: [
             Text(
-              isSelected ? _selectedAmount.toInt().toString() : 'Custom',
+              isSelected ? _selectedAmount.toInt().toString() : AppLocalizations.of(context)!.custom,
               style: TextStyle(
                 fontFamily: AppFonts.getLocalizedFontFamily(context),
                 fontSize: 18,
@@ -225,7 +226,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  'Selected',
+                  AppLocalizations.of(context)!.selected,
                   style: TextStyle(
                     fontFamily: AppFonts.getLocalizedFontFamily(context),
                     color: Colors.white,
@@ -265,7 +266,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
             Padding(
               padding: const EdgeInsets.all(20),
               child: Text(
-                'Enter Custom Amount',
+                AppLocalizations.of(context)!.enterCustomAmount,
                 style: TextStyle(
                   fontFamily: AppFonts.getTitleFontFamily(context),
                   fontSize: 20,
@@ -280,7 +281,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
               child: CupertinoTextField(
                 controller: _customAmountController,
                 keyboardType: TextInputType.number,
-                placeholder: 'Minimum 300',
+                placeholder: AppLocalizations.of(context)!.enterCustomAmount,
                 style: const TextStyle(fontSize: 18),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -299,7 +300,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                     child: CupertinoButton(
                       onPressed: () => Navigator.pop(context),
                       child: Text(
-                        'Cancel',
+                        AppLocalizations.of(context)!.cancel,
                         style: TextStyle(
                           fontFamily: AppFonts.getLocalizedFontFamily(context),
                           color: const Color(0xFF4CAF50),
@@ -325,14 +326,14 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                             context: context,
                             builder: (context) => CupertinoAlertDialog(
                               title: Text(
-                                'Invalid Amount',
+                                AppLocalizations.of(context)!.invalidAmount,
                                 style: TextStyle(
                                   fontFamily: AppFonts.getTitleFontFamily(context),
                                   decoration: TextDecoration.none,
                                 ),
                               ),
                               content: Text(
-                                'Minimum amount is 300',
+                                "Minimum amount is 300",
                                 style: TextStyle(
                                   fontFamily: AppFonts.getLocalizedFontFamily(context),
                                   decoration: TextDecoration.none,
@@ -341,7 +342,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                               actions: [
                                 CupertinoDialogAction(
                                   child: Text(
-                                    'OK',
+                                    AppLocalizations.of(context)!.ok,
                                     style: TextStyle(
                                       fontFamily: AppFonts.getLocalizedFontFamily(context),
                                       decoration: TextDecoration.none,
@@ -355,7 +356,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                         }
                       },
                       child: Text(
-                        'Confirm',
+                        AppLocalizations.of(context)!.confirm,
                         style: TextStyle(
                           fontFamily: AppFonts.getLocalizedFontFamily(context),
                           color: Colors.white,
@@ -393,7 +394,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
           ),
         ),
         middle: Text(
-          'Contribute',
+          AppLocalizations.of(context)!.contribute,
           style: TextStyle(
             fontFamily: AppFonts.getTitleFontFamily(context),
             fontSize: 18,
@@ -481,7 +482,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'raised of ${_formatAmountDZD(widget.fundraising.goalAmount * 134)} DZD goal',
+                                  AppLocalizations.of(context)!.raisedOfGoalAmount(_formatAmountDZD(widget.fundraising.goalAmount * 134)),
                                   style: TextStyle(
                                     fontFamily: AppFonts.getLocalizedFontFamily(context),
                                     fontSize: 14,
@@ -564,7 +565,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
 
                 // Amount selection
                 Text(
-                  'Choose Amount',
+                  AppLocalizations.of(context)!.chooseAmount,
                   style: TextStyle(
                     fontFamily: AppFonts.getTitleFontFamily(context),
                     fontSize: 22,
@@ -596,7 +597,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
 
                 // Payment methods
                 Text(
-                  'Payment Method',
+                  AppLocalizations.of(context)!.paymentMethod,
                   style: TextStyle(
                     fontFamily: AppFonts.getTitleFontFamily(context),
                     fontSize: 22,
@@ -612,7 +613,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                     Expanded(
                       child: _buildPaymentMethodCard(
                         'CIB',
-                        'CIB Bank',
+                        AppLocalizations.of(context)!.cibBank,
                         'assets/images/cib_logo.png',
                       ),
                     ),
@@ -620,7 +621,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                     Expanded(
                       child: _buildPaymentMethodCard(
                         'EDAHABIA',
-                        'EDAHABIA',
+                        AppLocalizations.of(context)!.edahabia,
                         'assets/images/sb_logo.png', // Using SB logo as placeholder for EDAHABIA
                       ),
                     ),
@@ -654,23 +655,23 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                         context: context,
                         builder: (context) => CupertinoAlertDialog(
                                                       title: Text(
-                            'Contribute',
+                            AppLocalizations.of(context)!.contribute,
                             style: TextStyle(
                               fontFamily: AppFonts.getTitleFontFamily(context),
                               decoration: TextDecoration.none,
                             ),
                           ),
-                          content: Text(
-                            'Contributing ${_selectedAmount.toInt()} via $_selectedPaymentMethod',
-                            style: TextStyle(
-                              fontFamily: AppFonts.getLocalizedFontFamily(context),
-                              decoration: TextDecoration.none,
+                                                      content: Text(
+                              AppLocalizations.of(context)!.contributingAmount(_selectedAmount.toInt().toString(), _selectedPaymentMethod),
+                              style: TextStyle(
+                                fontFamily: AppFonts.getLocalizedFontFamily(context),
+                                decoration: TextDecoration.none,
+                              ),
                             ),
-                          ),
                           actions: [
                             CupertinoDialogAction(
                               child: Text(
-                                'Cancel',
+                                AppLocalizations.of(context)!.cancel,
                                 style: TextStyle(
                                   fontFamily: AppFonts.getLocalizedFontFamily(context),
                                   decoration: TextDecoration.none,
@@ -681,7 +682,7 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                             CupertinoDialogAction(
                               isDefaultAction: true,
                               child: Text(
-                                'Confirm',
+                                AppLocalizations.of(context)!.confirm,
                                 style: TextStyle(
                                   fontFamily: AppFonts.getLocalizedFontFamily(context),
                                   decoration: TextDecoration.none,
@@ -702,16 +703,16 @@ class _ContributePageState extends State<ContributePage> with TickerProviderStat
                           size: 24,
                         ),
                         const SizedBox(width: 12),
-                        Text(
-                          'Contribute ${_selectedAmount.toInt()}',
-                          style: TextStyle(
-                            fontFamily: AppFonts.getLocalizedFontFamily(context),
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.none,
+                                                  Text(
+                            AppLocalizations.of(context)!.contributeWithAmount(_selectedAmount.toInt().toString()),
+                            style: TextStyle(
+                              fontFamily: AppFonts.getLocalizedFontFamily(context),
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.none,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),

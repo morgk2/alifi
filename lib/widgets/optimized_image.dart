@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/device_performance.dart';
+import '../services/comprehensive_cache_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'ios_optimized_image.dart';
 
 class OptimizedImage extends StatefulWidget {
   final String imageUrl;
@@ -35,12 +37,44 @@ class OptimizedImage extends StatefulWidget {
 }
 
 class _OptimizedImageState extends State<OptimizedImage> {
+  final ComprehensiveCacheService _cacheService = ComprehensiveCacheService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-cache the image for better performance
+    _precacheImage();
+  }
+
+  Future<void> _precacheImage() async {
+    try {
+      await _cacheService.cacheImage(widget.imageUrl);
+    } catch (e) {
+      // Silently fail, image will still load normally
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // For iOS, use the specialized iOS widget
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return IOSOptimizedImage(
+        imageUrl: widget.imageUrl,
+        width: widget.width,
+        height: widget.height,
+        fit: widget.fit,
+        borderRadius: widget.borderRadius,
+        placeholder: widget.placeholder,
+        errorWidget: widget.errorWidget,
+        isCircular: widget.isCircular,
+        fadeInDuration: widget.fadeInDuration,
+      );
+    }
+
     final devicePerformance = DevicePerformance();
     final isLowEndDevice = devicePerformance.performanceTier == PerformanceTier.low;
     
-    // Optimize image size based on device performance
+    // For other platforms, use the original logic
     final optimizedWidth = isLowEndDevice && widget.width != null 
         ? widget.width! * 0.8 
         : widget.width;
@@ -94,26 +128,28 @@ class _OptimizedImageState extends State<OptimizedImage> {
       );
     }
 
-    // For iOS, use CachedNetworkImage with optimizations
+    // For iOS, use optimized CachedNetworkImage with better quality settings
     return CachedNetworkImage(
       imageUrl: widget.imageUrl,
       width: width,
       height: height,
       fit: widget.fit,
-      // Reduce animation duration on low-end devices
-      fadeInDuration: isLowEndDevice ? const Duration(milliseconds: 100) : widget.fadeInDuration,
-      fadeOutDuration: const Duration(milliseconds: 100),
+      // Use longer fade duration for iOS to prevent jarring transitions
+      fadeInDuration: const Duration(milliseconds: 400),
+      fadeOutDuration: const Duration(milliseconds: 200),
       placeholder: (context, url) => _buildPlaceholder(),
       errorWidget: (context, url, error) => _buildErrorWidget(),
       cacheKey: _getCacheKey(),
-      // Disable progress indicator on low-end devices
-      // Use placeholder only, no visible progress indicator to keep loading subtle
+      // Disable progress indicator to keep loading subtle
       progressIndicatorBuilder: null,
-      // Improve memory management
+      // iOS-specific optimizations for better quality
       memCacheWidth: width?.toInt(),
       memCacheHeight: height?.toInt(),
-      maxWidthDiskCache: (width != null) ? (width * 1.5).toInt() : null,
-      maxHeightDiskCache: (height != null) ? (height * 1.5).toInt() : null,
+      // Increase disk cache size for iOS to maintain quality
+      maxWidthDiskCache: (width != null) ? (width * 2.0).toInt() : null,
+      maxHeightDiskCache: (height != null) ? (height * 2.0).toInt() : null,
+      // Use higher quality settings for iOS
+      filterQuality: FilterQuality.high,
     );
   }
 
@@ -159,8 +195,6 @@ class _OptimizedImageState extends State<OptimizedImage> {
           : const Icon(Icons.broken_image, color: Colors.grey),
     );
   }
-
-  // Progress indicator methods removed to keep image loading subtle without spinners
 
   String _getCacheKey() {
     // Use a stable cache key based on the URL for both web and mobile

@@ -116,7 +116,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proceed => 'PROCEED';
 
   @override
-  String get enterCustomAmount => 'Enter custom amount';
+  String get enterCustomAmount => 'Enter Custom Amount';
 
   @override
   String get locationServicesDisabled => 'Location Services Disabled';
@@ -1667,9 +1667,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shippingAddress => 'Shipping Address';
 
   @override
-  String paymentMethod(Object method) {
-    return 'Payment Method: $method';
-  }
+  String get paymentMethod => 'Payment Method';
 
   @override
   String get orderItems => 'Order Items';
@@ -1716,7 +1714,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get custom => 'Custom...';
+  String get custom => 'Custom';
 
   @override
   String get enterAmountInDZD => 'Enter amount in DZD';
@@ -2892,6 +2890,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get name => 'Name';
 
   @override
+  String get clearRecentSearches => 'Clear Recent Searches';
+
+  @override
+  String get clearRecentSearchesConfirmation => 'Are you sure you want to clear all recent searches? This action cannot be undone.';
+
+  @override
+  String get recentSearchesCleared => 'Recent searches cleared';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get undo => 'Undo';
+
+  @override
   String resultsFound(Object count) {
     return '$count results found';
   }
@@ -3936,9 +3949,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteVaccineConfirmation => 'Are you sure you want to delete this vaccine?';
 
   @override
-  String get undo => 'Undo';
-
-  @override
   String get deleteIllness => 'Delete Illness';
 
   @override
@@ -4877,4 +4887,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editDetails => 'Edit Details';
+
+  @override
+  String get chooseAmount => 'Choose Amount';
+
+  @override
+  String get cibBank => 'CIB Bank';
+
+  @override
+  String get minimumAmount => 'Minimum 300';
+
+  @override
+  String get invalidAmount => 'Invalid Amount';
+
+  @override
+  String get minimumAmountIs => 'Minimum amount is 300';
+
+  @override
+  String contributingVia(Object amount, Object method) {
+    return 'Contributing $amount via $method';
+  }
+
+  @override
+  String raisedOfGoal(Object goal) {
+    return 'raised of $goal DZD goal';
+  }
+
+  @override
+  String get raised => 'raised';
+
+  @override
+  String contributeAmount(Object amount) {
+    return 'Contribute $amount';
+  }
+
+  @override
+  String get minimumAmountPlaceholder => 'Minimum 300';
+
+  @override
+  String get customAmount => 'Custom';
+
+  @override
+  String get minimumAmountMessage => 'Minimum amount is 300';
+
+  @override
+  String contributingAmount(Object amount, Object method) {
+    return 'Contributing $amount via $method';
+  }
+
+  @override
+  String contributeWithAmount(Object amount) {
+    return 'Contribute $amount';
+  }
+
+  @override
+  String raisedOfGoalAmount(Object goal) {
+    return 'raised of $goal DZD goal';
+  }
 }

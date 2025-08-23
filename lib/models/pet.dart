@@ -177,6 +177,62 @@ class Pet {
     }
   }
 
+  /// Convert Pet to Map for caching
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'species': species,
+      'breed': breed,
+      'color': color,
+      'age': age,
+      'gender': gender,
+      'imageUrls': imageUrls,
+      'ownerId': ownerId,
+      'ownerIds': ownerIds,
+      'createdAt': createdAt.toIso8601String(),
+      'lastUpdatedAt': lastUpdatedAt.toIso8601String(),
+      'medicalInfo': medicalInfo,
+      'dietaryInfo': dietaryInfo,
+      'tags': tags,
+      'isActive': isActive,
+      'isForAdoption': isForAdoption,
+      'weight': weight,
+      'microchipId': microchipId,
+      'description': description,
+      'vaccines': vaccines,
+      'illnesses': illnesses,
+    };
+  }
+
+  /// Create Pet from Map for caching
+  factory Pet.fromMap(Map<String, dynamic> data) {
+    return Pet(
+      id: data['id'] ?? '',
+      name: data['name'] ?? '',
+      species: data['species'] ?? '',
+      breed: data['breed'] ?? '',
+      color: data['color'] ?? '',
+      age: (data['age'] ?? 0.0).toDouble(),
+      gender: data['gender'] ?? '',
+      imageUrls: data['imageUrls'] != null ? List<String>.from(data['imageUrls']) : [],
+      ownerId: data['ownerId'] ?? '',
+      ownerIds: data['ownerIds'] != null ? List<String>.from(data['ownerIds']) : [],
+      createdAt: DateTime.parse(data['createdAt'] ?? DateTime.now().toIso8601String()),
+      lastUpdatedAt: DateTime.parse(data['lastUpdatedAt'] ?? DateTime.now().toIso8601String()),
+      medicalInfo: data['medicalInfo'] != null ? Map<String, dynamic>.from(data['medicalInfo']) : {},
+      dietaryInfo: data['dietaryInfo'] != null ? Map<String, dynamic>.from(data['dietaryInfo']) : {},
+      tags: data['tags'] != null ? List<String>.from(data['tags']) : [],
+      isActive: data['isActive'] ?? true,
+      isForAdoption: data['isForAdoption'] ?? false,
+      weight: data['weight'] != null ? (data['weight'] as num).toDouble() : null,
+      microchipId: data['microchipId'],
+      description: data['description'],
+      vaccines: data['vaccines'] != null ? List<Map<String, dynamic>>.from(data['vaccines']) : null,
+      illnesses: data['illnesses'] != null ? List<Map<String, dynamic>>.from(data['illnesses']) : null,
+    );
+  }
+
   Pet copyWith({
     String? id,
     String? name,

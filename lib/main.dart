@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'icons.dart';
 import 'dialogs/terms_of_service_dialog.dart';
 import 'dialogs/privacy_policy_dialog.dart';
@@ -55,11 +56,84 @@ import 'widgets/keyboard_dismissible_text_field.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'services/app_initialization_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'models/notification.dart';
+
+// Background message handler - must be at top level
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print('Handling a background message: ${message.messageId}');
+  
+  // Store notification in Firestore for when app opens
+  await _storeBackgroundNotification(message);
+}
+
+// Store background notification
+Future<void> _storeBackgroundNotification(RemoteMessage message) async {
+  try {
+    final notification = AppNotification(
+      id: '', // Will be set by Firestore
+      recipientId: message.data['recipientId'] ?? '',
+      senderId: message.data['senderId'] ?? '',
+      senderName: message.data['senderName'],
+      senderPhotoUrl: message.data['senderPhotoUrl'],
+      type: _getNotificationTypeFromString(message.data['type'] ?? ''),
+      title: message.notification?.title ?? '',
+      body: message.notification?.body ?? '',
+      data: message.data,
+      isRead: false,
+      createdAt: DateTime.now(),
+      relatedId: message.data['relatedId'],
+    );
+
+    await FirebaseFirestore.instance
+        .collection('notifications')
+        .add(notification.toFirestore());
+  } catch (e) {
+    print('Error storing background notification: $e');
+  }
+}
+
+// Helper function to convert string to NotificationType
+NotificationType _getNotificationTypeFromString(String type) {
+  switch (type) {
+    case 'chatMessage':
+      return NotificationType.chatMessage;
+    case 'orderPlaced':
+      return NotificationType.orderPlaced;
+    case 'orderConfirmed':
+      return NotificationType.orderConfirmed;
+    case 'orderShipped':
+      return NotificationType.orderShipped;
+    case 'orderDelivered':
+      return NotificationType.orderDelivered;
+    case 'orderCancelled':
+      return NotificationType.orderCancelled;
+    case 'follow':
+      return NotificationType.follow;
+    case 'unfollow':
+      return NotificationType.unfollow;
+    case 'petOwnershipRequest':
+      return NotificationType.petOwnershipRequest;
+    case 'petOwnershipAccepted':
+      return NotificationType.petOwnershipAccepted;
+    case 'petOwnershipRejected':
+      return NotificationType.petOwnershipRejected;
+    default:
+      return NotificationType.chatMessage;
+  }
+}
 
 Future<void> main() async {
   try {
     print('Starting app initialization...');
     WidgetsFlutterBinding.ensureInitialized();
+    
+    // Load environment variables
+    await dotenv.load(fileName: ".env");
+    print('Environment variables loaded');
     
     // Initialize WebView for Android and iOS (skip for web)
     if (!kIsWeb) {
@@ -76,8 +150,8 @@ Future<void> main() async {
     
     // Initialize Supabase
     await Supabase.initialize(
-      url: SupabaseConfig.projectUrl,
-      anonKey: SupabaseConfig.anonKey,
+      url: dotenv.env['SUPABASE_URL'] ?? SupabaseConfig.projectUrl,
+      anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? SupabaseConfig.anonKey,
     );
     print('Supabase initialized successfully');
 
@@ -98,6 +172,9 @@ Future<void> main() async {
     
     // Optimize for smoother rendering
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    
+    // Initialize app services (including map tile cache)
+    await AppInitializationService().initialize();
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -114,6 +191,10 @@ Future<void> main() async {
         options: DefaultFirebaseOptions.currentPlatform,
       );
       print('Firebase initialized successfully');
+
+      // Register background message handler
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      print('Background message handler registered');
 
       // Configure Firestore for web
       if (kIsWeb) {
@@ -174,18 +255,8 @@ Future<void> main() async {
       // Continue anyway as the app should work in guest mode
     }
 
-    // Configure Firestore
-    if (kIsWeb) {
-      try {
-        FirebaseFirestore.instance.settings = const Settings(
-          persistenceEnabled: true,
-          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-        );
-        print('Firestore web settings configured');
-      } catch (e) {
-        print('Error configuring Firestore settings: $e');
-      }
-    }
+    // Firestore configuration is now handled by ComprehensiveCacheService
+    // No need to configure it here as it's done automatically during app initialization
 
     // Initialize Places Service cache (with timeout)
     try {
@@ -370,7 +441,7 @@ class _MainAppState extends State<MainApp> {
           create: (_) => StorageService(Supabase.instance.client),
         ),
         ChangeNotifierProvider(
-          create: (_) => NotificationService(),
+          create: (_) => NotificationService.instance,
         ),
         ChangeNotifierProvider(
           create: (_) => CurrencyService(),

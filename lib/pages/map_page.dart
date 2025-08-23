@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -32,6 +33,7 @@ import '../services/map_focus_service.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/keyboard_dismissible_text_field.dart';
 import '../widgets/universal_chat_page.dart';
+import '../services/map_tile_cache_service.dart';
 
 
 class _PhotoCarousel extends StatefulWidget {
@@ -222,6 +224,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
   final _placesService = PlacesService();
   final _locationService = LocationService();
   final MapController _mapController = MapController();
+  final MapTileCacheService _tileCacheService = MapTileCacheService();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   
@@ -310,6 +313,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
       parent: _minimizeController,
       curve: Curves.easeInOut,
     ));
+    
+    // Initialize tile cache service
+    _initializeTileCache();
+    
     _loadNearbyLostPets();
     _loadVetLocations();
     _loadStoreLocations();
@@ -354,6 +361,43 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
         });
       }
     });
+  }
+
+  /// Initialize tile cache service and preload tiles for current area
+  Future<void> _initializeTileCache() async {
+    try {
+      // Initialize the cache service
+      await _tileCacheService.initialize();
+      
+      // Get current location for preloading using Geolocator
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+      
+      // Preload tiles for the current area (10km radius)
+      await _tileCacheService.preloadTiles(
+        minZoom: 10,
+        maxZoom: 16,
+        centerLat: position.latitude,
+        centerLng: position.longitude,
+        radiusKm: 10.0,
+      );
+      
+      if (kDebugMode) {
+        final stats = _tileCacheService.getCacheStats();
+        print('🗺️ [MapPage] Tile cache stats: ${stats['cachedTiles']} tiles, ${stats['hitRate']}% hit rate');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ [MapPage] Failed to initialize tile cache: $e');
+      }
+    }
+  }
+
+  /// Get cache statistics for debugging
+  Map<String, dynamic> _getCacheStats() {
+    return _tileCacheService.getCacheStats();
   }
   
   void _handleFocusUser() {
@@ -3017,7 +3061,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: MapboxConfig.mapboxStyleUrl,
+                  urlTemplate: _tileCacheService.getTileUrl(0, 0, 0), // This will be overridden by our custom tile provider
+                  tileProvider: _CachedTileProvider(_tileCacheService),
                   tileBuilder: (context, widget, tile) {
                     return RepaintBoundary(
                       child: widget,
@@ -4409,5 +4454,29 @@ class _MarkerWithJiggleState extends State<_MarkerWithJiggle>
         },
       ),
     );
+  }
+}
+
+/// Custom TileProvider that uses cached tiles
+class _CachedTileProvider extends TileProvider {
+  final MapTileCacheService _cacheService;
+
+  _CachedTileProvider(this._cacheService);
+
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
+    final url = _cacheService.getTileUrl(
+      coordinates.z.round(),
+      coordinates.x.round(),
+      coordinates.y.round(),
+    );
+    
+    if (url.startsWith('file://')) {
+      // Return cached file
+      return FileImage(File(url.substring(7)));
+    } else {
+      // Return network image for uncached tiles
+      return NetworkImage(url);
+    }
   }
 }

@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:path/path.dart' as path;
 import '../l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 
 class AddPetDialog extends StatefulWidget {
   final Pet? pet;

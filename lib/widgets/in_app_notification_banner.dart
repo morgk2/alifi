@@ -106,6 +106,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner> with 
                             width: 44,
                             height: 44,
                             fit: BoxFit.cover,
+                            isCircular: true,
                           ),
                         ),
                         const SizedBox(width: 12),

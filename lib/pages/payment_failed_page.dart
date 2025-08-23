@@ -75,7 +75,7 @@ class PaymentFailedPage extends StatelessWidget {
               
               // Payment Method
               Text(
-                AppLocalizations.of(context)!.paymentMethod(paymentMethod),
+                "Payment Method: $paymentMethod",
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -87,7 +87,7 @@ class PaymentFailedPage extends StatelessWidget {
               // Error Message
               if (errorMessage != null) ...[
                 Text(
-                  AppLocalizations.of(context)!.error("", errorMessage!),
+                  "Error: $errorMessage",
                   style: const TextStyle(
                     fontSize: 16,
                     color: Colors.red,

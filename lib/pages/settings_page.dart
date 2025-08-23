@@ -25,6 +25,7 @@ import '../services/currency_service.dart';
 import '../services/database_service.dart';
 import '../services/user_preferences_service.dart';
 import '../widgets/custom_snackbar.dart';
+import '../widgets/cache_stats_widget.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -442,6 +443,11 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: AppLocalizations.of(context)!.addTestAppointment,
                     subtitle: AppLocalizations.of(context)!.createAppointmentForTesting,
                     onTap: () => _createTestAppointment(),
+                  ),
+                  // Cache Stats Widget
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: const CacheStatsWidget(showDetails: true),
                   ),
                 ],
               ),

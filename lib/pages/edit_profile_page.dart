@@ -1,6 +1,7 @@
 import 'package:alifi/pages/store_signup_page.dart';
 import 'package:alifi/pages/vet_signup_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';

@@ -61,8 +61,14 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
   }
 
   Future<void> _loadRecentProfiles() async {
-    final profiles = await _localStorageService.getRecentProfiles();
-    setState(() => _recentProfiles = profiles);
+    try {
+      final profiles = await _localStorageService.getRecentProfiles();
+      if (mounted) {
+        setState(() => _recentProfiles = profiles);
+      }
+    } catch (e) {
+      print('Error loading recent profiles: $e');
+    }
   }
 
   Future<void> _loadRecommendedVetsAndStores() async {
@@ -129,6 +135,67 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
       
       // Reload recent profiles again when returning from profile page
       await _loadRecentProfiles();
+    }
+  }
+
+  Future<void> _clearRecentProfiles() async {
+    final l10n = AppLocalizations.of(context)!;
+    
+    // Show confirmation dialog
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.clearRecentSearches),
+        content: Text(l10n.clearRecentSearchesConfirmation),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.clear),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldClear == true) {
+      await _localStorageService.clearRecentProfiles();
+      await _loadRecentProfiles();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.recentSearchesCleared),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeRecentProfile(User user) async {
+    await _localStorageService.removeRecentProfile(user.id);
+    await _loadRecentProfiles();
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${user.displayName ?? 'Profile'} removed from recent searches'),
+          duration: const Duration(seconds: 2),
+          action: SnackBarAction(
+            label: AppLocalizations.of(context)!.undo,
+            onPressed: () async {
+              await _localStorageService.addRecentProfile(user);
+              await _loadRecentProfiles();
+            },
+          ),
+        ),
+      );
     }
   }
 
@@ -1023,6 +1090,26 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                                       letterSpacing: -0.5,
                                     ),
                                   ),
+                                  const Spacer(),
+                                  if (_recentProfiles.isNotEmpty)
+                                    GestureDetector(
+                                      onTap: () => _clearRecentProfiles(),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[100],
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        child: Text(
+                                          'Clear',
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -1067,7 +1154,27 @@ class _UserSearchPageState extends State<UserSearchPage> with TickerProviderStat
                               padding: const EdgeInsets.symmetric(horizontal: 20),
                               sliver: SliverList(
                                 delegate: SliverChildBuilderDelegate(
-                                  (context, index) => _buildUserCard(_recentProfiles[index]),
+                                  (context, index) => Dismissible(
+                                    key: Key(_recentProfiles[index].id),
+                                    direction: DismissDirection.endToStart,
+                                    background: Container(
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.only(right: 20),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.delete,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    onDismissed: (direction) {
+                                      _removeRecentProfile(_recentProfiles[index]);
+                                    },
+                                    child: _buildUserCard(_recentProfiles[index]),
+                                  ),
                                   childCount: _recentProfiles.length,
                                 ),
                               ),

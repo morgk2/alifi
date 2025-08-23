@@ -43,7 +43,9 @@ dependencies:
   flutter_image_compress: ^2.4.0
   geocoding: ^4.0.0
   supabase_flutter: ^2.3.4  # Added for Supabase integration
+  flutter_dotenv: ^5.1.0  # Added for environment variables
   mime: ^1.0.5  # Added for file type detection
+  crypto: ^3.0.3  # Added for tile cache hashing
 
   video_player: ^2.8.2
   share_plus: ^7.2.1  # Added for sharing functionality
@@ -104,6 +106,7 @@ flutter:
   shaders:
     - shaders/glass_distortion.frag
   assets:
+    - .env
     - assets/images/alifi_logo.png
     - assets/images/app_icon.png
     - assets/images/photo_loader.png

@@ -4,8 +4,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification.dart';
 import 'push_notification_service.dart';
 import 'in_app_notification_controller.dart';
+import 'dart:convert'; // Added for jsonEncode
+import 'package:http/http.dart' as http; // Added for http
 
 class NotificationService extends ChangeNotifier {
+  static NotificationService? _instance;
+  static NotificationService get instance {
+    _instance ??= NotificationService._internal();
+    return _instance!;
+  }
+  
+  NotificationService._internal();
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final PushNotificationService _pushNotificationService = PushNotificationService();
   
@@ -21,6 +31,23 @@ class NotificationService extends ChangeNotifier {
   StreamSubscription<QuerySnapshot>? _notificationsSubscription;
   bool _skipInitialNotificationBatch = true;
 
+  // Track last message timestamp to avoid duplicate notifications
+  Map<String, DateTime> _lastMessageTimestamp = {};
+
+  // Track if listeners are already initialized
+  Map<String, bool> _listenersInitialized = {};
+
+  // Initialize the service
+  Future<void> initialize() async {
+    try {
+      print('🔔 [NotificationService] Initializing...');
+      await _pushNotificationService.initialize();
+      print('🔔 [NotificationService] Initialized successfully');
+    } catch (e) {
+      print('❌ [NotificationService] Error initializing: $e');
+    }
+  }
+
   // Getters for unread counts
   int getUnreadOrders(String userId) => _unreadOrders[userId] ?? 0;
   int getUnreadMessages(String userId) => _unreadMessages[userId] ?? 0;
@@ -29,6 +56,17 @@ class NotificationService extends ChangeNotifier {
 
   // Initialize listeners for a user
   void initializeListeners(String userId, String accountType) {
+    print('🔔 [NotificationService] initializeListeners called for user: $userId, type: $accountType');
+    
+    // Check if listeners are already initialized for this user
+    final listenerKey = '${userId}_$accountType';
+    if (_listenersInitialized[listenerKey] == true) {
+      print('🔔 [NotificationService] Listeners already initialized for user: $userId, type: $accountType - SKIPPING');
+      return;
+    }
+    
+    print('🔔 [NotificationService] Setting up listeners for user: $userId, type: $accountType');
+    
     if (accountType == 'store') {
       _listenToSellerOrders(userId);
       _listenToSellerMessages(userId);
@@ -38,6 +76,10 @@ class NotificationService extends ChangeNotifier {
     }
     // Start listening for new notifications to show in-app banner
     startInAppBannerListener(userId);
+    
+    // Mark listeners as initialized for this user
+    _listenersInitialized[listenerKey] = true;
+    print('🔔 [NotificationService] Listeners initialized for user: $userId, type: $accountType');
   }
 
   // Listen for new notifications and show in-app banner
@@ -110,37 +152,156 @@ class NotificationService extends ChangeNotifier {
 
   // Listen to buyer messages
   void _listenToBuyerMessages(String userId) {
+    print('🔔 [NotificationService] Setting up buyer messages listener for user: $userId');
+    
     _firestore
-        .collection('chat_messages')
+        .collection('chatMessages')
         .where('receiverId', isEqualTo: userId)
-        .where('isRead', isEqualTo: false)
+        .orderBy('timestamp', descending: true)
         .snapshots()
         .listen((snapshot) {
+      print('🔔 [NotificationService] Buyer messages snapshot received for user: $userId');
+      print('🔔 [NotificationService] Total messages in snapshot: ${snapshot.docs.length}');
+      
       _unreadMessages[userId] = snapshot.docs.length;
       notifyListeners();
 
       // Show in-app banner for newly added unread messages
       for (final change in snapshot.docChanges) {
+        print('🔔 [NotificationService] Document change type: ${change.type}');
+        
         if (change.type == DocumentChangeType.added) {
           final data = change.doc.data() as Map<String, dynamic>;
           final String senderId = data['senderId'] as String? ?? '';
+          final String receiverId = data['receiverId'] as String? ?? '';
           final String messageText = (data['message'] ?? data['text'] ?? '').toString();
+          final timestamp = (data['timestamp'] as Timestamp).toDate();
 
-          getUserInfo(senderId).then((senderInfo) {
-            final String title = 'New Message';
-            final String body = messageText.isNotEmpty ? messageText : 'You received a new message';
-            final String? imageUrl = senderInfo?['photoUrl'] as String?;
-            InAppNotificationController().show(
-              title: title,
-              body: body,
-              imageUrl: imageUrl,
-            );
-          }).catchError((e) {
-            debugPrint('Error fetching sender info for banner: $e');
-          });
+          print('🔔 [NotificationService] New message detected:');
+          print('🔔 [NotificationService] - Sender: $senderId');
+          print('🔔 [NotificationService] - Receiver: $receiverId');
+          print('🔔 [NotificationService] - Current user: $userId');
+          print('🔔 [NotificationService] - Message: $messageText');
+
+          // EARLY EXIT: If this user is the sender, skip notification completely
+          if (senderId == userId) {
+            print('🔔 [NotificationService] ❌ EARLY EXIT: Current user is the SENDER - skipping notification');
+            continue;
+          }
+
+          // Check if this is a truly new message (not from initial load)
+          final lastTimestamp = _lastMessageTimestamp[userId];
+          if (lastTimestamp != null && timestamp.isBefore(lastTimestamp)) {
+            print('🔔 [NotificationService] Skipping old message from initial load');
+            continue;
+          }
+
+          // Update last message timestamp
+          _lastMessageTimestamp[userId] = timestamp;
+
+          // CRITICAL FIX: Only send notification if this user is the RECEIVER and NOT the sender
+          if (receiverId == userId && senderId != userId) {
+            print('🔔 [NotificationService] ✅ This user is the RECEIVER - sending notification');
+            print('🔔 [NotificationService] Sender: $senderId');
+            print('🔔 [NotificationService] Message: $messageText');
+            print('🔔 [NotificationService] Timestamp: $timestamp');
+
+            // Send push notification for new incoming message
+            _sendPushNotificationForIncomingMessage(senderId, userId, messageText);
+
+            getUserInfo(senderId).then((senderInfo) {
+              final String title = senderInfo?['name'] as String? ?? 'New Message';
+              final String body = messageText.isNotEmpty ? messageText : 'You received a new message';
+              final String? imageUrl = senderInfo?['photoUrl'] as String?;
+              InAppNotificationController().show(
+                title: title,
+                body: body,
+                imageUrl: imageUrl,
+              );
+            }).catchError((e) {
+              debugPrint('Error fetching sender info for banner: $e');
+            });
+          } else {
+            print('🔔 [NotificationService] ❌ This user is the SENDER - NOT sending notification');
+            print('🔔 [NotificationService] Sender: $senderId, Receiver: $receiverId, Current: $userId');
+            print('🔔 [NotificationService] receiverId == userId: ${receiverId == userId}');
+            print('🔔 [NotificationService] senderId != userId: ${senderId != userId}');
+          }
         }
       }
     });
+  }
+
+  // Send push notification for incoming message
+  Future<void> _sendPushNotificationForIncomingMessage(String senderId, String receiverId, String message) async {
+    try {
+      print('🔔 [NotificationService] Sending push notification for incoming message');
+      print('🔔 [NotificationService] From: $senderId, To: $receiverId');
+      
+      // Get sender info
+      final senderInfo = await getUserInfo(senderId);
+      final senderName = senderInfo?['name'] as String? ?? 'Someone';
+      
+      print('🔔 [NotificationService] Sender name: $senderName');
+      
+      // Get recipient's FCM token from Firestore
+      print('🔔 [NotificationService] Getting recipient FCM token from Firestore...');
+      final recipientDoc = await _firestore.collection('users').doc(receiverId).get();
+      
+      if (!recipientDoc.exists) {
+        print('❌ [NotificationService] Recipient not found in Firestore: $receiverId');
+        return;
+      }
+      
+      final recipientData = recipientDoc.data() as Map<String, dynamic>;
+      final fcmToken = recipientData['fcmToken'] as String?;
+      
+      if (fcmToken == null) {
+        print('❌ [NotificationService] No FCM token found for recipient: $receiverId');
+        return;
+      }
+      
+      print('🔔 [NotificationService] Using recipient FCM token: ${fcmToken.substring(0, 20)}...');
+      
+      // Send push notification via Supabase with customized title
+      final supabaseUrl = 'https://slkygguxwqzwpnahnici.supabase.co';
+      final supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsa3lnZ3V4d3F6d3BuYWhuaWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMxMjM4OTcsImV4cCI6MjA2ODY5OTg5N30.-UNi-pJzCvzM3I1CdUHg230gDH14_pZix7DVqQQ2P_A';
+      
+      // Customize title to show sender's name
+      final String customTitle = senderName;
+      final String customBody = message.length > 50 ? '${message.substring(0, 50)}...' : message;
+      
+      final response = await http.post(
+        Uri.parse('$supabaseUrl/functions/v1/send-push-notification'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $supabaseAnonKey',
+        },
+        body: jsonEncode({
+          'token': fcmToken,
+          'title': customTitle,
+          'body': customBody,
+          'data': {
+            'type': 'chatMessage',
+            'senderId': senderId,
+            'senderName': senderName,
+            'senderPhotoUrl': senderInfo?['photoUrl'],
+            'message': message,
+          },
+        }),
+      );
+      
+      print('🔔 [NotificationService] Supabase response status: ${response.statusCode}');
+      print('🔔 [NotificationService] Supabase response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        print('✅ [NotificationService] Push notification sent successfully for incoming message');
+      } else {
+        print('❌ [NotificationService] Failed to send push notification for incoming message: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ [NotificationService] Error sending push notification for incoming message: $e');
+    }
   }
 
   // Listen to seller orders
@@ -166,34 +327,79 @@ class NotificationService extends ChangeNotifier {
 
   // Listen to seller messages
   void _listenToSellerMessages(String sellerId) {
+    print('🔔 [NotificationService] Setting up seller messages listener for user: $sellerId');
+    
     _firestore
-        .collection('chat_messages')
+        .collection('chatMessages')
         .where('receiverId', isEqualTo: sellerId)
-        .where('isRead', isEqualTo: false)
+        .orderBy('timestamp', descending: true)
         .snapshots()
         .listen((snapshot) {
+      print('🔔 [NotificationService] Seller messages snapshot received for user: $sellerId');
+      print('🔔 [NotificationService] Total messages in snapshot: ${snapshot.docs.length}');
+      
       _sellerUnreadMessages[sellerId] = snapshot.docs.length;
       notifyListeners();
 
       // Show in-app banner for newly added unread messages
       for (final change in snapshot.docChanges) {
+        print('🔔 [NotificationService] Document change type: ${change.type}');
+        
         if (change.type == DocumentChangeType.added) {
           final data = change.doc.data() as Map<String, dynamic>;
           final String senderId = data['senderId'] as String? ?? '';
+          final String receiverId = data['receiverId'] as String? ?? '';
           final String messageText = (data['message'] ?? data['text'] ?? '').toString();
+          final timestamp = (data['timestamp'] as Timestamp).toDate();
 
-          getUserInfo(senderId).then((senderInfo) {
-            final String title = 'New Message';
-            final String body = messageText.isNotEmpty ? messageText : 'You received a new message';
-            final String? imageUrl = senderInfo?['photoUrl'] as String?;
-            InAppNotificationController().show(
-              title: title,
-              body: body,
-              imageUrl: imageUrl,
-            );
-          }).catchError((e) {
-            debugPrint('Error fetching sender info for banner: $e');
-          });
+          print('🔔 [NotificationService] New message detected for seller:');
+          print('🔔 [NotificationService] - Sender: $senderId');
+          print('🔔 [NotificationService] - Receiver: $receiverId');
+          print('🔔 [NotificationService] - Current user: $sellerId');
+          print('🔔 [NotificationService] - Message: $messageText');
+
+          // EARLY EXIT: If this user is the sender, skip notification completely
+          if (senderId == sellerId) {
+            print('🔔 [NotificationService] ❌ EARLY EXIT: Current user is the SENDER - skipping notification');
+            continue;
+          }
+
+          // Check if this is a truly new message (not from initial load)
+          final lastTimestamp = _lastMessageTimestamp[sellerId];
+          if (lastTimestamp != null && timestamp.isBefore(lastTimestamp)) {
+            print('🔔 [NotificationService] Skipping old message from initial load');
+            continue;
+          }
+
+          // Update last message timestamp
+          _lastMessageTimestamp[sellerId] = timestamp;
+
+          // CRITICAL FIX: Only send notification if this user is the RECEIVER and NOT the sender
+          if (receiverId == sellerId && senderId != sellerId) {
+            print('🔔 [NotificationService] ✅ This user is the RECEIVER - sending notification');
+            print('🔔 [NotificationService] Sender: $senderId');
+            print('🔔 [NotificationService] Message: $messageText');
+            print('🔔 [NotificationService] Timestamp: $timestamp');
+
+            // Send push notification for new incoming message
+            _sendPushNotificationForIncomingMessage(senderId, sellerId, messageText);
+
+            getUserInfo(senderId).then((senderInfo) {
+              final String title = senderInfo?['name'] as String? ?? 'New Message';
+              final String body = messageText.isNotEmpty ? messageText : 'You received a new message';
+              final String? imageUrl = senderInfo?['photoUrl'] as String?;
+              InAppNotificationController().show(
+                title: title,
+                body: body,
+                imageUrl: imageUrl,
+              );
+            }).catchError((e) {
+              debugPrint('Error fetching sender info for banner: $e');
+            });
+          } else {
+            print('🔔 [NotificationService] This user is the SENDER - NOT sending notification');
+            print('🔔 [NotificationService] Sender: $senderId, Receiver: $receiverId, Current: $sellerId');
+          }
         }
       }
     });
@@ -375,6 +581,10 @@ class NotificationService extends ChangeNotifier {
     required String message,
   }) async {
     try {
+      print('🔔 [NotificationService] Starting chat message notification for recipient: $recipientId');
+      print('🔔 [NotificationService] Sender: $senderId ($senderName)');
+      print('🔔 [NotificationService] Message: $message');
+      
       final notification = AppNotification.chatMessage(
         id: '', // Will be set by Firestore
         recipientId: recipientId,
@@ -387,9 +597,12 @@ class NotificationService extends ChangeNotifier {
 
       // Always store notification in Firestore
       await sendNotification(notification);
+      print('🔔 [NotificationService] Notification stored in Firestore');
       
       // Try to send push notification, but don't fail if it doesn't work
       try {
+        print('🔔 [NotificationService] Attempting to send push notification...');
+        print('🔔 [NotificationService] Push notification service: $_pushNotificationService');
         await _pushNotificationService.sendPushNotification(
           recipientUserId: recipientId,
           title: 'New Message',
@@ -401,12 +614,14 @@ class NotificationService extends ChangeNotifier {
             'message': message,
           },
         );
+        print('🔔 [NotificationService] Push notification sent successfully');
       } catch (pushError) {
-        print('Push notification failed for chat message, but notification was stored: $pushError');
+        print('❌ [NotificationService] Push notification failed for chat message: $pushError');
+        print('❌ [NotificationService] But notification was stored in Firestore');
         // Don't rethrow - we want to continue even if push notifications fail
       }
     } catch (e) {
-      print('Error sending chat message notification: $e');
+      print('❌ [NotificationService] Error sending chat message notification: $e');
       throw e;
     }
   }

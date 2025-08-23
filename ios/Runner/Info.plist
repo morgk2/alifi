@@ -64,5 +64,16 @@
 	<string>We need to send you notifications about messages, orders, and updates.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>This app uses local network to discover nearby services.</string>
+	<!-- iOS Image Rendering Optimizations -->
+	<key>UIViewEdgeAntialiasing</key>
+	<true/>
+	<key>UIViewGroupOpacity</key>
+	<true/>
+	<key>UISupportedInterfaceOrientations~iphone</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 </dict>
 </plist>

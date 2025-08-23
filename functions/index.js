@@ -232,6 +232,102 @@ exports.onNewChatMessage = functions.firestore
     }
   });
 
+// Background function to handle new chat messages from chatMessages collection
+exports.onNewChatMessageFromCollection = functions.firestore
+  .document('chatMessages/{messageId}')
+  .onCreate(async (snap, context) => {
+    const messageData = snap.data();
+    const messageId = context.params.messageId;
+    
+    try {
+      console.log('New chat message received:', messageId);
+      console.log('Message data:', messageData);
+      
+      const senderId = messageData.senderId;
+      const receiverId = messageData.receiverId;
+      const messageText = messageData.message || '';
+      
+      if (!senderId || !receiverId) {
+        console.log('Missing senderId or receiverId, skipping notification');
+        return;
+      }
+      
+      // Get sender info
+      const senderDoc = await admin.firestore()
+        .collection('users')
+        .doc(senderId)
+        .get();
+      
+      const senderName = senderDoc.exists ? 
+        (senderDoc.data().displayName || 'Someone') : 'Someone';
+      
+      // Get receiver's FCM token
+      const receiverDoc = await admin.firestore()
+        .collection('users')
+        .doc(receiverId)
+        .get();
+      
+      if (!receiverDoc.exists) {
+        console.log('Receiver not found:', receiverId);
+        return;
+      }
+      
+      const receiverData = receiverDoc.data();
+      const fcmToken = receiverData.fcmToken;
+      
+      if (!fcmToken) {
+        console.log('No FCM token found for receiver:', receiverId);
+        return;
+      }
+      
+      console.log('Sending notification to:', receiverId);
+      console.log('FCM token:', fcmToken.substring(0, 20) + '...');
+      
+      // Send push notification
+      const message = {
+        token: fcmToken,
+        notification: {
+          title: `New message from ${senderName}`,
+          body: messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText,
+        },
+        data: {
+          type: 'chatMessage',
+          senderId: senderId,
+          senderName: senderName,
+          message: messageText,
+          messageId: messageId,
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        },
+        android: {
+          notification: {
+            channelId: 'alifi_notifications',
+            priority: 'high',
+            defaultSound: true,
+            defaultVibrateTimings: true,
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              alert: {
+                title: `New message from ${senderName}`,
+                body: messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText,
+              },
+              badge: 1,
+              sound: 'default',
+            },
+          },
+        },
+      };
+      
+      const response = await admin.messaging().send(message);
+      console.log('Successfully sent chat notification:', response);
+      
+    } catch (error) {
+      console.error('Error sending chat notification:', error);
+    }
+  });
+
 // Helper function to get FCM tokens for users
 async function getTokensForUsers(userIds) {
   const tokens = [];

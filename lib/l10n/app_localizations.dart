@@ -312,7 +312,7 @@ abstract class AppLocalizations {
   /// No description provided for @enterCustomAmount.
   ///
   /// In en, this message translates to:
-  /// **'Enter custom amount'**
+  /// **'Enter Custom Amount'**
   String get enterCustomAmount;
 
   /// No description provided for @locationServicesDisabled.
@@ -3246,8 +3246,8 @@ abstract class AppLocalizations {
   /// No description provided for @paymentMethod.
   ///
   /// In en, this message translates to:
-  /// **'Payment Method: {method}'**
-  String paymentMethod(Object method);
+  /// **'Payment Method'**
+  String get paymentMethod;
 
   /// No description provided for @orderItems.
   ///
@@ -3336,7 +3336,7 @@ abstract class AppLocalizations {
   /// No description provided for @custom.
   ///
   /// In en, this message translates to:
-  /// **'Custom...'**
+  /// **'Custom'**
   String get custom;
 
   /// No description provided for @enterAmountInDZD.
@@ -5517,6 +5517,36 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get name;
 
+  /// No description provided for @clearRecentSearches.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Recent Searches'**
+  String get clearRecentSearches;
+
+  /// No description provided for @clearRecentSearchesConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to clear all recent searches? This action cannot be undone.'**
+  String get clearRecentSearchesConfirmation;
+
+  /// No description provided for @recentSearchesCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent searches cleared'**
+  String get recentSearchesCleared;
+
+  /// No description provided for @clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clear;
+
+  /// No description provided for @undo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undo;
+
   /// No description provided for @resultsFound.
   ///
   /// In en, this message translates to:
@@ -7497,12 +7527,6 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to delete this vaccine?'**
   String get deleteVaccineConfirmation;
 
-  /// No description provided for @undo.
-  ///
-  /// In en, this message translates to:
-  /// **'Undo'**
-  String get undo;
-
   /// No description provided for @deleteIllness.
   ///
   /// In en, this message translates to:
@@ -9182,6 +9206,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit Details'**
   String get editDetails;
+
+  /// No description provided for @chooseAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Amount'**
+  String get chooseAmount;
+
+  /// No description provided for @cibBank.
+  ///
+  /// In en, this message translates to:
+  /// **'CIB Bank'**
+  String get cibBank;
+
+  /// No description provided for @minimumAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum 300'**
+  String get minimumAmount;
+
+  /// No description provided for @invalidAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid Amount'**
+  String get invalidAmount;
+
+  /// No description provided for @minimumAmountIs.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum amount is 300'**
+  String get minimumAmountIs;
+
+  /// No description provided for @contributingVia.
+  ///
+  /// In en, this message translates to:
+  /// **'Contributing {amount} via {method}'**
+  String contributingVia(Object amount, Object method);
+
+  /// No description provided for @raisedOfGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'raised of {goal} DZD goal'**
+  String raisedOfGoal(Object goal);
+
+  /// No description provided for @raised.
+  ///
+  /// In en, this message translates to:
+  /// **'raised'**
+  String get raised;
+
+  /// No description provided for @contributeAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Contribute {amount}'**
+  String contributeAmount(Object amount);
+
+  /// No description provided for @minimumAmountPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum 300'**
+  String get minimumAmountPlaceholder;
+
+  /// No description provided for @customAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get customAmount;
+
+  /// No description provided for @minimumAmountMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum amount is 300'**
+  String get minimumAmountMessage;
+
+  /// No description provided for @contributingAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Contributing {amount} via {method}'**
+  String contributingAmount(Object amount, Object method);
+
+  /// No description provided for @contributeWithAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Contribute {amount}'**
+  String contributeWithAmount(Object amount);
+
+  /// No description provided for @raisedOfGoalAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'raised of {goal} DZD goal'**
+  String raisedOfGoalAmount(Object goal);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

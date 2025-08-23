@@ -3,10 +3,13 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification.dart';
 import 'in_app_notification_controller.dart';
 import 'auth_service.dart';
 import 'dart:convert';
+import 'database_service.dart';
 
 class PushNotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -67,8 +70,7 @@ class PushNotificationService {
           _storeFCMToken(newToken);
         });
 
-        // Handle background messages
-        FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+        // Background messages are handled in main.dart
 
         // Handle foreground messages
         FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
@@ -190,10 +192,16 @@ class PushNotificationService {
     print('Got a message whilst in the foreground!');
     print('Message data: ${message.data}');
 
-    // On web, message.notification is often null (data-only). Show banner regardless.
-    final String title = message.notification?.title 
-        ?? (message.data['title'] as String?) 
-        ?? 'Notification';
+    // Customize title for chat messages to show sender's name
+    String title;
+    if (message.data['type'] == 'chatMessage' && message.data['senderName'] != null) {
+      title = message.data['senderName'] as String;
+    } else {
+      title = message.notification?.title 
+          ?? (message.data['title'] as String?) 
+          ?? 'Notification';
+    }
+    
     final String body = message.notification?.body 
         ?? (message.data['body'] as String?) 
         ?? (message.data['message'] as String?) 
@@ -243,6 +251,19 @@ class PushNotificationService {
 
   // Show local notification
   Future<void> _showLocalNotification(RemoteMessage message) async {
+    // Customize title for chat messages
+    String title;
+    if (message.data['type'] == 'chatMessage' && message.data['senderName'] != null) {
+      title = message.data['senderName'] as String;
+    } else {
+      title = message.notification?.title ?? 'Notification';
+    }
+    
+    String body = message.notification?.body ?? '';
+    if (body.isEmpty && message.data['message'] != null) {
+      body = message.data['message'] as String;
+    }
+
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'alifi_notifications',
@@ -251,6 +272,7 @@ class PushNotificationService {
       importance: Importance.max,
       priority: Priority.high,
       showWhen: true,
+      icon: 'ic_notification', // Use the notification icon
     );
 
     const DarwinNotificationDetails iOSPlatformChannelSpecifics =
@@ -258,6 +280,7 @@ class PushNotificationService {
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      categoryIdentifier: 'chat_message', // iOS notification category
     );
 
     const NotificationDetails platformChannelSpecifics = NotificationDetails(
@@ -267,8 +290,8 @@ class PushNotificationService {
 
     await _localNotifications.show(
       message.hashCode,
-      message.notification?.title,
-      message.notification?.body,
+      title,
+      body,
       platformChannelSpecifics,
       payload: message.data.toString(),
     );
@@ -293,29 +316,42 @@ class PushNotificationService {
     Map<String, dynamic>? data,
   }) async {
     try {
+      print('📱 [PushNotificationService] Starting push notification for user: $recipientUserId');
+      print('📱 [PushNotificationService] Title: $title');
+      print('📱 [PushNotificationService] Body: $body');
+      
       // Get recipient's FCM token from Firestore
       final userDoc = await _firestore
           .collection('users')
           .doc(recipientUserId)
           .get();
 
-      if (!userDoc.exists) return;
+      if (!userDoc.exists) {
+        print('❌ [PushNotificationService] User document not found: $recipientUserId');
+        return;
+      }
 
       final userData = userDoc.data() as Map<String, dynamic>;
       final fcmToken = userData['fcmToken'] as String?;
 
-      if (fcmToken == null) return;
+      if (fcmToken == null) {
+        print('❌ [PushNotificationService] No FCM token found for user: $recipientUserId');
+        return;
+      }
 
-      // Send notification using Firebase Functions or your backend
-      // This would typically be done through a Cloud Function
+      print('✅ [PushNotificationService] Found FCM token: ${fcmToken.substring(0, 20)}...');
+
+      // Send notification using Supabase Edge Function
       await _sendNotificationToToken(
         token: fcmToken,
         title: title,
         body: body,
         data: data,
       );
+      
+      print('✅ [PushNotificationService] Push notification sent successfully');
     } catch (e) {
-      print('Error sending push notification: $e');
+      print('❌ [PushNotificationService] Error sending push notification: $e');
     }
   }
 
@@ -328,30 +364,108 @@ class PushNotificationService {
     String? type,
   }) async {
     try {
-      print('Sending notification to token: $token');
-      print('Title: $title');
-      print('Body: $body');
-      print('Data: $data');
+      print('📱 [PushNotificationService] Sending notification to token: ${token.substring(0, 20)}...');
+      print('📱 [PushNotificationService] Title: $title');
+      print('📱 [PushNotificationService] Body: $body');
+      print('📱 [PushNotificationService] Data: $data');
       
-      // Call Firebase Cloud Function to send notification
-      final callable = _functions.httpsCallable('sendNotification');
-      final result = await callable.call({
+      // Use Supabase Edge Function instead of Firebase Cloud Functions
+      final supabaseUrl = 'https://slkygguxwqzwpnahnici.supabase.co';
+      final supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsa3lnZ3V4d3F6d3BuYWhuaWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMxMjM4OTcsImV4cCI6MjA2ODY5OTg5N30.-UNi-pJzCvzM3I1CdUHg230gDH14_pZix7DVqQQ2P_A';
+      
+      // Convert all data values to strings for FCM compatibility
+      Map<String, String> stringData = {};
+      if (data != null) {
+        data.forEach((key, value) {
+          stringData[key] = value.toString();
+        });
+      }
+      
+      final requestBody = {
         'token': token,
         'title': title,
         'body': body,
-        'data': data,
+        'data': stringData,
         'type': type ?? 'general',
-      });
+      };
       
-      if (result.data['success'] == true) {
-        print('Notification sent successfully: ${result.data['messageId']}');
+      print('📱 [PushNotificationService] Request body: ${jsonEncode(requestBody)}');
+      
+      final response = await http.post(
+        Uri.parse('$supabaseUrl/functions/v1/send-push-notification'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $supabaseAnonKey',
+        },
+        body: jsonEncode(requestBody),
+      );
+      
+      print('📱 [PushNotificationService] Response status: ${response.statusCode}');
+      print('📱 [PushNotificationService] Response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        if (result['success'] == true) {
+          print('✅ [PushNotificationService] Notification sent successfully via Supabase: ${result['messageId']}');
+        } else {
+          print('❌ [PushNotificationService] Failed to send notification via Supabase: ${result}');
+        }
       } else {
-        print('Failed to send notification: ${result.data}');
+        print('❌ [PushNotificationService] Supabase function error: ${response.statusCode} - ${response.body}');
+        // Try to parse error details
+        try {
+          final errorResult = jsonDecode(response.body);
+          print('❌ [PushNotificationService] Error details: ${errorResult['error']}');
+          print('❌ [PushNotificationService] Error details: ${errorResult['details']}');
+        } catch (e) {
+          print('❌ [PushNotificationService] Could not parse error response');
+        }
       }
+      
+      // Also show local notification as fallback
+      await _showTestLocalNotification(title, body, data);
+      
     } catch (e) {
-      print('Error calling sendNotification function: $e');
-      rethrow;
+      print('❌ [PushNotificationService] Error calling Supabase notification function: $e');
+      // Show local notification as fallback
+      await _showTestLocalNotification(title, body, data);
     }
+  }
+
+      // Show test local notification
+    Future<void> _showTestLocalNotification(String title, String body, Map<String, dynamic>? data) async {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+        'alifi_test_notifications',
+        'Alifi Test Notifications',
+        channelDescription: 'Test notifications for Alifi app',
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+        icon: 'ic_notification', // Use the notification icon
+      );
+
+    const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+        DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: iOSPlatformChannelSpecifics,
+    );
+
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      title,
+      body,
+      platformChannelSpecifics,
+      payload: data?.toString() ?? 'test',
+    );
+    
+    print('Test local notification sent: $title - $body');
   }
 
   // Check if notifications are enabled
@@ -394,6 +508,24 @@ class PushNotificationService {
   // Send a test notification
   Future<void> testNotification() async {
     try {
+      print('🧪 [TEST] Starting comprehensive notification test...');
+      
+      // First, check notification status
+      await checkNotificationStatus();
+      
+      // Then, test FCM token flow
+      await testFCMTokenFlow();
+      
+      // Test chat message notification
+      await testChatMessageNotification();
+      
+      // Test chat message through DatabaseService
+      await testChatMessageThroughDatabase();
+      
+      // Test chat notification via Supabase directly
+      await testChatNotificationViaSupabase();
+      
+      // Then send local notification
       const AndroidNotificationDetails androidPlatformChannelSpecifics =
           AndroidNotificationDetails(
         'alifi_notifications',
@@ -424,9 +556,9 @@ class PushNotificationService {
         payload: 'test_notification',
       );
       
-      print('Test notification sent successfully');
+      print('✅ [TEST] Local test notification sent successfully');
     } catch (e) {
-      print('Error sending test notification: $e');
+      print('❌ [TEST] Error sending test notification: $e');
       rethrow;
     }
   }
@@ -502,69 +634,402 @@ class PushNotificationService {
       rethrow;
     }
   }
-}
 
-// Background message handler
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('Handling a background message: ${message.messageId}');
-  
-  // Store notification in Firestore for when app opens
-  await _storeBackgroundNotification(message);
-}
+  // Send simple test notification (for debugging)
+  Future<void> sendSimpleTestNotification() async {
+    try {
+      print('Sending simple test notification...');
+      
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+        'alifi_simple_test',
+        'Simple Test Notifications',
+        channelDescription: 'Simple test notifications',
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+        playSound: true,
+        enableVibration: true,
+        icon: '@mipmap/ic_launcher', // Use the app icon as fallback
+      );
 
-// Store background notification
-Future<void> _storeBackgroundNotification(RemoteMessage message) async {
+      const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+          DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: iOSPlatformChannelSpecifics,
+      );
+
+      await _localNotifications.show(
+        DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        '🔔 Test Message',
+        'This is a simple test notification!',
+        platformChannelSpecifics,
+        payload: 'simple_test',
+      );
+      
+      print('✅ Simple test notification sent successfully');
+    } catch (e) {
+      print('❌ Error sending simple test notification: $e');
+      rethrow;
+    }
+  }
+
+  // Test Supabase function directly (for debugging)
+  Future<void> testSupabaseFunction() async {
+    try {
+      print('🧪 Testing Supabase function directly...');
+      
+      // Debug AuthService state
+      final authService = AuthService();
+      print('🔍 AuthService initialized: ${authService.isInitialized}');
+      print('🔍 AuthService loading: ${authService.isLoadingUser}');
+      print('🔍 AuthService authenticated: ${authService.isAuthenticated}');
+      print('🔍 AuthService guest mode: ${authService.isGuestMode}');
+      
+      // Check Firebase Auth directly
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      print('🔍 Firebase current user: ${firebaseUser?.email ?? 'null'}');
+      print('🔍 Firebase user ID: ${firebaseUser?.uid ?? 'null'}');
+      
+      // Get current user's FCM token
+      final currentUser = authService.currentUser;
+      if (currentUser == null) {
+        print('❌ No current user found in AuthService');
+        print('🔍 Trying to get user from Firebase directly...');
+        
+        if (firebaseUser != null) {
+          // Try to get user data directly from Firestore
+          final userDoc = await _firestore
+              .collection('users')
+              .doc(firebaseUser.uid)
+              .get();
+          
+          if (userDoc.exists) {
+            print('✅ Found user in Firestore: ${userDoc.data()}');
+            final userData = userDoc.data() as Map<String, dynamic>;
+            final fcmToken = userData['fcmToken'] as String?;
+            
+            if (fcmToken != null) {
+              print('✅ Found FCM token: ${fcmToken.substring(0, 20)}...');
+              await _testSupabaseWithToken(fcmToken);
+            } else {
+              print('❌ No FCM token found in Firestore');
+            }
+          } else {
+            print('❌ User document not found in Firestore');
+          }
+        }
+        return;
+      }
+
+      // Get FCM token from current user
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(currentUser.id)
+          .get();
+
+      if (!userDoc.exists) {
+        print('❌ User document not found in Firestore');
+        return;
+      }
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final fcmToken = userData['fcmToken'] as String?;
+
+      if (fcmToken == null) {
+        print('❌ FCM token not found for current user');
+        return;
+      }
+
+      print('✅ Found FCM token: ${fcmToken.substring(0, 20)}...');
+      await _testSupabaseWithToken(fcmToken);
+      
+    } catch (e) {
+      print('❌ Error testing Supabase function: $e');
+    }
+  }
+
+  // Helper method to test Supabase with a token
+  Future<void> _testSupabaseWithToken(String fcmToken) async {
   try {
-    final notification = AppNotification(
-      id: '', // Will be set by Firestore
-      recipientId: message.data['recipientId'] ?? '',
-      senderId: message.data['senderId'] ?? '',
-      senderName: message.data['senderName'],
-      senderPhotoUrl: message.data['senderPhotoUrl'],
-      type: _getNotificationTypeFromString(message.data['type'] ?? ''),
-      title: message.notification?.title ?? '',
-      body: message.notification?.body ?? '',
-      data: message.data,
-      isRead: false,
-      createdAt: DateTime.now(),
-      relatedId: message.data['relatedId'],
+    // Test Supabase function directly
+    final supabaseUrl = 'https://slkygguxwqzwpnahnici.supabase.co';
+    final supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsa3lnZ3V4d3F6d3BuYWhuaWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMxMjM4OTcsImV4cCI6MjA2ODY5OTg5N30.-UNi-pJzCvzM3I1CdUHg230gDH14_pZix7DVqQQ2P_A';
+    
+    final response = await http.post(
+      Uri.parse('$supabaseUrl/functions/v1/send-push-notification'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $supabaseAnonKey',
+      },
+      body: jsonEncode({
+        'token': fcmToken,
+        'title': '🧪 Direct Supabase Test',
+        'body': 'Testing Supabase function directly!',
+        'data': {'type': 'test', 'timestamp': DateTime.now().toString()},
+        'type': 'test',
+      }),
     );
-
-    await FirebaseFirestore.instance
-        .collection('notifications')
-        .add(notification.toFirestore());
+    
+    print('📡 Supabase response status: ${response.statusCode}');
+    print('📡 Supabase response body: ${response.body}');
+    
+    if (response.statusCode == 200) {
+      final result = jsonDecode(response.body);
+      if (result['success'] == true) {
+        print('✅ Supabase function test successful: ${result['messageId']}');
+      } else {
+        print('❌ Supabase function returned error: ${result}');
+      }
+    } else {
+      print('❌ Supabase function HTTP error: ${response.statusCode}');
+    }
+    
   } catch (e) {
-    print('Error storing background notification: $e');
+    print('❌ Error in _testSupabaseWithToken: $e');
   }
 }
 
-// Helper function to convert string to NotificationType
-NotificationType _getNotificationTypeFromString(String type) {
-  switch (type) {
-    case 'chatMessage':
-      return NotificationType.chatMessage;
-    case 'orderPlaced':
-      return NotificationType.orderPlaced;
-    case 'orderConfirmed':
-      return NotificationType.orderConfirmed;
-    case 'orderShipped':
-      return NotificationType.orderShipped;
-    case 'orderDelivered':
-      return NotificationType.orderDelivered;
-    case 'orderCancelled':
-      return NotificationType.orderCancelled;
-    case 'follow':
-      return NotificationType.follow;
-    case 'unfollow':
-      return NotificationType.unfollow;
-    case 'petOwnershipRequest':
-      return NotificationType.petOwnershipRequest;
-    case 'petOwnershipAccepted':
-      return NotificationType.petOwnershipAccepted;
-    case 'petOwnershipRejected':
-      return NotificationType.petOwnershipRejected;
-    default:
-      return NotificationType.chatMessage;
+  // Test FCM token storage and retrieval
+  Future<void> testFCMTokenFlow() async {
+    try {
+      print('🧪 [TEST] Starting FCM token flow test...');
+      
+      // Get current user
+      final authService = AuthService();
+      final currentUser = authService.currentUser;
+      
+      if (currentUser == null) {
+        print('❌ [TEST] No current user found');
+        return;
+      }
+      
+      print('🧪 [TEST] Current user: ${currentUser.id}');
+      
+      // Get FCM token
+      final token = await _firebaseMessaging.getToken();
+      print('🧪 [TEST] Current FCM token: ${token?.substring(0, 20)}...');
+      
+      if (token == null) {
+        print('❌ [TEST] FCM token is null - this is the problem!');
+        return;
+      }
+      
+      // Store token
+      await _storeFCMToken(token);
+      print('🧪 [TEST] FCM token stored');
+      
+      // Retrieve token from Firestore
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(currentUser.id)
+          .get();
+      
+      if (!userDoc.exists) {
+        print('❌ [TEST] User document not found in Firestore');
+        return;
+      }
+      
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final storedToken = userData['fcmToken'] as String?;
+      
+      print('🧪 [TEST] Stored FCM token: ${storedToken?.substring(0, 20)}...');
+      
+      if (storedToken == null) {
+        print('❌ [TEST] No FCM token found in Firestore');
+        return;
+      }
+      
+      if (storedToken == token) {
+        print('✅ [TEST] FCM token matches! Storage and retrieval working correctly');
+      } else {
+        print('❌ [TEST] FCM token mismatch!');
+        print('🧪 [TEST] Original: ${token.substring(0, 20)}...');
+        print('🧪 [TEST] Stored: ${storedToken.substring(0, 20)}...');
+      }
+      
+      // Test sending a notification to self
+      print('🧪 [TEST] Testing self-notification...');
+      await sendPushNotification(
+        recipientUserId: currentUser.id,
+        title: 'FCM Test',
+        body: 'This is a test notification to verify FCM is working',
+        data: {'type': 'test'},
+      );
+      
+    } catch (e) {
+      print('❌ [TEST] Error in FCM token flow test: $e');
+    }
+  }
+
+  // Test chat message notification
+  Future<void> testChatMessageNotification() async {
+    try {
+      print('🧪 [TEST] Testing chat message notification...');
+      
+      // Get current user
+      final authService = AuthService();
+      final currentUser = authService.currentUser;
+      
+      if (currentUser == null) {
+        print('❌ [TEST] No current user found');
+        return;
+      }
+      
+      print('🧪 [TEST] Current user: ${currentUser.id}');
+      
+      // Send a chat message notification to self (for testing)
+      await sendPushNotification(
+        recipientUserId: currentUser.id,
+        title: 'Test Chat Message',
+        body: 'This is a test chat message notification',
+        data: {
+          'type': 'chatMessage',
+          'senderId': 'test-sender',
+          'senderName': 'Test Sender',
+          'message': 'This is a test chat message notification',
+        },
+      );
+      
+      print('✅ [TEST] Chat message notification test completed');
+    } catch (e) {
+      print('❌ [TEST] Error in chat message notification test: $e');
+    }
+  }
+
+  // Test sending a chat message through DatabaseService
+  Future<void> testChatMessageThroughDatabase() async {
+    try {
+      print('🧪 [TEST] Testing chat message through DatabaseService...');
+      
+      // Get current user
+      final authService = AuthService();
+      final currentUser = authService.currentUser;
+      
+      if (currentUser == null) {
+        print('❌ [TEST] No current user found');
+        return;
+      }
+      
+      print('🧪 [TEST] Current user: ${currentUser.id}');
+      
+      // Send a chat message to self (for testing)
+      print('🧪 [TEST] About to call DatabaseService().sendChatMessage...');
+      final messageId = await DatabaseService().sendChatMessage(
+        currentUser.id, // sender
+        currentUser.id, // receiver (self)
+        'This is a test chat message from DatabaseService - ' + DateTime.now().toString(),
+      );
+      
+      print('✅ [TEST] Chat message sent through DatabaseService, messageId: $messageId');
+    } catch (e) {
+      print('❌ [TEST] Error sending chat message through DatabaseService: $e');
+      print('❌ [TEST] Stack trace: ${StackTrace.current}');
+    }
+  }
+
+  // Test chat notification via Supabase directly
+  Future<void> testChatNotificationViaSupabase() async {
+    try {
+      print('🧪 [TEST] Testing chat notification via Supabase directly...');
+      
+      // Get current user
+      final authService = AuthService();
+      final currentUser = authService.currentUser;
+      
+      if (currentUser == null) {
+        print('❌ [TEST] No current user found');
+        return;
+      }
+      
+      print('🧪 [TEST] Current user: ${currentUser.id}');
+      
+      // Call Supabase function directly
+      final supabaseUrl = 'https://slkygguxwqzwpnahnici.supabase.co';
+      final supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsa3lnZ3V4d3F6d3BuYWhuaWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMxMjM4OTcsImV4cCI6MjA2ODY5OTg5N30.-UNi-pJzCvzM3I1CdUHg230gDH14_pZix7DVqQQ2P_A';
+      
+      final response = await http.post(
+        Uri.parse('$supabaseUrl/functions/v1/send-chat-notification'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $supabaseAnonKey',
+        },
+        body: jsonEncode({
+          'recipientId': currentUser.id,
+          'senderId': 'test-sender-id',
+          'senderName': 'Test Sender',
+          'message': 'This is a test chat notification via Supabase - ' + DateTime.now().toString(),
+        }),
+      );
+      
+      print('🧪 [TEST] Supabase response status: ${response.statusCode}');
+      print('🧪 [TEST] Supabase response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        print('✅ [TEST] Chat notification sent successfully via Supabase');
+      } else {
+        print('❌ [TEST] Failed to send chat notification via Supabase: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ [TEST] Error sending chat notification via Supabase: $e');
+    }
+  }
+
+  // Check notification permissions and channel status
+  Future<void> checkNotificationStatus() async {
+    try {
+      print('🔍 [STATUS] Checking notification status...');
+      
+      // Check Firebase Messaging settings
+      final settings = await _firebaseMessaging.getNotificationSettings();
+      print('🔍 [STATUS] Firebase Messaging Settings:');
+      print('  - Authorization Status: ${settings.authorizationStatus}');
+      print('  - Alert: ${settings.alert}');
+      print('  - Badge: ${settings.badge}');
+      print('  - Sound: ${settings.sound}');
+      print('  - Announcement: ${settings.announcement}');
+      print('  - Car Play: ${settings.carPlay}');
+      print('  - Critical Alert: ${settings.criticalAlert}');
+      
+      // Check if we have a token
+      final token = await _firebaseMessaging.getToken();
+      print('�� [STATUS] FCM Token: ${token?.substring(0, 20)}...');
+      
+      // Check Android notification channels (if on Android)
+      if (!kIsWeb) {
+        try {
+          final androidChannels = await _localNotifications.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()?.getNotificationChannels();
+          print('🔍 [STATUS] Android Notification Channels:');
+          if (androidChannels != null) {
+            for (final channel in androidChannels) {
+              print('  - ${channel.id}: ${channel.name} (importance: ${channel.importance})');
+            }
+          }
+        } catch (e) {
+          print('🔍 [STATUS] Could not check Android channels: $e');
+        }
+      }
+      
+    } catch (e) {
+      print('❌ [STATUS] Error checking notification status: $e');
+    }
+  }
+
+  // Get current FCM token
+  Future<String?> getFCMToken() async {
+    try {
+      final token = await _firebaseMessaging.getToken();
+      return token;
+    } catch (e) {
+      print('❌ [PushNotificationService] Error getting FCM token: $e');
+      return null;
+    }
   }
 } 

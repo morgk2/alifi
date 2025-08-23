@@ -10,6 +10,7 @@ import 'optimized_shadow.dart';
 import 'spinning_loader.dart';
 import 'currency_symbol.dart';
 import '../pages/product_details_page.dart';
+import 'skeleton_loader.dart';
 
 class UnifiedProductCard extends StatefulWidget {
   final dynamic product;
@@ -79,15 +80,29 @@ class _UnifiedProductCardState extends State<UnifiedProductCard> {
                         width: widget.width,
                         height: widget.height * 0.35, // Reduced image height to give more space to info
                         fit: BoxFit.cover,
-                        placeholder: Image.asset(
-                          'assets/images/photo_loader.png',
-                          fit: BoxFit.cover,
+                        placeholder: Container(
                           width: widget.width,
                           height: widget.height * 0.35,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.3),
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                          ),
+                          child: const Center(
+                            child: ShimmerLoader(
+                              child: SizedBox.expand(),
+                            ),
+                          ),
                         ),
                         errorWidget: Container(
-                          color: Colors.grey[200],
-                          child: Icon(Icons.error, color: Colors.grey[400]),
+                          width: widget.width,
+                          height: widget.height * 0.35,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.3),
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.error, color: Colors.grey),
+                          ),
                         ),
                       ),
                     ),

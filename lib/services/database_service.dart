@@ -26,18 +26,16 @@ import '../models/pet_post.dart';
 import '../services/device_performance.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'storage_service.dart';
+import 'comprehensive_cache_service.dart';
 
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final LocalStorageService _localStorage = LocalStorageService();
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ComprehensiveCacheService _cacheService = ComprehensiveCacheService();
   final _uuid = const Uuid();
   late final DevicePerformance _devicePerformance;
   late bool _isLowEndDevice;
-  
-  // Cache for frequently accessed data
-  final Map<String, dynamic> _cache = {};
-  final Duration _cacheExpiry = const Duration(minutes: 5);
 
   DatabaseService() {
     _devicePerformance = DevicePerformance();
@@ -49,27 +47,138 @@ class DatabaseService {
     return _isLowEndDevice ? (defaultLimit ~/ 2) : defaultLimit;
   }
 
-  // Cache management
-  void _setCache(String key, dynamic data) {
-    _cache[key] = {
-      'data': data,
-      'timestamp': DateTime.now(),
-    };
+  // Cache management using comprehensive cache service
+  Future<void> _setCache(String key, dynamic data, {Duration? expiry}) async {
+    await _cacheService.cacheData(key, data, expiry: expiry);
   }
 
   dynamic _getCache(String key) {
-    final cached = _cache[key];
-    if (cached != null) {
-      final timestamp = cached['timestamp'] as DateTime;
-      if (DateTime.now().difference(timestamp) < _cacheExpiry) {
-        return cached['data'];
-      }
+    return _cacheService.getCachedData(key);
+  }
+
+  Future<void> _clearCache() async {
+    await _cacheService.clearAllCache();
+  }
+
+  // Profile-specific caching methods
+  Future<void> _cacheUserProfile(String userId, User userData) async {
+    final cacheKey = 'user_profile_$userId';
+    await _setCache(cacheKey, userData.toMap(), expiry: const Duration(hours: 6));
+    
+    // Also cache user photo if available
+    if (userData.photoURL != null && userData.photoURL!.isNotEmpty) {
+      await _cacheService.cacheImage(userData.photoURL!, expiry: const Duration(days: 7));
+    }
+    
+    // Cache cover photo if available
+    if (userData.coverPhotoURL != null && userData.coverPhotoURL!.isNotEmpty) {
+      await _cacheService.cacheImage(userData.coverPhotoURL!, expiry: const Duration(days: 7));
+    }
+  }
+
+  User? _getCachedUserProfile(String userId) {
+    final cacheKey = 'user_profile_$userId';
+    final cachedData = _getCache(cacheKey);
+    if (cachedData != null) {
+      return User.fromMap(cachedData);
     }
     return null;
   }
 
-  void _clearCache() {
-    _cache.clear();
+  Future<void> _cacheUserPets(String userId, List<Pet> pets) async {
+    final cacheKey = 'user_pets_$userId';
+    final petsData = pets.map((pet) => pet.toMap()).toList();
+    await _setCache(cacheKey, petsData, expiry: const Duration(hours: 2));
+    
+    // Cache pet photos
+    for (final pet in pets) {
+      if (pet.photoURL != null && pet.photoURL!.isNotEmpty) {
+        await _cacheService.cacheImage(pet.photoURL!, expiry: const Duration(days: 7));
+      }
+    }
+  }
+
+  List<Pet>? _getCachedUserPets(String userId) {
+    final cacheKey = 'user_pets_$userId';
+    final cachedData = _getCache(cacheKey);
+    if (cachedData != null) {
+      return (cachedData as List).map((petData) => Pet.fromMap(petData)).toList();
+    }
+    return null;
+  }
+
+  // Get user pets with caching support
+  Future<List<Pet>> getUserPetsCached(String userId, {bool isGuest = false}) async {
+    print('🔍 [DatabaseService] getUserPetsCached called for userId: $userId, isGuest: $isGuest');
+    
+    if (isGuest) {
+      return await _localStorage.getGuestPets();
+    }
+    
+    // Check cache first
+    final cachedPets = _getCachedUserPets(userId);
+    if (cachedPets != null) {
+      print('🔍 [DatabaseService] getUserPetsCached cache HIT for userId: $userId');
+      return cachedPets;
+    }
+    
+    print('🔍 [DatabaseService] getUserPetsCached cache MISS for userId: $userId');
+    
+    try {
+      // Get pets from Firestore
+      final snapshot = await _petsCollection
+          .where('ownerId', isEqualTo: userId)
+          .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .get();
+      
+      print('🔍 [DatabaseService] getUserPetsCached received ${snapshot.docs.length} documents from ownerId query');
+      
+      // Get pets from the primary owner query
+      final pets = <Pet>[];
+      for (final doc in snapshot.docs) {
+        try {
+          final pet = Pet.fromFirestore(doc);
+          pets.add(pet);
+        } catch (e) {
+          print('🔍 [DatabaseService] Error parsing pet document ${doc.id}: $e');
+        }
+      }
+      
+      // Also query for pets where user is in ownerIds (for multi-owner pets)
+      try {
+        final multiOwnerSnapshot = await _petsCollection
+            .where('ownerIds', arrayContains: userId)
+            .where('isActive', isEqualTo: true)
+            .get();
+        
+        print('🔍 [DatabaseService] Found ${multiOwnerSnapshot.docs.length} pets from ownerIds query');
+        
+        // Add pets from multi-owner query, avoiding duplicates
+        final existingIds = pets.map((p) => p.id).toSet();
+        for (final doc in multiOwnerSnapshot.docs) {
+          if (!existingIds.contains(doc.id)) {
+            try {
+              final pet = Pet.fromFirestore(doc);
+              pets.add(pet);
+            } catch (e) {
+              print('🔍 [DatabaseService] Error parsing multi-owner pet document ${doc.id}: $e');
+            }
+          }
+        }
+      } catch (e) {
+        print('🔍 [DatabaseService] Error querying multi-owner pets: $e');
+      }
+      
+      // Cache the pets and their photos
+      await _cacheUserPets(userId, pets);
+      print('🔍 [DatabaseService] getUserPetsCached cached ${pets.length} pets for userId: $userId');
+      
+      return pets;
+    } catch (e) {
+      print('🔍 [DatabaseService] getUserPetsCached ERROR: $e');
+      return [];
+    }
   }
 
   // Collections
@@ -539,6 +648,16 @@ class DatabaseService {
 
   Future<User?> getUser(String userId) async {
     print('🔍 [DatabaseService] getUser called with userId: $userId');
+    
+    // Check cache first
+    final cachedUser = _getCachedUserProfile(userId);
+    if (cachedUser != null) {
+      print('🔍 [DatabaseService] getUser cache HIT for userId: $userId');
+      return cachedUser;
+    }
+    
+    print('🔍 [DatabaseService] getUser cache MISS for userId: $userId');
+    
     try {
       final doc = await _usersCollection.doc(userId).get();
       print('🔍 [DatabaseService] getUser document exists: ${doc.exists}');
@@ -552,6 +671,11 @@ class DatabaseService {
         final user = User.fromFirestore(doc);
         print('🔍 [DatabaseService] getUser created user: ${user.displayName}');
         print('🔍 [DatabaseService] getUser user displayName type: ${user.displayName.runtimeType}');
+        
+        // Cache the user profile and photos
+        await _cacheUserProfile(userId, user);
+        print('🔍 [DatabaseService] getUser cached user profile for userId: $userId');
+        
         return user;
       } else {
         print('🔍 [DatabaseService] getUser document does not exist');
@@ -1099,7 +1223,7 @@ class DatabaseService {
     
     // Send follow notification after successful transaction
     try {
-      final notificationService = NotificationService();
+      final notificationService = NotificationService.instance;
       final currentUser = await getUser(currentUserId);
       final targetUser = await getUser(targetUserId);
       
@@ -3133,6 +3257,13 @@ class DatabaseService {
   // Chat methods
   Future<String> sendChatMessage(String senderId, String receiverId, String message, {Map<String, dynamic>? productAttachment, bool isOrderAttachment = false}) async {
     try {
+      print('🔔 [DatabaseService] sendChatMessage called');
+      print('🔔 [DatabaseService] senderId: $senderId');
+      print('🔔 [DatabaseService] receiverId: $receiverId');
+      print('🔔 [DatabaseService] message: $message');
+      print('🔔 [DatabaseService] productAttachment: $productAttachment');
+      print('🔔 [DatabaseService] isOrderAttachment: $isOrderAttachment');
+      
       final docRef = await _chatMessagesCollection.add({
         'senderId': senderId,
         'receiverId': receiverId,
@@ -3143,12 +3274,17 @@ class DatabaseService {
         'isOrderAttachment': isOrderAttachment,
       });
 
+      print('🔔 [DatabaseService] Chat message saved to Firestore with ID: ${docRef.id}');
+
       // Send notification for chat message
-      _sendChatNotification(senderId, receiverId, message);
+      print('🔔 [DatabaseService] About to call _sendChatNotification...');
+      await _sendChatNotification(senderId, receiverId, message);
+      print('🔔 [DatabaseService] _sendChatNotification completed');
 
       return docRef.id;
     } catch (e) {
-      print('Error sending chat message: $e');
+      print('❌ [DatabaseService] Error sending chat message: $e');
+      print('❌ [DatabaseService] Stack trace: ${StackTrace.current}');
       throw e;
     }
   }
@@ -3156,20 +3292,63 @@ class DatabaseService {
   // Helper method to send chat notifications
   Future<void> _sendChatNotification(String senderId, String receiverId, String message) async {
     try {
-      final notificationService = NotificationService();
+      print('🔔 [DatabaseService] Starting chat notification for sender: $senderId, receiver: $receiverId');
+      print('🔔 [DatabaseService] Message: $message');
       
       // Get sender info
       final senderInfo = await _getUserInfo(senderId);
+      print('🔔 [DatabaseService] Sender info: $senderInfo');
       
-      await notificationService.sendChatMessageNotification(
-        recipientId: receiverId,
-        senderId: senderId,
-        senderName: senderInfo?['name'],
-        senderPhotoUrl: senderInfo?['photoUrl'],
-        message: message,
+      // Call the new Supabase Edge Function for chat notifications
+      print('🔔 [DatabaseService] Calling Supabase chat notification function...');
+      
+      final supabaseUrl = 'https://slkygguxwqzwpnahnici.supabase.co';
+      final supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsa3lnZ3V4d3F6d3BuYWhuaWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMxMjM4OTcsImV4cCI6MjA2ODY5OTg5N30.-UNi-pJzCvzM3I1CdUHg230gDH14_pZix7DVqQQ2P_A';
+      
+      final response = await http.post(
+        Uri.parse('$supabaseUrl/functions/v1/send-chat-notification'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $supabaseAnonKey',
+        },
+        body: jsonEncode({
+          'recipientId': receiverId,
+          'senderId': senderId,
+          'senderName': senderInfo?['name'],
+          'message': message,
+        }),
       );
+      
+      print('🔔 [DatabaseService] Supabase response status: ${response.statusCode}');
+      print('🔔 [DatabaseService] Supabase response body: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        print('✅ [DatabaseService] Chat notification sent successfully via Supabase');
+      } else {
+        print('❌ [DatabaseService] Failed to send chat notification via Supabase: ${response.statusCode}');
+      }
+      
+      // Also try the old notification service as backup
+      try {
+        final notificationService = NotificationService.instance;
+        await notificationService.initialize();
+        
+        print('🔔 [DatabaseService] Calling notificationService.sendChatMessageNotification...');
+        await notificationService.sendChatMessageNotification(
+          recipientId: receiverId,
+          senderId: senderId,
+          senderName: senderInfo?['name'],
+          senderPhotoUrl: senderInfo?['photoUrl'],
+          message: message,
+        );
+        print('🔔 [DatabaseService] Chat notification sent successfully via NotificationService');
+      } catch (e) {
+        print('❌ [DatabaseService] Error with NotificationService: $e');
+      }
+      
     } catch (e) {
-      print('Error sending chat notification: $e');
+      print('❌ [DatabaseService] Error sending chat notification: $e');
+      print('❌ [DatabaseService] Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -3552,7 +3731,7 @@ class DatabaseService {
   // Helper method to send order placed notification
   Future<void> _sendOrderPlacedNotification(store_order.StoreOrder order) async {
     try {
-      final notificationService = NotificationService();
+      final notificationService = NotificationService.instance;
       
       // Get buyer info
       final buyerInfo = await _getUserInfo(order.customerId);
@@ -3734,7 +3913,7 @@ class DatabaseService {
   // Helper method to send order status notifications
   Future<void> _sendOrderStatusNotification(String orderId, String status) async {
     try {
-      final notificationService = NotificationService();
+      final notificationService = NotificationService.instance;
       
       // Get order details
       final orderDoc = await _ordersCollection.doc(orderId).get();
@@ -4176,7 +4355,7 @@ class DatabaseService {
         createdAt: DateTime.now(),
         relatedId: docRef.id,
       );
-      await NotificationService().sendNotification(notification);
+      await NotificationService.instance.sendNotification(notification);
       print('🔍 [DatabaseService] Notification sent to vet');
 
       return docRef.id;
@@ -4392,7 +4571,7 @@ class DatabaseService {
             createdAt: DateTime.now(),
             relatedId: appointmentId,
           );
-          await NotificationService().sendNotification(notification);
+          await NotificationService.instance.sendNotification(notification);
         }
       }
     } catch (e) {
@@ -4811,7 +4990,7 @@ class DatabaseService {
           createdAt: DateTime.now(),
           relatedId: appointmentId,
         );
-        await NotificationService().sendNotification(notification);
+        await NotificationService.instance.sendNotification(notification);
       }
     } catch (e) {
       print('Error cancelling appointment: $e');
@@ -5707,7 +5886,7 @@ class DatabaseService {
         relatedId: relatedId,
       );
 
-      final notificationService = NotificationService();
+      final notificationService = NotificationService.instance;
       await notificationService.sendNotification(notification);
       print('✅ [DatabaseService] Notification sent to user: $userId');
     } catch (e) {

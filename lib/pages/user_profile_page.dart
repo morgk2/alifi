@@ -88,37 +88,16 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
       print('🔍 [UserProfilePage] Loading pets for user: ${widget.user.id}');
       print('🔍 [UserProfilePage] User accountType: ${widget.user.accountType}');
       
-      // Add timeout to prevent infinite loading
-      _databaseService
-          .getUserPets(widget.user.id)
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: (sink) {
-              print('🔍 [UserProfilePage] getUserPets stream timed out');
-              sink.add([]); // Emit empty list on timeout
-            },
-          )
-          .listen((pets) {
-            print('🔍 [UserProfilePage] Received ${pets.length} pets');
-            if (mounted) {
-              setState(() {
-                _userPets = pets;
-                _isLoading = false;
-              });
-            }
-          },
-          onError: (e) {
-            print('🔍 [UserProfilePage] Error loading pets: $e');
-            if (mounted) {
-              setState(() {
-                _userPets = [];
-                _isLoading = false;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.errorLoadingPets(e.toString()))),
-              );
-            }
-          });
+      // Use cached method for better performance
+      final pets = await _databaseService.getUserPetsCached(widget.user.id);
+      
+      if (mounted) {
+        setState(() {
+          _userPets = pets;
+          _isLoading = false;
+        });
+        print('🔍 [UserProfilePage] Loaded ${pets.length} pets for user: ${widget.user.id}');
+      }
     } catch (e) {
       print('🔍 [UserProfilePage] Exception in _loadUserPets: $e');
       if (mounted) {

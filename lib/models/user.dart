@@ -257,6 +257,133 @@ class User {
     );
   }
 
+  /// Convert User to Map for caching
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'email': email,
+      'displayName': displayName,
+      'username': username,
+      'photoURL': photoURL,
+      'coverPhotoURL': coverPhotoURL,
+      'createdAt': createdAt.toIso8601String(),
+      'lastLoginAt': lastLoginAt.toIso8601String(),
+      'linkedAccounts': linkedAccounts,
+      'isAdmin': isAdmin,
+      'accountType': accountType,
+      'isVerified': isVerified,
+      'basicInfo': basicInfo,
+      'patients': patients,
+      'rating': rating,
+      'totalOrders': totalOrders,
+      'pets': pets,
+      'followers': followers,
+      'following': following,
+      'followersCount': followersCount,
+      'followingCount': followingCount,
+      'searchTokens': searchTokens,
+      'products': products,
+      'location': location != null ? {
+        'latitude': location!.latitude,
+        'longitude': location!.longitude,
+      } : null,
+      'reviews': reviews,
+      'defaultAddress': defaultAddress,
+      'addresses': addresses,
+      'dailyRevenue': dailyRevenue,
+      'totalRevenue': totalRevenue,
+      'lastRevenueUpdate': lastRevenueUpdate?.toIso8601String(),
+      'petsRescued': petsRescued,
+      'subscriptionPlan': subscriptionPlan,
+      'subscriptionStatus': subscriptionStatus,
+      'subscriptionStartDate': subscriptionStartDate?.toIso8601String(),
+      'nextBillingDate': nextBillingDate?.toIso8601String(),
+      'lastBillingDate': lastBillingDate?.toIso8601String(),
+      'paymentMethod': paymentMethod,
+      'subscriptionAmount': subscriptionAmount,
+      'subscriptionCurrency': subscriptionCurrency,
+      'subscriptionInterval': subscriptionInterval,
+      'businessFirstName': businessFirstName,
+      'businessLastName': businessLastName,
+      'businessName': businessName,
+      'businessLocation': businessLocation,
+      'city': city,
+      'phone': phone,
+      'clinicName': clinicName,
+      'clinicLocation': clinicLocation,
+      'storeName': storeName,
+      'storeLocation': storeLocation,
+      'socialMedia': socialMedia,
+    };
+  }
+
+  /// Create User from Map for caching
+  factory User.fromMap(Map<String, dynamic> data) {
+    // Parse location data
+    LatLng? location;
+    if (data['location'] != null) {
+      final locationData = data['location'] as Map<String, dynamic>;
+      location = LatLng(
+        locationData['latitude'] as double,
+        locationData['longitude'] as double,
+      );
+    }
+
+    return User(
+      id: data['id'] ?? '',
+      email: data['email'] ?? '',
+      displayName: data['displayName'],
+      username: data['username'],
+      photoURL: data['photoURL'],
+      coverPhotoURL: data['coverPhotoURL'],
+      createdAt: DateTime.parse(data['createdAt'] ?? DateTime.now().toIso8601String()),
+      lastLoginAt: DateTime.parse(data['lastLoginAt'] ?? DateTime.now().toIso8601String()),
+      linkedAccounts: Map<String, bool>.from(data['linkedAccounts'] ?? {}),
+      isAdmin: data['isAdmin'] ?? false,
+      accountType: data['accountType'] ?? 'normal',
+      isVerified: data['isVerified'] ?? false,
+      basicInfo: data['basicInfo'],
+      patients: data['patients'] != null ? List<String>.from(data['patients']) : null,
+      rating: (data['rating'] ?? 0.0).toDouble(),
+      totalOrders: data['totalOrders'] ?? 0,
+      pets: data['pets'] != null ? List<String>.from(data['pets']) : null,
+      followers: data['followers'] != null ? List<String>.from(data['followers']) : null,
+      following: data['following'] != null ? List<String>.from(data['following']) : null,
+      followersCount: data['followersCount'] ?? 0,
+      followingCount: data['followingCount'] ?? 0,
+      searchTokens: data['searchTokens'] != null ? List<String>.from(data['searchTokens']) : null,
+      products: data['products'] != null ? List<String>.from(data['products']) : null,
+      location: location,
+      reviews: data['reviews'] != null ? List<Map<String, dynamic>>.from(data['reviews']) : null,
+      defaultAddress: data['defaultAddress'] != null ? Map<String, dynamic>.from(data['defaultAddress']) : null,
+      addresses: data['addresses'] != null ? List<Map<String, dynamic>>.from(data['addresses']) : null,
+      dailyRevenue: (data['dailyRevenue'] ?? 0.0).toDouble(),
+      totalRevenue: (data['totalRevenue'] ?? 0.0).toDouble(),
+      lastRevenueUpdate: data['lastRevenueUpdate'] != null ? DateTime.parse(data['lastRevenueUpdate']) : null,
+      petsRescued: data['petsRescued'] ?? 0,
+      subscriptionPlan: data['subscriptionPlan'],
+      subscriptionStatus: data['subscriptionStatus'],
+      subscriptionStartDate: data['subscriptionStartDate'] != null ? DateTime.parse(data['subscriptionStartDate']) : null,
+      nextBillingDate: data['nextBillingDate'] != null ? DateTime.parse(data['nextBillingDate']) : null,
+      lastBillingDate: data['lastBillingDate'] != null ? DateTime.parse(data['lastBillingDate']) : null,
+      paymentMethod: data['paymentMethod'],
+      subscriptionAmount: (data['subscriptionAmount'] ?? 0.0).toDouble(),
+      subscriptionCurrency: data['subscriptionCurrency'],
+      subscriptionInterval: data['subscriptionInterval'],
+      businessFirstName: data['businessFirstName'],
+      businessLastName: data['businessLastName'],
+      businessName: data['businessName'],
+      businessLocation: data['businessLocation'],
+      city: data['city'],
+      phone: data['phone'],
+      clinicName: data['clinicName'],
+      clinicLocation: data['clinicLocation'],
+      storeName: data['storeName'],
+      storeLocation: data['storeLocation'],
+      socialMedia: data['socialMedia'] != null ? Map<String, String>.from(data['socialMedia']) : null,
+    );
+  }
+
   User copyWith({
     String? id,
     String? email,

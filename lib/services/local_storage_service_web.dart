@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:html' as html;
+import '../models/user.dart';
 
 class LocalStorageService {
   static const String _guestPetsKey = 'guest_pets';
@@ -98,11 +99,25 @@ class LocalStorageService {
   }
 
   // Recent profiles methods
-  Future<List<dynamic>> getRecentProfiles() async {
+  Future<List<User>> getRecentProfiles() async {
     final jsonString = html.window.localStorage[_recentProfilesKey];
     if (jsonString != null) {
       try {
-        return json.decode(jsonString) as List<dynamic>;
+        final profilesData = json.decode(jsonString) as List<dynamic>;
+        final List<User> profiles = [];
+        
+        for (final profileData in profilesData) {
+          try {
+            if (profileData is Map<String, dynamic>) {
+              final user = User.fromMap(profileData);
+              profiles.add(user);
+            }
+          } catch (e) {
+            print('Error converting profile data to User: $e');
+          }
+        }
+        
+        return profiles;
       } catch (e) {
         print('Error parsing recent profiles: $e');
       }
@@ -110,16 +125,33 @@ class LocalStorageService {
     return [];
   }
 
-  Future<void> addRecentProfile(dynamic user) async {
+  Future<void> addRecentProfile(User user) async {
     final profiles = await getRecentProfiles();
-    profiles.removeWhere((p) => p['id'] == user['id']);
+    profiles.removeWhere((p) => p.id == user.id);
     profiles.insert(0, user);
     
     if (profiles.length > _maxRecentProfiles) {
       profiles.removeLast();
     }
     
-    html.window.localStorage[_recentProfilesKey] = json.encode(profiles);
+    // Convert to maps for storage
+    final profilesData = profiles.map((p) => p.toMap()).toList();
+    
+    html.window.localStorage[_recentProfilesKey] = json.encode(profilesData);
+  }
+
+  Future<void> clearRecentProfiles() async {
+    html.window.localStorage.remove(_recentProfilesKey);
+  }
+
+  Future<void> removeRecentProfile(String userId) async {
+    final profiles = await getRecentProfiles();
+    profiles.removeWhere((p) => p.id == userId);
+    
+    // Convert to maps for storage
+    final profilesData = profiles.map((p) => p.toMap()).toList();
+    
+    html.window.localStorage[_recentProfilesKey] = json.encode(profilesData);
   }
 
   // Vet Locations methods
